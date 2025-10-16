@@ -1,0 +1,108 @@
+import { useEffect, useRef, useState } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
+import MapStyleSelector from './MapStyleSelector';
+import EntityMarker from './EntityMarker';
+import { useEntities } from '../../hooks/useEntities';
+
+// Configurar token de Mapbox
+mapboxgl.accessToken = MAPBOX_TOKEN;
+
+export default function MapContainer() {
+  const mapContainer = useRef(null);
+  const map = useRef(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  
+  // 📡 Obtener entidades desde Supabase
+  const { entities, loading, error } = useEntities();
+
+  useEffect(() => {
+    // Evitar inicializar el mapa más de una vez
+    if (map.current) return;
+
+    // Inicializar el mapa con Mapbox GL JS
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: MAP_CONFIG.style,
+      center: MAP_CONFIG.center,
+      zoom: MAP_CONFIG.zoom,
+      ...MAP_CONFIG.options,
+    });
+
+    // Agregar controles de navegación
+    map.current.addControl(
+      new mapboxgl.NavigationControl({
+        visualizePitch: true,
+        showCompass: true,
+      }),
+      'top-right'
+    );
+
+    // Agregar control de escala
+    map.current.addControl(
+      new mapboxgl.ScaleControl({
+        maxWidth: 200,
+        unit: 'metric',
+      }),
+      'bottom-left'
+    );
+
+    // Log cuando el mapa esté listo
+    map.current.on('load', () => {
+      console.log('✅ Mapa del Caribe cargado correctamente');
+      console.log('📍 Centro:', MAP_CONFIG.center);
+      console.log('🔍 Zoom:', MAP_CONFIG.zoom);
+      setMapLoaded(true);
+    });
+
+    // Cleanup al desmontar
+    return () => {
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div className="w-screen h-screen">
+      {/* Contenedor del mapa - ocupa todo el espacio */}
+      <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Selector de estilos de mapa */}
+      {mapLoaded && <MapStyleSelector map={map.current} />}
+
+      {/* Marcadores de entidades militares */}
+      {mapLoaded && !loading && entities.map((entity) => (
+        <EntityMarker 
+          key={entity.id} 
+          entity={entity} 
+          map={map.current} 
+        />
+      ))}
+
+      {/* Indicador de carga */}
+      {loading && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-bg-secondary/90 backdrop-blur-sm text-military-text-primary px-4 py-2 rounded-md shadow-lg">
+          🔄 Cargando entidades desde Supabase...
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-accent-danger/90 backdrop-blur-sm text-white px-4 py-2 rounded-md shadow-lg">
+          ❌ Error: {error}
+        </div>
+      )}
+
+      {/* Contador de entidades */}
+      {mapLoaded && !loading && (
+        <div className="absolute bottom-4 right-4 bg-military-bg-secondary/90 backdrop-blur-sm text-military-text-primary px-3 py-2 rounded-md shadow-lg text-sm">
+          🚢 {entities.length} entidades activas
+        </div>
+      )}
+    </div>
+  );
+}
+
