@@ -20,9 +20,10 @@ export default function MapContainer() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
-  
+
   // 📡 Obtener entidades desde Supabase
   const { entities, loading, error } = useEntities();
+
   
   // 🎯 Hook para actualizar posiciones
   const { updatePosition, updating } = useUpdateEntity();

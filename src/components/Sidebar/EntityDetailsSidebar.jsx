@@ -64,12 +64,29 @@ export default function EntityDetailsSidebar({ entity, onClose }) {
 
   return (
     <div className="fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700" style={{ left: '64px', zIndex: 45 }}>
-      {/* Header con imagen de fondo */}
+      {/* Header con imagen/video de fondo */}
       <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
-        {/* Imagen de fondo */}
-        {entity.image_thumbnail_url ? (
+        {/* Video de fondo (prioridad sobre imagen) */}
+        {entity.video_url ? (
+          <div className="relative z-10 h-full w-full">
+            <video
+              src={entity.video_url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover rounded-lg"
+              style={{
+                filter: 'brightness(0.8) contrast(1.2) saturate(1.1)',
+                transform: 'scale(1.05)' // Para evitar bordes negros
+              }}
+            />
+            {/* Overlay sutil para mejor legibilidad del texto */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 rounded-lg" />
+          </div>
+        ) : entity.image_thumbnail_url ? (
           <>
-            <div 
+            <div
               className="absolute inset-0 bg-cover bg-center filter blur-lg opacity-30"
               style={{ backgroundImage: `url(${entity.image_thumbnail_url})` }}
             />

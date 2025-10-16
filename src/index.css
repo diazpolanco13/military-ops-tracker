@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Scrollbar personalizado estilo profesional */
 .custom-scrollbar::-webkit-scrollbar {
@@ -26,24 +28,6 @@
   scrollbar-color: rgba(100, 116, 139, 0.5) rgba(15, 23, 42, 0.5);
 }
 
-/* Configuración del tema (Tailwind CSS v4) */
-@theme {
-  /* Colores militares personalizados */
-  --color-military-bg-primary: #0f172a;
-  --color-military-bg-secondary: #1e293b;
-  --color-military-bg-sidebar: #334155;
-
-  --color-military-accent-primary: #3b82f6;
-  --color-military-accent-danger: #ef4444;
-  --color-military-accent-success: #10b981;
-  --color-military-accent-warning: #f59e0b;
-
-  --color-military-text-primary: #f1f5f9;
-  --color-military-text-secondary: #94a3b8;
-
-  /* Animación personalizada */
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
 
 /* Estilos base */
 * {
