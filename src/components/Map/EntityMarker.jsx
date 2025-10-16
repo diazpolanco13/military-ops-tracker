@@ -54,9 +54,10 @@ function getEntitySize(type) {
 /**
  * Componente de marcador individual
  */
-export default function EntityMarker({ entity, map }) {
+export default function EntityMarker({ entity, map, onPositionChange }) {
   const markerRef = useRef(null);
   const popupRef = useRef(null);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     if (!map || !entity) return;
@@ -64,7 +65,7 @@ export default function EntityMarker({ entity, map }) {
     // Crear elemento del marcador
     const el = document.createElement('div');
     el.className = 'entity-marker';
-    el.style.cursor = 'pointer';
+    el.style.cursor = 'grab';
     el.style.width = `${getEntitySize(entity.type)}px`;
     el.style.height = `${getEntitySize(entity.type)}px`;
 
@@ -101,14 +102,58 @@ export default function EntityMarker({ entity, map }) {
       className: 'entity-popup',
     }).setDOMContent(popupEl);
 
-    // Crear marcador de Mapbox con popup
+    // Crear marcador de Mapbox con popup y DRAGGABLE
     const marker = new mapboxgl.Marker({
       element: el,
       anchor: 'center',
+      draggable: true, // 🎯 ACTIVAR DRAG & DROP
     })
       .setLngLat([entity.longitude, entity.latitude])
       .setPopup(popup)
       .addTo(map);
+
+    // 🎯 EVENT LISTENERS PARA DRAG & DROP
+
+    // Cuando empieza a arrastrar
+    marker.on('dragstart', () => {
+      isDraggingRef.current = true;
+      el.style.cursor = 'grabbing';
+      // Cerrar popup mientras arrastra
+      if (popup.isOpen()) {
+        popup.remove();
+      }
+      // Efecto visual de arrastre
+      el.style.transform = 'scale(1.2)';
+      el.style.filter = 'brightness(1.3) drop-shadow(0 0 20px currentColor)';
+    });
+
+    // Mientras está arrastrando
+    marker.on('drag', () => {
+      // Aquí podríamos mostrar coordenadas en tiempo real
+      const lngLat = marker.getLngLat();
+      console.log('📍 Arrastrando:', lngLat.lat.toFixed(4), lngLat.lng.toFixed(4));
+    });
+
+    // Cuando termina de arrastrar
+    marker.on('dragend', async () => {
+      const newLngLat = marker.getLngLat();
+      
+      // Restaurar estilo
+      el.style.cursor = 'grab';
+      el.style.transform = 'scale(1)';
+      el.style.filter = 'none';
+
+      // 🚀 ACTUALIZAR POSICIÓN EN SUPABASE
+      if (onPositionChange) {
+        console.log('🔄 Actualizando posición en Supabase...');
+        await onPositionChange(entity.id, {
+          latitude: newLngLat.lat,
+          longitude: newLngLat.lng,
+        });
+      }
+
+      isDraggingRef.current = false;
+    });
 
     // Guardar referencias
     markerRef.current = marker;
@@ -123,7 +168,7 @@ export default function EntityMarker({ entity, map }) {
         markerRef.current.remove();
       }
     };
-  }, [entity, map]);
+  }, [entity, map, onPositionChange]);
 
   return null; // Este componente no renderiza nada en React, solo en Mapbox
 }

@@ -117,16 +117,50 @@ body {
   border-top-color: #0f172a !important;
 }
 
-/* 🎯 Estilos para marcadores */
+/* 🎯 Estilos para marcadores arrastrables */
 .entity-marker {
   transition: all 0.3s ease;
+  position: relative;
 }
 
 .entity-marker:hover {
   filter: brightness(1.2) drop-shadow(0 0 10px currentColor);
 }
 
+.entity-marker:hover::after {
+  content: '⬅️ Arrastra para mover';
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(15, 23, 42, 0.95);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 .entity-marker:active {
-  cursor: grabbing;
-  transform: scale(0.95);
+  cursor: grabbing !important;
+  transform: scale(1.2);
+  filter: brightness(1.5) drop-shadow(0 0 25px currentColor);
+}
+
+.entity-marker:active::after {
+  display: none;
 }

@@ -5,6 +5,7 @@ import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
 import MapStyleSelector from './MapStyleSelector';
 import EntityMarker from './EntityMarker';
 import { useEntities } from '../../hooks/useEntities';
+import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -16,6 +17,20 @@ export default function MapContainer() {
   
   // 📡 Obtener entidades desde Supabase
   const { entities, loading, error } = useEntities();
+  
+  // 🎯 Hook para actualizar posiciones
+  const { updatePosition, updating } = useUpdateEntity();
+
+  // Handler para cuando se arrastra una entidad
+  const handlePositionChange = async (entityId, newPosition) => {
+    try {
+      await updatePosition(entityId, newPosition);
+      console.log(`✅ ${entityId} movido a:`, newPosition);
+    } catch (err) {
+      console.error('❌ Error al mover entidad:', err);
+      alert('Error al actualizar posición. Por favor, intenta de nuevo.');
+    }
+  };
 
   useEffect(() => {
     // Evitar inicializar el mapa más de una vez
@@ -78,7 +93,8 @@ export default function MapContainer() {
         <EntityMarker 
           key={entity.id} 
           entity={entity} 
-          map={map.current} 
+          map={map.current}
+          onPositionChange={handlePositionChange}
         />
       ))}
 
@@ -93,6 +109,14 @@ export default function MapContainer() {
       {error && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-accent-danger/90 backdrop-blur-sm text-white px-4 py-2 rounded-md shadow-lg">
           ❌ Error: {error}
+        </div>
+      )}
+
+      {/* Indicador de actualización */}
+      {updating && (
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-accent-warning/90 backdrop-blur-sm text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2">
+          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+          Actualizando posición...
         </div>
       )}
 
