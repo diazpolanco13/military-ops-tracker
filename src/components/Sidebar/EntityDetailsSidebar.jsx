@@ -46,8 +46,26 @@ const STATUS_CONFIG = {
  * 📊 Sidebar de detalles de entidad (estilo VesselFinder)
  * Panel lateral profesional que muestra información completa
  */
-export default function EntityDetailsSidebar({ entity, onClose }) {
-  if (!entity) return null;
+export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }) {
+
+  // Estado vacío cuando no hay entidad
+  if (!entity) {
+    return (
+      <div
+        className={`fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ left: '64px', zIndex: 45 }}
+      >
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center text-slate-400">
+            <Ship className="w-16 h-16 mx-auto mb-4 opacity-30" strokeWidth={1} />
+            <p className="text-sm">Selecciona una entidad del mapa</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const Icon = TYPE_ICONS[entity.type] || Ship;
   const statusConfig = STATUS_CONFIG[entity.status] || STATUS_CONFIG.activo;
@@ -63,7 +81,12 @@ export default function EntityDetailsSidebar({ entity, onClose }) {
     : 'N/A';
 
   return (
-    <div className="fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700" style={{ left: '64px', zIndex: 45 }}>
+    <div
+      className={`fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+      style={{ left: '64px', zIndex: 45 }}
+    >
       {/* Header con imagen/video de fondo */}
       <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
         {/* Video de fondo (prioridad sobre imagen) */}

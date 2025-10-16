@@ -92,24 +92,20 @@ export default function MapContainer() {
       {/* 🧭 Barra de navegación lateral izquierda */}
       <NavigationBar />
 
-      {/* Sidebar de detalles (se abre al hacer click en marcador) */}
-      {selectedEntity && (
-        <EntityDetailsSidebar 
-          entity={selectedEntity} 
-          onClose={() => setSelectedEntity(null)} 
-        />
-      )}
+      {/* Sidebar de detalles - siempre presente con animación */}
+      <EntityDetailsSidebar
+        entity={selectedEntity}
+        onClose={() => setSelectedEntity(null)}
+        isOpen={!!selectedEntity}
+      />
 
-      {/* Contenedor del mapa - posicionamiento absoluto para evitar conflictos con padding */}
-      <div 
-        ref={mapContainer} 
-        style={{ 
-          position: 'absolute',
-          top: 0,
-          bottom: 0,
-          left: selectedEntity ? '444px' : '64px', // 64px (nav) + 380px (sidebar si está abierto)
-          right: 0,
-          transition: 'left 0.3s ease-in-out'
+      {/* Contenedor del mapa - siempre ocupa todo el espacio disponible */}
+      <div
+        ref={mapContainer}
+        className="absolute inset-0"
+        style={{
+          left: '64px', // Solo espacio para la barra de navegación lateral
+          transition: 'none' // Sin transición para evitar movimientos
         }}
       />
 
