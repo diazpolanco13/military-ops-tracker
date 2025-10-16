@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* Configuración del tema (Tailwind CSS v4) */
+@theme {
+  /* Colores militares personalizados */
+  --color-military-bg-primary: #0f172a;
+  --color-military-bg-secondary: #1e293b;
+  --color-military-bg-sidebar: #334155;
+
+  --color-military-accent-primary: #3b82f6;
+  --color-military-accent-danger: #ef4444;
+  --color-military-accent-success: #10b981;
+  --color-military-accent-warning: #f59e0b;
+
+  --color-military-text-primary: #f1f5f9;
+  --color-military-text-secondary: #94a3b8;
+
+  /* Animación personalizada */
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Estilos base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-military-bg-primary);
+  color: var(--color-military-text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Componentes personalizados */
+.btn-primary {
+  background-color: var(--color-military-accent-primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-danger {
+  background-color: var(--color-military-accent-danger);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+}
+
+.btn-danger:active {
+  transform: scale(0.95);
+}
+
+.card-military {
+  background-color: var(--color-military-bg-secondary);
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* Estilos para Mapbox (se añadirán cuando se instale) */
+.mapboxgl-popup-content {
+  background-color: #1e293b;
+  color: white;
+  border: 1px solid #475569;
+  border-radius: 0.5rem;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  padding: 0;
+}
+
+.mapboxgl-popup-close-button {
+  color: white;
+  font-size: 20px;
+}
+
+.mapboxgl-popup-close-button:hover {
+  color: #cbd5e1;
+}
+
+.entity-marker {
+  transition: filter 0.3s ease;
+}
+
+.entity-marker:active {
+  cursor: grabbing;
+  filter: brightness(1.3);
+}
