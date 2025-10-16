@@ -19,7 +19,7 @@
 
 ---
 
-## Iteración 0: Setup Base
+## ✅ Iteración 0: Setup Base [COMPLETADO]
 **⏱️ Tiempo**: 10-15 minutos  
 **🎯 Objetivo**: Proyecto funcionando con estructura básica  
 **👁️ Resultado Visual**: Pantalla negra con "Vite + React"
@@ -30,25 +30,24 @@
 npm create vite@latest military-ops-tracker -- --template react
 cd military-ops-tracker
 npm install
-npm install -D tailwindcss@next postcss autoprefixer
-npx tailwindcss init -p
+npm install -D tailwindcss@next @tailwindcss/vite
 ```
 
-### Archivos a Crear
-- [ ] `tailwind.config.js` - Configuración básica
-- [ ] `src/index.css` - Importar Tailwind
-- [ ] `.env` - Variables de entorno vacías por ahora
+### Archivos Creados
+- [x] `vite.config.js` - Configuración con @tailwindcss/vite
+- [x] `src/index.css` - Importar Tailwind CSS v4
+- [x] `.env.local` - Variables de entorno
 
 ### ✅ Criterio de Éxito
-- `npm run dev` levanta servidor en localhost:5173
-- Ves la pantalla de bienvenida de Vite
+- ✅ `npm run dev` levanta servidor en localhost:5173
+- ✅ Tailwind CSS 4.1 funcionando correctamente
 
 ---
 
-## Iteración 1: Mapa Visible ⭐
+## ✅ Iteración 1: Mapa Visible ⭐ [COMPLETADO]
 **⏱️ Tiempo**: 30-40 minutos  
 **🎯 Objetivo**: Ver el mapa del Caribe funcionando  
-**👁️ Resultado Visual**: Mapa interactivo oscuro centrado en el Caribe
+**👁️ Resultado Visual**: Mapa interactivo oscuro centrado en el Caribe con selector de estilos
 
 ### Dependencias
 ```bash
@@ -129,16 +128,17 @@ VITE_MAPBOX_ACCESS_TOKEN=tu_token_aqui
 ```
 
 ### ✅ Criterio de Éxito
-- ✅ Ves el mapa del Caribe en modo oscuro
+- ✅ Ves el mapa del Caribe en modo satélite
 - ✅ Puedes hacer zoom y pan
 - ✅ Controles de navegación visibles
+- ✅ Selector de estilos funcional (Satélite, Oscuro, Calles, etc.)
 
 ---
 
-## Iteración 2: Marcadores Básicos
+## ✅ Iteración 2: Marcadores Básicos [COMPLETADO]
 **⏱️ Tiempo**: 20-30 minutos  
 **🎯 Objetivo**: Ver iconos de entidades en el mapa  
-**👁️ Resultado Visual**: 4 iconos (barco, avión, tanque, tropas) en diferentes ubicaciones
+**👁️ Resultado Visual**: 6 iconos militares (destructores, fragatas, avión) en el Caribe
 
 ### Dependencias
 ```bash
@@ -255,16 +255,17 @@ useEffect(() => {
 ```
 
 ### ✅ Criterio de Éxito
-- ✅ Ves 4 iconos circulares de colores en el mapa
-- ✅ Cada tipo tiene su color distintivo
+- ✅ Ves 6 marcadores con iconos militares (Ship, Anchor, Plane)
+- ✅ Cada tipo tiene su color distintivo (rojo=destructor, azul=fragata, gris=avión)
 - ✅ Los marcadores están en posiciones correctas del Caribe
+- ✅ Datos cargados desde Supabase
 
 ---
 
-## Iteración 3: Interacción con Popup
+## ✅ Iteración 3: Interacción con Popup [COMPLETADO]
 **⏱️ Tiempo**: 15-20 minutos  
 **🎯 Objetivo**: Hacer click en marcador y ver información  
-**👁️ Resultado Visual**: Popup con nombre y tipo de entidad
+**👁️ Resultado Visual**: Popup militar profesional con información completa de la entidad
 
 ### Tareas
 - [ ] Añadir evento click a marcadores
@@ -313,16 +314,17 @@ MOCK_ENTITIES.forEach((entity) => {
 ```
 
 ### ✅ Criterio de Éxito
-- ✅ Click en marcador abre popup
-- ✅ Popup muestra nombre, tipo y estado
-- ✅ Popup tiene estilo oscuro militar
+- ✅ Click en marcador abre popup profesional
+- ✅ Popup muestra: nombre, clase, tipo, estado, coordenadas, rumbo, velocidad, armamento
+- ✅ Badges coloridos por estado (🟢 Activo, 🟡 Patrullando, etc.)
+- ✅ Popup tiene estilo oscuro militar con backdrop blur
 
 ---
 
-## Iteración 4: Supabase + Datos Reales
+## ✅ Iteración 4: Supabase + Datos Reales [COMPLETADO]
 **⏱️ Tiempo**: 45-60 minutos  
-**🎯 Objetivo**: Datos desde base de datos real  
-**👁️ Resultado Visual**: Los mismos marcadores pero desde Supabase
+**🎯 Objetivo**: Datos desde base de datos real con PostGIS  
+**👁️ Resultado Visual**: Marcadores desde Supabase con actualización en tiempo real
 
 ### Dependencias
 ```bash
@@ -488,16 +490,19 @@ export default function MapContainer() {
 ```
 
 ### ✅ Criterio de Éxito
-- ✅ Marcadores se cargan desde Supabase
-- ✅ Añadir una entidad en Supabase SQL Editor aparece en el mapa al refrescar
-- ✅ No hay errores en consola
+- ✅ Marcadores se cargan desde Supabase con PostGIS
+- ✅ Tabla `entities` con GEOGRAPHY(POINT, 4326)
+- ✅ Hook `useEntities` con suscripción Realtime
+- ✅ 6 entidades insertadas (3 destructores + 2 fragatas + 1 avión)
+- ✅ Función RPC `update_entity_position`
+- ✅ Tabla `movement_history` con triggers automáticos
 
 ---
 
-## Iteración 5: Drag & Drop (CORE FUNCIONAL)
+## ✅ Iteración 5: Drag & Drop (CORE FUNCIONAL) [COMPLETADO]
 **⏱️ Tiempo**: 60-90 minutos  
-**🎯 Objetivo**: Arrastrar marcadores y actualizar BD  
-**👁️ Resultado Visual**: Arrastra un barco, se actualiza su posición en BD
+**🎯 Objetivo**: Arrastrar marcadores y actualizar BD en tiempo real  
+**👁️ Resultado Visual**: Arrastra un destructor, se guarda en Supabase automáticamente
 
 ### Dependencias
 ```bash
@@ -630,24 +635,33 @@ export default function MapContainer() {
 ```
 
 ### ✅ Criterio de Éxito
-- ✅ Puedes arrastrar cualquier marcador
-- ✅ Al soltar, se actualiza en Supabase
-- ✅ Refrescas la página y mantiene nueva posición
-- ✅ Feedback visual (brillo) al mover
+- ✅ Puedes arrastrar cualquier marcador (cursor grab/grabbing)
+- ✅ Al soltar, se actualiza en Supabase con función RPC
+- ✅ El marcador permanece visible sin necesidad de scroll
+- ✅ Se registra automáticamente en `movement_history`
+- ✅ Actualización Realtime para múltiples usuarios
+- ✅ Workaround aplicado: remover/re-agregar marcador para forzar render
 
 ---
 
-## 🎉 CHECKPOINT: MVP Ultra-Lean Completo
+## 🎉 CHECKPOINT: MVP Ultra-Lean Completo ✅
 
-**Has completado el CORE de la aplicación:**
-- ✅ Mapa interactivo profesional
-- ✅ Datos desde base de datos
-- ✅ Visualización de entidades
-- ✅ Drag & Drop funcional
-- ✅ Persistencia en BD
+**✅ Has completado el CORE de la aplicación:**
+- ✅ Mapa interactivo profesional (Mapbox GL JS)
+- ✅ Selector de estilos de mapa (Satélite, Oscuro, Calles, etc.)
+- ✅ Datos desde Supabase con PostGIS
+- ✅ 6 entidades militares reales (destructores + fragatas + avión)
+- ✅ Visualización con iconos personalizados (lucide-react)
+- ✅ Popups interactivos con información completa
+- ✅ Drag & Drop funcional con actualización en BD
+- ✅ Historial de movimientos automático
+- ✅ Realtime sync entre usuarios
+- ✅ Persistencia en BD con PostGIS
 
-**Tiempo total estimado**: 3-4 horas  
-**Resultado**: Demo funcional que impresiona
+**Tiempo total real**: ~4 horas  
+**Resultado**: Demo funcional profesional lista para impresionar
+
+**Fecha de Completación**: 16 de Octubre, 2025
 
 ---
 
@@ -978,7 +992,8 @@ git merge iteracion-X-nombre
 
 ---
 
-**Última Actualización**: Octubre 2025  
-**Versión del Roadmap**: 1.0  
-**Próxima Revisión**: Después de completar Iteración 5
+**Última Actualización**: 16 de Octubre, 2025  
+**Versión del Roadmap**: 1.1  
+**Estado**: Iteraciones 0-5 COMPLETADAS ✅  
+**Próxima Revisión**: Después de completar MVP-1 y MVP-2
 

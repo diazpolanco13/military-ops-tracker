@@ -119,12 +119,13 @@ body {
 
 /* 🎯 Estilos para marcadores arrastrables */
 .entity-marker {
-  transition: all 0.3s ease;
   position: relative;
+  /* NO transition por defecto - se agrega solo en hover */
 }
 
 .entity-marker:hover {
   filter: brightness(1.2) drop-shadow(0 0 10px currentColor);
+  transition: filter 0.2s ease; /* Solo transición en el filtro */
 }
 
 .entity-marker:hover::after {

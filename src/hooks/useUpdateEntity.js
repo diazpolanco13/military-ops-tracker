@@ -18,10 +18,14 @@ export function useUpdateEntity() {
    */
   const updatePosition = async (entityId, { latitude, longitude }) => {
     try {
+      console.log('🚀 [updatePosition] INICIANDO...');
+      console.log('🚀 [updatePosition] entityId:', entityId);
+      console.log('🚀 [updatePosition] coords:', { latitude, longitude });
+      
       setUpdating(true);
       setError(null);
 
-      console.log(`🚢 Actualizando ${entityId}:`, { latitude, longitude });
+      console.log(`🚢 Llamando a Supabase RPC: update_entity_position`);
 
       // Actualizar posición usando SQL directo para manejar GEOGRAPHY
       const { data, error: updateError } = await supabase.rpc(
@@ -33,16 +37,23 @@ export function useUpdateEntity() {
         }
       );
 
-      if (updateError) throw updateError;
+      console.log('📦 Respuesta de Supabase:', { data, error: updateError });
 
-      console.log('✅ Posición actualizada correctamente');
+      if (updateError) {
+        console.error('❌ Error de Supabase:', updateError);
+        throw updateError;
+      }
+
+      console.log('✅ Posición actualizada correctamente en BD');
       return data;
     } catch (err) {
-      console.error('❌ Error al actualizar posición:', err);
+      console.error('❌ EXCEPCIÓN en updatePosition:', err);
+      console.error('❌ Error completo:', JSON.stringify(err, null, 2));
       setError(err.message);
       throw err;
     } finally {
       setUpdating(false);
+      console.log('🏁 [updatePosition] FINALIZADO');
     }
   };
 

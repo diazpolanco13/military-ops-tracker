@@ -58,7 +58,9 @@ export default function EntityMarker({ entity, map, onPositionChange }) {
   const markerRef = useRef(null);
   const popupRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const entityIdRef = useRef(entity.id);
 
+  // 🎯 Efecto para CREAR el marcador (solo una vez)
   useEffect(() => {
     if (!map || !entity) return;
 
@@ -122,37 +124,51 @@ export default function EntityMarker({ entity, map, onPositionChange }) {
       if (popup.isOpen()) {
         popup.remove();
       }
-      // Efecto visual de arrastre
-      el.style.transform = 'scale(1.2)';
-      el.style.filter = 'brightness(1.3) drop-shadow(0 0 20px currentColor)';
     });
 
     // Mientras está arrastrando
     marker.on('drag', () => {
-      // Aquí podríamos mostrar coordenadas en tiempo real
-      const lngLat = marker.getLngLat();
-      console.log('📍 Arrastrando:', lngLat.lat.toFixed(4), lngLat.lng.toFixed(4));
+      // Coordenadas disponibles si se necesitan
+      // const lngLat = marker.getLngLat();
+      // console.log('📍 Arrastrando:', lngLat.lat.toFixed(4), lngLat.lng.toFixed(4));
     });
 
     // Cuando termina de arrastrar
     marker.on('dragend', async () => {
       const newLngLat = marker.getLngLat();
       
-      // Restaurar estilo
+      console.log('🎯 DRAGEND EVENTO DISPARADO');
+      console.log('📍 Nueva posición:', { lat: newLngLat.lat, lng: newLngLat.lng });
+
+      // Restaurar cursor
       el.style.cursor = 'grab';
-      el.style.transform = 'scale(1)';
-      el.style.filter = 'none';
+      isDraggingRef.current = false;
 
       // 🚀 ACTUALIZAR POSICIÓN EN SUPABASE
       if (onPositionChange) {
-        console.log('🔄 Actualizando posición en Supabase...');
-        await onPositionChange(entity.id, {
-          latitude: newLngLat.lat,
-          longitude: newLngLat.lng,
-        });
+        console.log('🔄 Llamando a onPositionChange...');
+        try {
+          await onPositionChange(entity.id, {
+            latitude: newLngLat.lat,
+            longitude: newLngLat.lng,
+          });
+          console.log('✅ onPositionChange completado');
+          
+          // 🎨 WORKAROUND: Remover y volver a agregar el marcador
+          // Esto fuerza a Mapbox a re-renderizarlo correctamente
+          marker.remove();
+          
+          // Pequeño delay para asegurar que se limpie el DOM
+          setTimeout(() => {
+            marker.setLngLat([newLngLat.lng, newLngLat.lat]);
+            marker.addTo(map);
+            console.log('🎨 Marcador re-agregado al mapa');
+          }, 10);
+          
+        } catch (error) {
+          console.error('❌ Error en onPositionChange:', error);
+        }
       }
-
-      isDraggingRef.current = false;
     });
 
     // Guardar referencias
@@ -168,7 +184,45 @@ export default function EntityMarker({ entity, map, onPositionChange }) {
         markerRef.current.remove();
       }
     };
-  }, [entity, map, onPositionChange]);
+  }, [map]); // ⚠️ Solo depende de 'map', no de 'entity'
+
+  // 🔄 Efecto separado para ACTUALIZAR la posición cuando cambia en Supabase (otros usuarios)
+  useEffect(() => {
+    if (!markerRef.current || !entity) return;
+    
+    // NO actualizar si estamos arrastrando este marcador
+    if (isDraggingRef.current) {
+      console.log('⏸️ Ignorando actualización durante drag');
+      return;
+    }
+
+    const marker = markerRef.current;
+    const currentLngLat = marker.getLngLat();
+
+    // Solo actualizar si la posición cambió significativamente (más de 0.0001 grados)
+    const hasChanged = 
+      Math.abs(currentLngLat.lat - entity.latitude) > 0.0001 ||
+      Math.abs(currentLngLat.lng - entity.longitude) > 0.0001;
+
+    if (hasChanged) {
+      console.log('🔄 Actualizando posición del marcador desde Supabase (otro usuario):', {
+        entity: entity.name,
+        old: { lat: currentLngLat.lat.toFixed(4), lng: currentLngLat.lng.toFixed(4) },
+        new: { lat: entity.latitude.toFixed(4), lng: entity.longitude.toFixed(4) }
+      });
+      
+      // Actualizar posición con animación suave
+      marker.setLngLat([entity.longitude, entity.latitude]);
+      
+      // Asegurar que el marcador sea visible
+      const el = marker.getElement();
+      if (el) {
+        el.style.display = 'block';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+      }
+    }
+  }, [entity.latitude, entity.longitude, entity.name]);
 
   return null; // Este componente no renderiza nada en React, solo en Mapbox
 }
