@@ -88,7 +88,7 @@ export default function MapContainer() {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       {/* 🧭 Barra de navegación lateral izquierda */}
       <NavigationBar />
 
@@ -102,10 +102,14 @@ export default function MapContainer() {
       {/* Contenedor del mapa - siempre ocupa todo el espacio disponible */}
       <div
         ref={mapContainer}
-        className="absolute inset-0"
         style={{
-          left: '64px', // Solo espacio para la barra de navegación lateral
-          transition: 'none' // Sin transición para evitar movimientos
+          position: 'absolute',
+          top: 0,
+          left: '64px', // Espacio para la barra de navegación lateral
+          right: 0,
+          bottom: 0,
+          transition: 'none', // Sin transición para evitar movimientos
+          border: '2px solid red' // DEBUG: borde rojo para verificar visibilidad
         }}
       />
 
