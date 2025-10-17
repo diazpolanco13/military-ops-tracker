@@ -67,12 +67,6 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   useEffect(() => {
     if (!map || !entity) return;
 
-    console.log(`🎨 CREANDO MARCADOR para ${entity.name} en:`, {
-      lat: entity.latitude,
-      lng: entity.longitude,
-      position: entity.position
-    });
-
     // Crear elemento del marcador (contenedor principal)
     const el = document.createElement('div');
     el.className = 'entity-marker-container';
@@ -168,18 +162,13 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     });
 
     // Crear marcador de Mapbox SIN POPUP (redundante)
-    const initialPosition = [entity.longitude, entity.latitude];
-    console.log(`📍 Posición inicial del marcador [${entity.name}]:`, initialPosition);
-    
     const marker = new mapboxgl.Marker({
       element: el,
       anchor: 'center',
       draggable: true,
     })
-      .setLngLat(initialPosition)
+      .setLngLat([entity.longitude, entity.latitude])
       .addTo(map);
-    
-    console.log(`✅ Marcador agregado al mapa para ${entity.name}`);
 
     // 🎯 EVENT LISTENERS PARA DRAG & DROP
 
@@ -192,9 +181,6 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     // Cuando termina de arrastrar
     marker.on('dragend', async () => {
       const newLngLat = marker.getLngLat();
-      
-      console.log(`🎯 DRAGEND [${entity.name}]`);
-      console.log(`📍 Nueva posición: lat=${newLngLat.lat.toFixed(6)}, lng=${newLngLat.lng.toFixed(6)}`);
 
       // 🚀 ACTUALIZAR POSICIÓN EN SUPABASE
       if (onPositionChange) {
@@ -203,7 +189,6 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
             latitude: newLngLat.lat,
             longitude: newLngLat.lng,
           });
-          console.log(`✅ Posición guardada en Supabase`);
         } catch (error) {
           console.error(`❌ Error al guardar posición:`, error);
           // Revertir posición si falla
@@ -254,10 +239,6 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       Math.abs(currentLngLat.lng - entity.longitude) > 0.0001;
 
     if (hasChanged) {
-      console.log(
-        `🔄 ACTUALIZAR [${entity.name}]: (${currentLngLat.lat.toFixed(6)}, ${currentLngLat.lng.toFixed(6)}) → (${entity.latitude.toFixed(6)}, ${entity.longitude.toFixed(6)})`
-      );
-
       marker.setLngLat([entity.longitude, entity.latitude]);
     }
   }, [entity.latitude, entity.longitude, entity.name]);

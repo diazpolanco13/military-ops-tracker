@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Settings } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
 import TemplateCard from './TemplateCard';
+import TemplateAdminPanel from './TemplateAdminPanel';
 
 /**
  * Panel lateral de paleta de plantillas tipo IBM Analyst's Notebook
@@ -20,6 +21,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
   }); // Algunos tipos expandidos por defecto
   const [favorites, setFavorites] = useState([]);
   const [topTemplates, setTopTemplates] = useState([]);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // Cargar plantillas más usadas
   useEffect(() => {
@@ -273,16 +275,27 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
 
       {/* Footer con botones de acción */}
       <div className="p-4 border-t border-slate-700 bg-slate-800 space-y-2">
-        <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+        <button 
+          onClick={() => setShowAdminPanel(true)}
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+        >
           <Plus size={16} />
           <span className="text-sm font-medium">Crear Plantilla</span>
         </button>
         
-        <button className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors">
+        <button 
+          onClick={() => setShowAdminPanel(true)}
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg transition-colors"
+        >
           <Settings size={16} />
           <span className="text-sm font-medium">Administrar Plantillas</span>
         </button>
       </div>
+
+      {/* Panel de Administración */}
+      {showAdminPanel && (
+        <TemplateAdminPanel onClose={() => setShowAdminPanel(false)} />
+      )}
     </div>
   );
 }

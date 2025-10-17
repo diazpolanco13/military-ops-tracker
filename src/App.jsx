@@ -10,17 +10,15 @@ function App() {
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
-    console.log('Template seleccionada:', template);
     setSelectedTemplate(template);
     setDropPosition(null); // Reset position
   };
 
   const handleDragTemplate = (template, event) => {
-    console.log('Arrastrando template:', template);
+    // Callback cuando se arrastra una plantilla
   };
 
   const handleTemplateDrop = (template, position) => {
-    console.log('Template soltada:', template, 'en posición:', position);
     setSelectedTemplate(template);
     setDropPosition(position);
   };
@@ -36,17 +34,12 @@ function App() {
     const result = await createFromTemplate(entityData, selectedTemplate);
     
     if (result.success) {
-      console.log('✅ Entidad creada exitosamente:', result.data);
       handleCloseModal();
       
       // Agregar entidad directamente al estado sin refetch completo
-      // Esto evita el salto/parpadeo de todas las entidades
       if (window.addEntityDirectly && result.data) {
         window.addEntityDirectly(result.data);
-        console.log('🎯 Entidad agregada directamente al mapa');
       }
-      
-      // TODO: Mostrar toast de éxito
     } else {
       alert(`Error al crear entidad: ${result.error}`);
     }

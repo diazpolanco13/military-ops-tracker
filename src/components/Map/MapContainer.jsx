@@ -41,7 +41,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
   const handlePositionChange = async (entityId, newPosition) => {
     try {
       await updatePosition(entityId, newPosition);
-      console.log(`✅ ${entityId} movido a:`, newPosition);
     } catch (err) {
       console.error('❌ Error al mover entidad:', err);
       alert('Error al actualizar posición. Por favor, intenta de nuevo.');
@@ -79,11 +78,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
       'bottom-left'
     );
 
-    // Log cuando el mapa esté listo
+    // Cuando el mapa esté listo
     map.current.on('load', () => {
-      console.log('✅ Mapa del Caribe cargado correctamente');
-      console.log('📍 Centro:', MAP_CONFIG.center);
-      console.log('🔍 Zoom:', MAP_CONFIG.zoom);
       setMapLoaded(true);
     });
 
@@ -127,8 +123,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;
           const lngLat = map.current.unproject([x, y]);
-
-          console.log('📍 Template soltada en:', lngLat);
           
           // Notificar al componente padre
           if (onTemplateDrop) {

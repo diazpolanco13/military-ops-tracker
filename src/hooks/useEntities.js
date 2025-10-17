@@ -23,7 +23,6 @@ export function useEntities() {
 
       setEntities(data || []);
       setError(null);
-      console.log('✅ Entidades cargadas:', data?.length);
     } catch (err) {
       console.error('❌ Error al cargar entidades:', err);
       setError(err.message);
@@ -74,7 +73,6 @@ export function useEntities() {
   // Función para agregar una entidad manualmente (sin refetch completo)
   const addEntity = (newEntity) => {
     setEntities((prev) => [...prev, newEntity]);
-    console.log('✅ Entidad agregada al estado:', newEntity.name);
   };
 
   return { entities, loading, error, refetch: fetchEntities, addEntity };
