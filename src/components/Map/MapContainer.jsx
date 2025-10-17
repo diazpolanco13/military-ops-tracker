@@ -23,15 +23,16 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
 
   // 📡 Obtener entidades desde Supabase con función de refetch
-  const { entities, loading, error, refetch, addEntity } = useEntities();
+  const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
 
   // Exponer funciones al componente padre
   useEffect(() => {
     if (onRefetchNeeded) {
       window.refetchEntities = refetch;
       window.addEntityDirectly = addEntity;
+      window.removeEntityDirectly = removeEntity;
     }
-  }, [refetch, addEntity, onRefetchNeeded]);
+  }, [refetch, addEntity, removeEntity, onRefetchNeeded]);
 
   
   // 🎯 Hook para actualizar posiciones

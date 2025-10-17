@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search, Settings } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
 
 /**

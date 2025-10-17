@@ -1,4 +1,5 @@
-import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship, Anchor, Plane, Users } from 'lucide-react';
+import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship, Anchor, Plane, Users, Edit2, Eye, EyeOff, Archive, Trash2 } from 'lucide-react';
+import { useEntityActions } from '../../hooks/useEntityActions';
 
 const TYPE_ICONS = {
   destructor: Ship,
@@ -47,6 +48,52 @@ const STATUS_CONFIG = {
  * Panel lateral profesional que muestra información completa
  */
 export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }) {
+  const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
+
+  // Handlers para las acciones
+  const handleToggleVisibility = async () => {
+    const result = await toggleVisibility(entity.id, entity.is_visible);
+    if (result.success) {
+      // Remover del estado para que desaparezca inmediatamente
+      if (window.removeEntityDirectly) {
+        window.removeEntityDirectly(entity.id);
+      }
+      onClose();
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!confirm(`¿Archivar "${entity.name}"? Se puede restaurar después.`)) return;
+    
+    const result = await archiveEntity(entity.id);
+    if (result.success) {
+      // Remover del estado para que desaparezca inmediatamente
+      if (window.removeEntityDirectly) {
+        window.removeEntityDirectly(entity.id);
+      }
+      onClose();
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${entity.name}"?`)) return;
+    if (!confirm(`Esta acción NO se puede deshacer. ¿Estás seguro?`)) return;
+    
+    const result = await deleteEntity(entity.id);
+    if (result.success) {
+      // Remover del estado para que desaparezca inmediatamente
+      if (window.removeEntityDirectly) {
+        window.removeEntityDirectly(entity.id);
+      }
+      onClose();
+    } else {
+      alert(`Error: ${result.error}`);
+    }
+  };
 
   // Estado vacío cuando no hay entidad
   if (!entity) {
@@ -285,8 +332,69 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
             </div>
           )}
 
+          {/* Sección de Acciones */}
+          <div className="pt-4 border-t border-slate-700/50 space-y-2">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Acciones
+            </h3>
+
+            {/* Fila 1: Editar y Visibilidad */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => alert('Función de editar en desarrollo')}
+                disabled={processing}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+                title="Editar entidad"
+              >
+                <Edit2 size={16} />
+                Editar
+              </button>
+              
+              <button
+                onClick={handleToggleVisibility}
+                disabled={processing}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
+                title={entity?.is_visible ? 'Ocultar del mapa' : 'Mostrar en mapa'}
+              >
+                {entity?.is_visible ? <EyeOff size={16} /> : <Eye size={16} />}
+                {entity?.is_visible ? 'Ocultar' : 'Mostrar'}
+              </button>
+            </div>
+
+            {/* Fila 2: Archivar y Eliminar */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={handleArchive}
+                disabled={processing}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-yellow-900/30 hover:bg-yellow-900/50 disabled:opacity-50 disabled:cursor-not-allowed text-yellow-400 rounded-lg transition-colors text-sm font-medium"
+                title="Archivar entidad"
+              >
+                <Archive size={16} />
+                Archivar
+              </button>
+              
+              <button
+                onClick={handleDelete}
+                disabled={processing}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-400 rounded-lg transition-colors text-sm font-medium"
+                title="Eliminar permanentemente"
+              >
+                <Trash2 size={16} />
+                Eliminar
+              </button>
+            </div>
+
+            {/* Indicador de procesamiento */}
+            {processing && (
+              <div className="flex items-center justify-center gap-2 text-blue-400 text-sm">
+                <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                Procesando...
+              </div>
+            )}
+          </div>
+
           {/* Footer con última actualización */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-700/50">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-700/50 mt-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-3.5 h-3.5 text-slate-500" />
               <span className="text-xs text-slate-500">

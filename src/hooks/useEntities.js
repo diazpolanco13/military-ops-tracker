@@ -17,6 +17,8 @@ export function useEntities() {
       const { data, error } = await supabase
         .from('entities')
         .select('*')
+        .eq('is_visible', true) // Solo visibles
+        .is('archived_at', null) // Solo no archivadas
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -75,6 +77,11 @@ export function useEntities() {
     setEntities((prev) => [...prev, newEntity]);
   };
 
-  return { entities, loading, error, refetch: fetchEntities, addEntity };
+  // Función para remover una entidad del estado (cuando se oculta/archiva/elimina)
+  const removeEntity = (entityId) => {
+    setEntities((prev) => prev.filter(e => e.id !== entityId));
+  };
+
+  return { entities, loading, error, refetch: fetchEntities, addEntity, removeEntity };
 }
 
