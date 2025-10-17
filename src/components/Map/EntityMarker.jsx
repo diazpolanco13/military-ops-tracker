@@ -67,14 +67,16 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   useEffect(() => {
     if (!map || !entity) return;
 
-    // Crear elemento del marcador
+    // Crear elemento del marcador (contenedor principal)
     const el = document.createElement('div');
-    el.className = 'entity-marker';
+    el.className = 'entity-marker-container';
     el.style.cursor = 'grab';
-    el.style.width = `${getEntitySize(entity.type)}px`;
-    el.style.height = `${getEntitySize(entity.type)}px`;
+    el.style.display = 'flex';
+    el.style.flexDirection = 'column';
+    el.style.alignItems = 'center';
+    el.style.gap = '4px';
 
-    // Renderizar icono o imagen del barco
+    // Renderizar icono o imagen del barco con etiqueta
     const color = getEntityColor(entity.type);
     const size = getEntitySize(entity.type);
 
@@ -82,22 +84,39 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     if (entity.image_thumbnail_url) {
       const root = createRoot(el);
       root.render(
-        <div
-          className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
-          style={{ 
-            borderColor: color,
-            width: `${size}px`,
-            height: `${size}px`,
-          }}
-        >
-          <img 
-            src={entity.image_thumbnail_url}
-            alt={entity.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.target.style.display = 'none';
+        <div className="flex flex-col items-center gap-1">
+          {/* Icono/Imagen */}
+          <div
+            className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
+            style={{ 
+              borderColor: color,
+              width: `${size}px`,
+              height: `${size}px`,
             }}
-          />
+          >
+            <img 
+              src={entity.image_thumbnail_url}
+              alt={entity.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          </div>
+          
+          {/* Etiqueta con nombre */}
+          <div 
+            className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
+            style={{ 
+              borderColor: color,
+              borderWidth: '1px',
+              maxWidth: '150px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {entity.name}
+          </div>
         </div>
       );
     } else {
@@ -105,15 +124,32 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       const Icon = getEntityIcon(entity.type);
       const root = createRoot(el);
       root.render(
-        <div
-          className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
-          style={{ 
-            borderColor: color,
-            width: `${size}px`,
-            height: `${size}px`,
-          }}
-        >
-          <Icon size={size * 0.6} color={color} strokeWidth={2.5} />
+        <div className="flex flex-col items-center gap-1">
+          {/* Icono */}
+          <div
+            className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
+            style={{ 
+              borderColor: color,
+              width: `${size}px`,
+              height: `${size}px`,
+            }}
+          >
+            <Icon size={size * 0.6} color={color} strokeWidth={2.5} />
+          </div>
+          
+          {/* Etiqueta con nombre */}
+          <div 
+            className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
+            style={{ 
+              borderColor: color,
+              borderWidth: '1px',
+              maxWidth: '150px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
+            {entity.name}
+          </div>
         </div>
       );
     }

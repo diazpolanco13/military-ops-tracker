@@ -14,15 +14,22 @@ import { Upload } from 'lucide-react';
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer() {
+export default function MapContainer({ onRefetchNeeded }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
 
-  // 📡 Obtener entidades desde Supabase
-  const { entities, loading, error } = useEntities();
+  // 📡 Obtener entidades desde Supabase con función de refetch
+  const { entities, loading, error, refetch } = useEntities();
+
+  // Exponer refetch al componente padre
+  useEffect(() => {
+    if (onRefetchNeeded && refetch) {
+      window.refetchEntities = refetch;
+    }
+  }, [refetch, onRefetchNeeded]);
 
   
   // 🎯 Hook para actualizar posiciones

@@ -10,28 +10,29 @@ export function useEntities() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    // 📡 Función para cargar entidades
-    async function fetchEntities() {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('entities')
-          .select('*')
-          .order('name', { ascending: true });
+  // 📡 Función para cargar entidades (extraída para reutilizar)
+  const fetchEntities = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const { data, error } = await supabase
+        .from('entities')
+        .select('*')
+        .order('name', { ascending: true });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setEntities(data || []);
-        setError(null);
-      } catch (err) {
-        console.error('❌ Error al cargar entidades:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      setEntities(data || []);
+      setError(null);
+      console.log('✅ Entidades cargadas:', data?.length);
+    } catch (err) {
+      console.error('❌ Error al cargar entidades:', err);
+      setError(err.message);
+    } finally {
+      if (!silent) setLoading(false);
     }
+  };
 
+  useEffect(() => {
     fetchEntities();
 
     // 🔄 Suscripción a cambios en tiempo real
@@ -70,6 +71,6 @@ export function useEntities() {
     };
   }, []);
 
-  return { entities, loading, error };
+  return { entities, loading, error, refetch: fetchEntities };
 }
 
