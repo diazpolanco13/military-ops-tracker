@@ -2,23 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
-import MapStyleSelector from './MapStyleSelector';
 import EntityMarker from './EntityMarker';
 import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
-import ImageUploadDemo from '../ImageUploadDemo';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
-import NavigationBar from '../Sidebar/NavigationBar';
-import { Upload } from 'lucide-react';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onTogglePalette, showPalette }) {
+export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPalette, onMapReady }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [showImageUploader, setShowImageUploader] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
 
@@ -82,6 +77,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onToggle
     // Cuando el mapa esté listo
     map.current.on('load', () => {
       setMapLoaded(true);
+      // Exponer mapa al componente padre
+      if (onMapReady) {
+        onMapReady(map.current);
+      }
     });
 
     // 🎯 EVENT HANDLERS PARA DRAG & DROP DE PLANTILLAS
@@ -156,12 +155,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onToggle
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* 🧭 Barra de navegación lateral izquierda - Fixed, fuera del flujo */}
-      <NavigationBar 
-        onTogglePalette={onTogglePalette}
-        paletteVisible={showPalette}
-      />
-      
       {/* Sidebar de detalles - Fixed, fuera del flujo */}
       <EntityDetailsSidebar
         entity={selectedEntity}
@@ -169,19 +162,21 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onToggle
         isOpen={!!selectedEntity}
       />
 
-      {/* Contenedor del mapa - Ocupa todo el espacio, compensando la NavigationBar */}
+      {/* Contenedor del mapa - Empieza después de navbar */}
       <div
         ref={mapContainer}
         className={dragPreview ? 'map-drop-active' : ''}
         style={{
-          width: '100%',
-          height: '100%',
-          paddingLeft: '64px' // Espacio para la NavigationBar
+          position: 'absolute',
+          top: '56px', // Empieza después de TopNavbar
+          left: 0,
+          right: 0,
+          bottom: 0
         }}
       />
 
-      {/* Selector de estilos de mapa */}
-      {mapLoaded && <MapStyleSelector map={map.current} />}
+      {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
+      {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
       {/* Marcadores de entidades militares */}
       {mapLoaded && !loading && entities.map((entity) => (
@@ -231,21 +226,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onToggle
         </div>
       )}
 
-      {/* Botón para abrir el uploader de imágenes */}
-      {mapLoaded && (
-        <button
-          onClick={() => setShowImageUploader(true)}
-          className="absolute top-20 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2 transition-all"
-        >
-          <Upload className="w-4 h-4" />
-          Subir Imágenes
-        </button>
-      )}
-
-      {/* Modal de subida de imágenes */}
-      {showImageUploader && (
-        <ImageUploadDemo onClose={() => setShowImageUploader(false)} />
-      )}
+      {/* Botón de subida de imágenes - ELIMINADO, ahora integrado en plantillas y formularios */}
     </div>
   );
 }

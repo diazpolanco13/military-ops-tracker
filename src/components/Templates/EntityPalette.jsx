@@ -108,8 +108,12 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
 
   return (
     <div 
-      className="fixed left-16 top-0 w-80 bg-slate-900 border-r border-slate-700 flex flex-col h-screen palette-enter shadow-2xl" 
-      style={{ zIndex: 40 }}
+      className="fixed left-0 w-80 bg-slate-900 border-r border-slate-700 flex flex-col palette-enter shadow-2xl" 
+      style={{ 
+        zIndex: 40,
+        top: '56px', // Después de TopNavbar
+        height: 'calc(100vh - 56px)'
+      }}
     >
       {/* Header - Siempre visible desde el inicio */}
       <div className="p-4 border-b border-slate-700 bg-slate-800">

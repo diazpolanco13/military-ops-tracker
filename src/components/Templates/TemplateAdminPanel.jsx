@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search, Settings } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search, Settings, Upload, Image as ImageIcon } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
+import ImageUploader from '../ImageUploader';
 
 /**
  * Panel de Administración de Plantillas
@@ -19,6 +20,8 @@ export default function TemplateAdminPanel({ onClose }) {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState(getEmptyForm());
+  const [showImageUploader, setShowImageUploader] = useState(false);
+  const [uploadingForTemplate, setUploadingForTemplate] = useState(null); // ID temporal para upload
 
   // Formulario vacío por defecto
   function getEmptyForm() {
@@ -45,6 +48,7 @@ export default function TemplateAdminPanel({ onClose }) {
       era: 'moderno',
       armamento: '',
       icon_color: '#3b82f6',
+      image_url: '',
     };
   }
 
@@ -108,6 +112,16 @@ export default function TemplateAdminPanel({ onClose }) {
   const handleEdit = (template) => {
     setSelectedTemplate(template);
     setMode('edit');
+  };
+
+  const handleImageUploadComplete = (urls) => {
+    // Actualizar formData con las URLs de las imágenes subidas
+    setFormData({
+      ...formData,
+      image_url: urls.full,
+      icon_url: urls.thumbnail // Para icono pequeño
+    });
+    setShowImageUploader(false);
   };
 
   const filteredTemplates = templates.filter(t =>
@@ -599,6 +613,49 @@ export default function TemplateAdminPanel({ onClose }) {
                         <option value="clasico">Clásico</option>
                       </select>
                     </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Imagen de la Plantilla
+                      </label>
+                      
+                      {formData.image_url ? (
+                        <div className="flex items-center gap-3 p-3 bg-slate-900 border border-slate-600 rounded-lg">
+                          <img 
+                            src={formData.image_url} 
+                            alt="Preview" 
+                            className="w-16 h-16 object-cover rounded-lg"
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm text-white">Imagen cargada</p>
+                            <p className="text-xs text-slate-400 truncate">{formData.image_url}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({...formData, image_url: '', icon_url: ''})}
+                            className="p-2 hover:bg-slate-700 rounded-lg text-red-400 transition-colors"
+                          >
+                            <X size={18} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadingForTemplate('temp');
+                            setShowImageUploader(true);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border-2 border-dashed border-blue-500/50 hover:border-blue-500 text-blue-300 rounded-lg transition-all"
+                        >
+                          <Upload size={20} />
+                          <span>Subir Imagen a Supabase Storage</span>
+                        </button>
+                      )}
+                      
+                      <p className="text-xs text-slate-500 mt-1.5">
+                        💡 Esta imagen será heredada por todas las entidades creadas desde esta plantilla
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -628,6 +685,32 @@ export default function TemplateAdminPanel({ onClose }) {
           )}
         </div>
       </div>
+
+      {/* Modal de subida de imagen */}
+      {showImageUploader && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[300]">
+          <div className="bg-slate-900 rounded-xl p-6 max-w-2xl w-full mx-4 border border-slate-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <ImageIcon size={20} />
+                Subir Imagen de Plantilla
+              </h3>
+              <button
+                onClick={() => setShowImageUploader(false)}
+                className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <ImageUploader
+              entityId="template-temp"
+              entityName={formData.display_name || 'Plantilla'}
+              onUploadComplete={handleImageUploadComplete}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

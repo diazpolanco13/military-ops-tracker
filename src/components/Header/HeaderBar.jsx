@@ -59,12 +59,15 @@ export default function HeaderBar({ paletteVisible }) {
   // Si no hay selección, no mostrar nada
   if (selectedCount === 0) return null;
 
-  const leftOffset = paletteVisible ? '384px' : '64px'; // Ajustar según paleta
+  const leftOffset = paletteVisible ? '320px' : '0px'; // Ajustar según paleta (sin NavigationBar lateral)
 
   return (
     <div 
-      className="fixed top-0 right-0 z-[60] bg-gradient-to-r from-yellow-900/20 via-slate-900/95 to-slate-900/95 backdrop-blur-md border-b-2 border-yellow-500/30 shadow-xl transition-all duration-300"
-      style={{ left: leftOffset }}
+      className="fixed right-0 z-[60] bg-gradient-to-r from-yellow-900/20 via-slate-900/95 to-slate-900/95 backdrop-blur-md border-b-2 border-yellow-500/30 shadow-xl transition-all duration-300"
+      style={{ 
+        left: leftOffset,
+        top: '56px' // Después de TopNavbar
+      }}
     >
       <div className="flex items-center justify-between px-6 py-2.5">
         {/* Contador de selección */}

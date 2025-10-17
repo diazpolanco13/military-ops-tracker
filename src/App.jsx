@@ -1,7 +1,7 @@
 import MapContainer from './components/Map/MapContainer';
 import EntityPalette from './components/Templates/EntityPalette';
 import InstantiateModal from './components/Templates/InstantiateModal';
-import HeaderBar from './components/Header/HeaderBar';
+import TopNavigationBar from './components/Navigation/TopNavigationBar';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -10,6 +10,7 @@ function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
+  const [mapInstance, setMapInstance] = useState(null); // Referencia al mapa para navbar
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -50,16 +51,22 @@ function App() {
 
   return (
     <SelectionProvider>
-      {/* Header superior con contador y acciones */}
-      <HeaderBar paletteVisible={showPalette} />
+      {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
+      <TopNavigationBar 
+        onTogglePalette={() => setShowPalette(!showPalette)}
+        paletteVisible={showPalette}
+        map={mapInstance}
+      />
+
+      {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
       
       <div className="h-screen">
         {/* Mapa ocupa todo el espacio */}
         <MapContainer 
           onRefetchNeeded={true}
           onTemplateDrop={handleTemplateDrop}
-          onTogglePalette={() => setShowPalette(!showPalette)}
           showPalette={showPalette}
+          onMapReady={setMapInstance}
         />
         
         {/* Paleta como overlay (fixed) */}

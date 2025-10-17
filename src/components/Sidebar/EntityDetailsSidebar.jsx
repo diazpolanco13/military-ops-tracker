@@ -99,10 +99,15 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
   if (!entity) {
     return (
       <div
-        className={`fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-l border-slate-700 transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
-        style={{ left: '64px', zIndex: 45 }}
+        style={{ 
+          right: 0,
+          top: '56px', // Después de TopNavbar
+          height: 'calc(100vh - 56px)',
+          zIndex: 60 
+        }}
       >
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="text-center text-slate-400">
@@ -129,10 +134,15 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
 
   return (
     <div
-      className={`fixed top-0 h-screen w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+      className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-l border-slate-700 transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
-      style={{ left: '64px', zIndex: 45 }}
+      style={{ 
+        right: 0,
+        top: '56px', // Después de TopNavbar
+        height: 'calc(100vh - 56px)',
+        zIndex: 60 
+      }}
     >
       {/* Header con imagen/video de fondo */}
       <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
