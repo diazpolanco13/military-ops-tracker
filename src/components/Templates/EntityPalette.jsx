@@ -14,11 +14,8 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // all, favorites, recent
-  const [expandedCategories, setExpandedCategories] = useState({ militar: true }); // Militar expandido por defecto
-  const [expandedTypes, setExpandedTypes] = useState({ 
-    'militar-destructor': true,
-    'militar-avion': true
-  }); // Algunos tipos expandidos por defecto
+  const [expandedCategories, setExpandedCategories] = useState({}); // TODO colapsado por defecto
+  const [expandedTypes, setExpandedTypes] = useState({}); // TODO colapsado por defecto
   const [favorites, setFavorites] = useState([]);
   const [topTemplates, setTopTemplates] = useState([]);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -107,20 +104,14 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     tanque: '🛡️ Vehículos',
   };
 
-  if (loading) {
-    return (
-      <div className="w-80 bg-slate-900 border-r border-slate-700 flex items-center justify-center">
-        <div className="text-white">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p className="text-sm">Cargando plantillas...</p>
-        </div>
-      </div>
-    );
-  }
+  // NO bloquear con loading - mostrar la UI vacía mientras carga
 
   return (
-    <div className="w-80 bg-slate-900 border-r border-slate-700 flex flex-col h-screen relative" style={{ zIndex: 40, marginLeft: '64px' }}>
-      {/* Header */}
+    <div 
+      className="fixed left-16 top-0 w-80 bg-slate-900 border-r border-slate-700 flex flex-col h-screen palette-enter shadow-2xl" 
+      style={{ zIndex: 40 }}
+    >
+      {/* Header - Siempre visible desde el inicio */}
       <div className="p-4 border-b border-slate-700 bg-slate-800">
         <h2 className="text-lg font-bold text-white mb-3">
           🎨 Paleta de Entidades
@@ -136,6 +127,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={loading}
           />
         </div>
 
@@ -177,7 +169,25 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
       </div>
 
       {/* Contenido scrolleable */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-slate-900">
+        {/* Indicador de carga con skeleton */}
+        {loading && (
+          <div className="space-y-3">
+            {/* Skeleton placeholders */}
+            {[1, 2, 3].map(i => (
+              <div key={i} className="border border-slate-700 rounded-lg overflow-hidden animate-pulse">
+                <div className="p-3 bg-slate-800">
+                  <div className="h-4 bg-slate-700 rounded w-32 mb-2"></div>
+                  <div className="h-3 bg-slate-700 rounded w-20"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Contenido normal */}
+        {!loading && (
+          <>
         {/* Resultados de búsqueda */}
         {searchTerm && (
           <div className="space-y-2">
@@ -271,6 +281,8 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
             )}
           </div>
         ))}
+        </>
+        )}
       </div>
 
       {/* Footer con botones de acción */}

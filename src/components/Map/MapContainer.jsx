@@ -14,7 +14,7 @@ import { Upload } from 'lucide-react';
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
+export default function MapContainer({ onRefetchNeeded, onTemplateDrop, onTogglePalette, showPalette }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -157,7 +157,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       {/* 🧭 Barra de navegación lateral izquierda - Fixed, fuera del flujo */}
-      <NavigationBar />
+      <NavigationBar 
+        onTogglePalette={onTogglePalette}
+        paletteVisible={showPalette}
+      />
       
       {/* Sidebar de detalles - Fixed, fuera del flujo */}
       <EntityDetailsSidebar

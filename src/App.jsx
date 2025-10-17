@@ -1,12 +1,15 @@
 import MapContainer from './components/Map/MapContainer';
 import EntityPalette from './components/Templates/EntityPalette';
 import InstantiateModal from './components/Templates/InstantiateModal';
+import HeaderBar from './components/Header/HeaderBar';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
+import { SelectionProvider } from './stores/SelectionContext';
 
 function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
+  const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -46,36 +49,47 @@ function App() {
   };
 
   return (
-    <div className="flex h-screen">
-      <EntityPalette 
-        onSelectTemplate={handleSelectTemplate}
-        onDragTemplate={handleDragTemplate}
-      />
-      <div className="flex-1">
+    <SelectionProvider>
+      {/* Header superior con contador y acciones */}
+      <HeaderBar paletteVisible={showPalette} />
+      
+      <div className="h-screen">
+        {/* Mapa ocupa todo el espacio */}
         <MapContainer 
           onRefetchNeeded={true}
           onTemplateDrop={handleTemplateDrop}
+          onTogglePalette={() => setShowPalette(!showPalette)}
+          showPalette={showPalette}
         />
+        
+        {/* Paleta como overlay (fixed) */}
+        {showPalette && (
+          <EntityPalette 
+            onSelectTemplate={handleSelectTemplate}
+            onDragTemplate={handleDragTemplate}
+            onClose={() => setShowPalette(false)}
+          />
+        )}
+
+        {/* Modal de instanciación */}
+        {selectedTemplate && (
+          <InstantiateModal
+            template={selectedTemplate}
+            position={dropPosition}
+            onClose={handleCloseModal}
+            onConfirm={handleConfirmCreate}
+          />
+        )}
+
+        {/* Indicador de creación */}
+        {creating && (
+          <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 z-50">
+            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+            <span>Creando entidad...</span>
+          </div>
+        )}
       </div>
-
-      {/* Modal de instanciación */}
-      {selectedTemplate && (
-        <InstantiateModal
-          template={selectedTemplate}
-          position={dropPosition}
-          onClose={handleCloseModal}
-          onConfirm={handleConfirmCreate}
-        />
-      )}
-
-      {/* Indicador de creación */}
-      {creating && (
-        <div className="fixed bottom-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 z-50">
-          <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-          <span>Creando entidad...</span>
-        </div>
-      )}
-    </div>
+    </SelectionProvider>
   );
 }
 

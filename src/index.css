@@ -45,6 +45,37 @@
   cursor: copy !important;
 }
 
+/* Animación suave para paleta de entidades */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.palette-enter {
+  animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.palette-exit {
+  animation: slideOutToLeft 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
 /* Scrollbar personalizado estilo profesional */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;

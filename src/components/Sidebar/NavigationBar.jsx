@@ -7,14 +7,15 @@ import {
   Settings,
   Anchor,
   Filter,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN LATERAL IZQUIERDA
  * Estilo VesselFinder con iconos y menús desplegables
  */
-export default function NavigationBar({ onFilterChange }) {
+export default function NavigationBar({ onFilterChange, onTogglePalette, paletteVisible }) {
   const [activePanel, setActivePanel] = useState(null);
 
   const togglePanel = (panelName) => {
@@ -35,6 +36,14 @@ export default function NavigationBar({ onFilterChange }) {
         </button>
 
         <div className="w-10 h-px bg-slate-700 my-1" />
+
+        {/* 🎨 Paleta de Plantillas */}
+        <NavButton
+          icon={<Layers className="w-5 h-5" />}
+          active={paletteVisible}
+          onClick={onTogglePalette}
+          title="Paleta de Plantillas"
+        />
 
         {/* ⭐ Favoritos */}
         <NavButton

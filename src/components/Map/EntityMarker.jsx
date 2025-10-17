@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { Ship, Anchor, Plane } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
+import { useSelection } from '../../stores/SelectionContext';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -61,7 +62,12 @@ function getEntitySize(type) {
  */
 export default function EntityMarker({ entity, map, onPositionChange, onEntityClick }) {
   const markerRef = useRef(null);
+  const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
+  const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
+
+  // Verificar si esta entidad está seleccionada
+  const selected = isSelected(entity.id);
 
   // 🎯 CREAR EL MARCADOR (solo una vez)
   useEffect(() => {
@@ -87,7 +93,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
         <div className="flex flex-col items-center gap-1">
           {/* Icono/Imagen */}
           <div
-            className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
+            className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
             style={{ 
               borderColor: color,
               width: `${size}px`,
@@ -127,7 +133,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
         <div className="flex flex-col items-center gap-1">
           {/* Icono */}
           <div
-            className="flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
+            className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
             style={{ 
               borderColor: color,
               width: `${size}px`,
@@ -154,10 +160,23 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       );
     }
 
-    // 🎯 Event listener para click en el marcador (abrir sidebar)
-    el.addEventListener('click', () => {
-      if (onEntityClick && !isDraggingRef.current) {
-        onEntityClick();
+    // 🎯 Event listener para click en el marcador (selección o sidebar)
+    el.addEventListener('click', (e) => {
+      if (isDraggingRef.current) return; // Ignorar si es drag
+      
+      // Detectar Ctrl/Cmd directamente del evento del mouse
+      const ctrlPressed = e.ctrlKey || e.metaKey;
+      
+      if (ctrlPressed) {
+        // Ctrl+Click: Agregar/quitar de selección múltiple
+        addToSelection(entity.id);
+        e.stopPropagation();
+      } else {
+        // Click normal: Seleccionar solo esta + abrir sidebar
+        selectEntity(entity.id);
+        if (onEntityClick) {
+          onEntityClick();
+        }
       }
     });
 
@@ -203,8 +222,9 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       }, 100); // Pequeño delay para evitar click accidental
     });
 
-    // Guardar referencia
+    // Guardar referencias
     markerRef.current = marker;
+    elementRef.current = el;
 
     // CLEANUP: Remover marcador cuando el componente se desmonta
     return () => {
@@ -242,6 +262,33 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       marker.setLngLat([entity.longitude, entity.latitude]);
     }
   }, [entity.latitude, entity.longitude, entity.name]);
+
+  // 🎨 ACTUALIZAR ESTILOS SEGÚN SELECCIÓN
+  useEffect(() => {
+    if (!elementRef.current) return;
+
+    const el = elementRef.current;
+    const iconElement = el.querySelector('.entity-marker-icon');
+    
+    if (selected) {
+      // Estilos de selección
+      if (iconElement) {
+        iconElement.style.borderColor = '#fbbf24'; // Amarillo
+        iconElement.style.borderWidth = '4px';
+        iconElement.style.boxShadow = '0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3)';
+        iconElement.style.transform = 'scale(1.15)';
+      }
+    } else {
+      // Estilos normales
+      if (iconElement) {
+        const color = getEntityColor(entity.type);
+        iconElement.style.borderColor = color;
+        iconElement.style.borderWidth = '2px';
+        iconElement.style.boxShadow = '';
+        iconElement.style.transform = 'scale(1)';
+      }
+    }
+  }, [selected, entity.type]);
 
   return null; // Este componente no renderiza nada en React, solo en Mapbox
 }
