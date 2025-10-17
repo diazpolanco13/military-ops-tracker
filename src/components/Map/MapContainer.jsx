@@ -88,28 +88,24 @@ export default function MapContainer() {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      {/* 🧭 Barra de navegación lateral izquierda */}
+    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+      {/* 🧭 Barra de navegación lateral izquierda - Fixed, fuera del flujo */}
       <NavigationBar />
-
-      {/* Sidebar de detalles - siempre presente con animación */}
+      
+      {/* Sidebar de detalles - Fixed, fuera del flujo */}
       <EntityDetailsSidebar
         entity={selectedEntity}
         onClose={() => setSelectedEntity(null)}
         isOpen={!!selectedEntity}
       />
 
-      {/* Contenedor del mapa - siempre ocupa todo el espacio disponible */}
+      {/* Contenedor del mapa - Ocupa todo el espacio, compensando la NavigationBar */}
       <div
         ref={mapContainer}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: '64px', // Espacio para la barra de navegación lateral
-          right: 0,
-          bottom: 0,
-          transition: 'none', // Sin transición para evitar movimientos
-          border: '2px solid red' // DEBUG: borde rojo para verificar visibilidad
+          width: '100%',
+          height: '100%',
+          paddingLeft: '64px' // Espacio para la NavigationBar
         }}
       />
 

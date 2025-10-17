@@ -7,7 +7,7 @@ Aplicación web profesional de nivel empresarial para monitorear y rastrear movi
 
 ### Core
 - **Frontend**: React 19 + Vite (aprovechando React Compiler para optimización automática)
-- **Estilos**: Tailwind CSS 4.1 (variables CSS nativas, mejor performance)
+- **Estilos**: Tailwind CSS 3.4.4 
 - **Mapa**: **Mapbox GL JS** (rendimiento superior, estilos profesionales, soporte 3D)
 - **Backend/Base de datos**: Supabase (PostgreSQL + PostGIS + Realtime + Edge Functions + Storage)
 - **Drag & Drop**: @dnd-kit (mejor rendimiento y accesibilidad)
@@ -26,9 +26,9 @@ Aplicación web profesional de nivel empresarial para monitorear y rastrear movi
 ### Herramientas de Desarrollo
 - **MCPs Activos**:
   - Supabase MCP (gestión de BD, migraciones, edge functions)
-  - Context7 MCP (documentación React 19 + Tailwind 4.1)
+  - Context7 MCP (documentación React 19 + Tailwind 3.4.4 )
 
-## Estructura del Proyecto
+## Estructura futura del Proyecto
 ```
 military-ops-tracker/
 ├── src/

@@ -69,7 +69,7 @@ export default function MapStyleSelector({ map }) {
   const Icon = currentStyleOption?.icon || Satellite;
 
   return (
-    <div className="absolute top-4 left-4 z-20">
+    <div className="absolute top-4 right-4 z-20">
       {/* Botón principal */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -89,7 +89,7 @@ export default function MapStyleSelector({ map }) {
 
       {/* Panel de opciones */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-80 bg-slate-800/98 backdrop-blur-md rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-2 w-80 bg-slate-800/98 backdrop-blur-md rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-3 border-b border-slate-700">
             <h3 className="text-sm font-semibold text-white">Estilos de Mapa</h3>
             <p className="text-xs text-slate-400 mt-0.5">Selecciona la vista del mapa</p>
