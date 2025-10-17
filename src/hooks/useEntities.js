@@ -71,6 +71,12 @@ export function useEntities() {
     };
   }, []);
 
-  return { entities, loading, error, refetch: fetchEntities };
+  // Función para agregar una entidad manualmente (sin refetch completo)
+  const addEntity = (newEntity) => {
+    setEntities((prev) => [...prev, newEntity]);
+    console.log('✅ Entidad agregada al estado:', newEntity.name);
+  };
+
+  return { entities, loading, error, refetch: fetchEntities, addEntity };
 }
 

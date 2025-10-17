@@ -19,6 +19,12 @@ function App() {
     console.log('Arrastrando template:', template);
   };
 
+  const handleTemplateDrop = (template, position) => {
+    console.log('Template soltada:', template, 'en posición:', position);
+    setSelectedTemplate(template);
+    setDropPosition(position);
+  };
+
   const handleCloseModal = () => {
     setSelectedTemplate(null);
     setDropPosition(null);
@@ -33,12 +39,11 @@ function App() {
       console.log('✅ Entidad creada exitosamente:', result.data);
       handleCloseModal();
       
-      // Refrescar entidades para que aparezca inmediatamente (silencioso)
-      if (window.refetchEntities) {
-        setTimeout(() => {
-          window.refetchEntities(true); // true = silent (sin mostrar loading)
-          console.log('🔄 Refrescando entidades silenciosamente...');
-        }, 300); // Delay reducido para respuesta más rápida
+      // Agregar entidad directamente al estado sin refetch completo
+      // Esto evita el salto/parpadeo de todas las entidades
+      if (window.addEntityDirectly && result.data) {
+        window.addEntityDirectly(result.data);
+        console.log('🎯 Entidad agregada directamente al mapa');
       }
       
       // TODO: Mostrar toast de éxito
@@ -54,7 +59,10 @@ function App() {
         onDragTemplate={handleDragTemplate}
       />
       <div className="flex-1">
-        <MapContainer onRefetchNeeded={true} />
+        <MapContainer 
+          onRefetchNeeded={true}
+          onTemplateDrop={handleTemplateDrop}
+        />
       </div>
 
       {/* Modal de instanciación */}

@@ -14,22 +14,24 @@ import { Upload } from 'lucide-react';
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer({ onRefetchNeeded }) {
+export default function MapContainer({ onRefetchNeeded, onTemplateDrop }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
 
   // 📡 Obtener entidades desde Supabase con función de refetch
-  const { entities, loading, error, refetch } = useEntities();
+  const { entities, loading, error, refetch, addEntity } = useEntities();
 
-  // Exponer refetch al componente padre
+  // Exponer funciones al componente padre
   useEffect(() => {
-    if (onRefetchNeeded && refetch) {
+    if (onRefetchNeeded) {
       window.refetchEntities = refetch;
+      window.addEntityDirectly = addEntity;
     }
-  }, [refetch, onRefetchNeeded]);
+  }, [refetch, addEntity, onRefetchNeeded]);
 
   
   // 🎯 Hook para actualizar posiciones
@@ -85,8 +87,71 @@ export default function MapContainer({ onRefetchNeeded }) {
       setMapLoaded(true);
     });
 
+    // 🎯 EVENT HANDLERS PARA DRAG & DROP DE PLANTILLAS
+    const mapElement = mapContainer.current;
+
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      
+      // Obtener coordenadas del mapa en la posición del mouse
+      if (map.current) {
+        const rect = mapElement.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const lngLat = map.current.unproject([x, y]);
+        
+        setDragPreview({
+          x: e.clientX,
+          y: e.clientY,
+          lat: lngLat.lat,
+          lng: lngLat.lng
+        });
+      }
+    };
+
+    const handleDragLeave = () => {
+      setDragPreview(null);
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      setDragPreview(null);
+
+      try {
+        const templateData = JSON.parse(e.dataTransfer.getData('application/json'));
+        
+        if (templateData && map.current) {
+          // Obtener coordenadas exactas donde se soltó
+          const rect = mapElement.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          const lngLat = map.current.unproject([x, y]);
+
+          console.log('📍 Template soltada en:', lngLat);
+          
+          // Notificar al componente padre
+          if (onTemplateDrop) {
+            onTemplateDrop(templateData, { lat: lngLat.lat, lng: lngLat.lng });
+          }
+        }
+      } catch (err) {
+        console.error('Error al procesar drop:', err);
+      }
+    };
+
+    // Agregar event listeners
+    mapElement.addEventListener('dragover', handleDragOver);
+    mapElement.addEventListener('dragleave', handleDragLeave);
+    mapElement.addEventListener('drop', handleDrop);
+
     // Cleanup al desmontar
     return () => {
+      // Remover event listeners
+      mapElement.removeEventListener('dragover', handleDragOver);
+      mapElement.removeEventListener('dragleave', handleDragLeave);
+      mapElement.removeEventListener('drop', handleDrop);
+      
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -109,6 +174,7 @@ export default function MapContainer({ onRefetchNeeded }) {
       {/* Contenedor del mapa - Ocupa todo el espacio, compensando la NavigationBar */}
       <div
         ref={mapContainer}
+        className={dragPreview ? 'map-drop-active' : ''}
         style={{
           width: '100%',
           height: '100%',
@@ -144,11 +210,19 @@ export default function MapContainer({ onRefetchNeeded }) {
         </div>
       )}
 
-      {/* Indicador de actualización */}
-      {updating && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-accent-warning/90 backdrop-blur-sm text-white px-4 py-2 rounded-md shadow-lg flex items-center gap-2">
-          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-          Actualizando posición...
+      {/* Indicador de actualización - ELIMINADO (no necesario, la actualización es instantánea) */}
+
+      {/* Preview de coordenadas al arrastrar plantilla */}
+      {dragPreview && (
+        <div 
+          className="fixed pointer-events-none bg-blue-600/95 backdrop-blur-sm text-white px-3 py-2 rounded-lg shadow-xl text-sm font-mono border border-blue-400"
+          style={{
+            left: dragPreview.x + 20,
+            top: dragPreview.y + 20,
+            zIndex: 9999 // Por encima de todo
+          }}
+        >
+          📍 {dragPreview.lat.toFixed(4)}°, {dragPreview.lng.toFixed(4)}°
         </div>
       )}
 

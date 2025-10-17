@@ -26,6 +26,13 @@ export default function TemplateCard({ template, onDragStart, onClick, isFavorit
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(template));
     
+    // Crear una imagen de drag vacía para que no tape nada
+    const dragImage = document.createElement('div');
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-9999px';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    
     // Callback para el padre
     if (onDragStart) {
       onDragStart(template, e);

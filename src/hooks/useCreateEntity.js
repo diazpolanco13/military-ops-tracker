@@ -21,6 +21,13 @@ export function useCreateEntity() {
       // Construir el objeto geography POINT para PostGIS
       const position = `POINT(${entityData.longitude} ${entityData.latitude})`;
 
+      console.log('📝 Datos de entrada:', {
+        name: entityData.name,
+        lat: entityData.latitude,
+        lng: entityData.longitude,
+        position
+      });
+
       // Preparar datos para inserción
       const insertData = {
         name: entityData.name,
@@ -59,7 +66,12 @@ export function useCreateEntity() {
 
       if (insertError) throw insertError;
 
-      console.log('✅ Entidad creada:', data);
+      console.log('✅ Entidad creada en BD:', {
+        name: data.name,
+        lat: data.latitude,
+        lng: data.longitude,
+        id: data.id
+      });
       
       return { success: true, data };
     } catch (err) {

@@ -67,6 +67,12 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   useEffect(() => {
     if (!map || !entity) return;
 
+    console.log(`🎨 CREANDO MARCADOR para ${entity.name} en:`, {
+      lat: entity.latitude,
+      lng: entity.longitude,
+      position: entity.position
+    });
+
     // Crear elemento del marcador (contenedor principal)
     const el = document.createElement('div');
     el.className = 'entity-marker-container';
@@ -162,13 +168,18 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     });
 
     // Crear marcador de Mapbox SIN POPUP (redundante)
+    const initialPosition = [entity.longitude, entity.latitude];
+    console.log(`📍 Posición inicial del marcador [${entity.name}]:`, initialPosition);
+    
     const marker = new mapboxgl.Marker({
       element: el,
       anchor: 'center',
       draggable: true,
     })
-      .setLngLat([entity.longitude, entity.latitude])
+      .setLngLat(initialPosition)
       .addTo(map);
+    
+    console.log(`✅ Marcador agregado al mapa para ${entity.name}`);
 
     // 🎯 EVENT LISTENERS PARA DRAG & DROP
 
@@ -185,10 +196,6 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       console.log(`🎯 DRAGEND [${entity.name}]`);
       console.log(`📍 Nueva posición: lat=${newLngLat.lat.toFixed(6)}, lng=${newLngLat.lng.toFixed(6)}`);
 
-      // Restaurar cursor
-      el.style.cursor = 'grab';
-      isDraggingRef.current = false;
-
       // 🚀 ACTUALIZAR POSICIÓN EN SUPABASE
       if (onPositionChange) {
         try {
@@ -197,24 +204,18 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
             longitude: newLngLat.lng,
           });
           console.log(`✅ Posición guardada en Supabase`);
-          
-          // 🎨 WORKAROUND: Remover y volver a agregar el marcador
-          // Esto fuerza a Mapbox a re-renderizarlo correctamente
-          marker.remove();
-          
-          // Pequeño delay para que se limpie el DOM
-          setTimeout(() => {
-            marker.setLngLat([newLngLat.lng, newLngLat.lat]);
-            marker.addTo(map);
-            console.log(`🎨 Marcador re-agregado al mapa`);
-          }, 10);
-          
         } catch (error) {
           console.error(`❌ Error al guardar posición:`, error);
-          // Revertir posición
+          // Revertir posición si falla
           marker.setLngLat([entity.longitude, entity.latitude]);
         }
       }
+
+      // Restaurar cursor y estado DESPUÉS de guardar
+      setTimeout(() => {
+        el.style.cursor = 'grab';
+        isDraggingRef.current = false;
+      }, 100); // Pequeño delay para evitar click accidental
     });
 
     // Guardar referencia
@@ -237,6 +238,13 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       return;
     }
 
+    // ⚠️ VALIDAR que las coordenadas sean válidas (no null, no undefined, no NaN)
+    if (!entity.latitude || !entity.longitude || 
+        isNaN(entity.latitude) || isNaN(entity.longitude)) {
+      console.warn(`⚠️ Coordenadas inválidas para ${entity.name}, ignorando actualización`);
+      return;
+    }
+
     const marker = markerRef.current;
     const currentLngLat = marker.getLngLat();
 
@@ -252,7 +260,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
 
       marker.setLngLat([entity.longitude, entity.latitude]);
     }
-  }, [entity.latitude, entity.longitude]);
+  }, [entity.latitude, entity.longitude, entity.name]);
 
   return null; // Este componente no renderiza nada en React, solo en Mapbox
 }

@@ -28,12 +28,22 @@
 }
 
 /* Aplicar animación a los marcadores de entidades */
-.entity-marker-container {
+/* DESHABILITADO - Causaba que las entidades aparezcan en esquina primero */
+/* .entity-marker-container {
   animation: fadeInScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+} */
 
 /* NO aplicar transición a los marcadores - interfiere con el movimiento del mapa */
 /* Los marcadores deben moverse instantáneamente con el mapa */
+
+/* Cursor especial al arrastrar plantilla sobre el mapa */
+.map-drop-active {
+  cursor: copy !important;
+}
+
+.map-drop-active * {
+  cursor: copy !important;
+}
 
 /* Scrollbar personalizado estilo profesional */
 .custom-scrollbar::-webkit-scrollbar {
