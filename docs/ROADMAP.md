@@ -3,14 +3,15 @@
 > **Filosofía**: Sistema tipo IBM i2 Analyst's Notebook para operaciones militares  
 > Desarrollo iterativo con resultados visuales inmediatos
 
-**Última Actualización**: 17 de Octubre, 2025  
-**Versión**: 2.0 - Post-Rediseño IBM i2  
-**Estado**: Sistema de Plantillas + Interfaz Profesional COMPLETADOS ✅
+**Última Actualización**: 18 de Octubre, 2025  
+**Versión**: 2.1 - Sistema de Gestión de Entidades  
+**Estado**: Sistema de Visibilidad COMPLETADO ✅ (95% - Solo falta listado visual)
 
 ---
 
 ## 📋 Tabla de Contenidos
 - [✅ COMPLETADO - Sesión Épica](#-completado---sesión-épica-17-oct-2025)
+- [✅ COMPLETADO - Sistema de Gestión de Entidades](#-completado---sistema-de-gestión-de-entidades-18-oct-2025)
 - [🎯 PRÓXIMOS PASOS](#-próximos-pasos)
 - [🚀 FEATURES FUTURAS](#-features-futuras)
 - [📚 HISTORIAL DE ITERACIONES](#-historial-de-iteraciones-completadas)
@@ -20,6 +21,59 @@
 ## ✅ COMPLETADO - Sesión Épica (17 Oct 2025)
 
 ### 🎉 **8 Commits - 3,048 Líneas de Código - 30+ Archivos:**
+
+---
+
+## ✅ COMPLETADO - Sistema de Gestión de Entidades (18 Oct 2025)
+
+### 🎉 **15 Commits - Sistema Completo de Visibilidad:**
+
+**1. Sistema de Entidades Ocultas**
+- ✅ Hook `useHiddenEntities` con CRUD completo
+- ✅ Hook `useHiddenCount` para conteo en tiempo real
+- ✅ Funcionalidades: mostrar individual, mostrar todas, archivar, eliminar
+- ✅ Refetch automático del mapa después de mostrar
+
+**2. Sistema de Entidades Archivadas**
+- ✅ Hook `useArchivedEntities` con CRUD completo
+- ✅ Hook `useArchivedCount` para conteo en tiempo real
+- ✅ Funcionalidades: restaurar individual, restaurar todas, eliminar permanentemente
+- ✅ Refetch automático del mapa después de restaurar
+
+**3. Modal Unificado**
+- ✅ Componente `EntitiesManagementModal` para ocultas y archivadas
+- ✅ Diseño responsive optimizado para tablet y desktop
+- ✅ Búsqueda por nombre o clase
+- ✅ Filtro por tipo de entidad
+- ✅ Estadísticas por tipo
+- ✅ Acciones individuales y masivas
+
+**4. Integración con Navegación**
+- ✅ Badges de conteo en tiempo real en barra de navegación
+- ✅ Botones "Ver entidades ocultas" y "Ver entidades archivadas"
+- ✅ Estado unificado del modal
+
+**5. Correcciones de Bugs**
+- ✅ Variables de entorno: corregido `.env.local` mal nombrado
+- ✅ Estado del modal: solucionado apertura/cierre inmediato
+- ✅ Refetch del mapa: entidades reaparecen correctamente
+- ✅ Dependencias: instalado `date-fns` faltante
+- ✅ Desestructuración: corregida comunicación entre hooks y componentes
+
+### 📊 **Métricas de la Sesión:**
+- **Commits**: 15
+- **Hooks nuevos**: 4 (`useHiddenEntities`, `useArchivedEntities`, `useHiddenCount`, `useArchivedCount`)
+- **Componentes nuevos**: 1 (`EntitiesManagementModal`)
+- **Componentes modificados**: 3 (`TopNavigationBar`, `ViewPanel`, `EntityDetailsSidebar`)
+- **Archivos eliminados**: 2 (`HiddenEntitiesPanel`, `ArchivedEntitiesPanel`)
+- **Progreso**: 95% completado
+
+### 🐛 **Problema Pendiente:**
+- **Listado visual en modal**: 0% funcional (muestra lista vacía)
+- **Causa**: Datos llegan al hook pero no se renderizan en el componente
+- **Impacto**: Funcionalidad core operativa, solo falta el listado visual
+
+---
 
 **1. Sistema de Plantillas de Entidades**
 - ✅ Tabla `entity_templates` con 7 plantillas militares predefinidas
@@ -85,17 +139,19 @@
 
 ### **PRIORIDAD ALTA - Completar Sistema de Visibilidad**
 
-**1. Panel de Entidades Ocultas** 
-- Mostrar lista de entidades con `is_visible = false`
-- Botón "Mostrar" por entidad
-- Botón "Mostrar Todas"
-- Contador de ocultas en navbar
+**1. ✅ Panel de Entidades Ocultas** 
+- ✅ Mostrar lista de entidades con `is_visible = false`
+- ✅ Botón "Mostrar" por entidad
+- ✅ Botón "Mostrar Todas"
+- ✅ Contador de ocultas en navbar
+- ⚠️ **Pendiente**: Listado visual en modal (95% completado)
 
-**2. Panel de Entidades Archivadas**
-- Mostrar lista de entidades con `archived_at IS NOT NULL`
-- Botón "Restaurar" por entidad
-- Ver fecha de archivo
-- Filtros por fecha
+**2. ✅ Panel de Entidades Archivadas**
+- ✅ Mostrar lista de entidades con `archived_at IS NOT NULL`
+- ✅ Botón "Restaurar" por entidad
+- ✅ Ver fecha de archivo
+- ✅ Filtros por fecha
+- ⚠️ **Pendiente**: Listado visual en modal (95% completado)
 
 **3. Modal de Edición de Entidades**
 - Formulario completo similar a InstantiateModal
