@@ -45,7 +45,7 @@ export default function EntitiesManagementModal({ type, onClose }) {
   });
 
   const entityTypes = [...new Set((entities || []).map(entity => entity.type))];
-  const entityCountsByType = getEntityCountsByType();
+  const entityCountsByType = getEntityCountsByType ? getEntityCountsByType() : {};
 
   // 🔄 Manejar acción individual
   const handleAction = async (action, entityId, entityName) => {
@@ -117,7 +117,7 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const getBatchActionColor = () => isHidden ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700';
 
   // Validaciones de seguridad
-  if (!entities || loading) {
+  if (!entities || loading || !getEntityCountsByType) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-8">
