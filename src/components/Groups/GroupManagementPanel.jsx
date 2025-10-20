@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Users, Plus, Sparkles, Check, AlertCircle } from 'lucide-react';
 import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useEntities } from '../../hooks/useEntities';
+import CreateGroupModal from './CreateGroupModal';
 
 /**
  * 🎯 Panel de Gestión de Grupos de Entidades
@@ -12,6 +13,7 @@ export default function GroupManagementPanel({ onClose }) {
   const { entities } = useEntities();
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Generar sugerencias al cargar
   useEffect(() => {
@@ -39,6 +41,17 @@ export default function GroupManagementPanel({ onClose }) {
       // Remover sugerencia aceptada
       setSuggestions(prev => prev.filter(s => s !== suggestion));
     }
+  };
+
+  // Crear grupo manual
+  const handleCreateManualGroup = async (groupData, entityIds) => {
+    const result = await createGroup(groupData);
+    
+    if (result.success) {
+      await addEntitiesToGroup(result.data.id, entityIds);
+    }
+    
+    return result;
   };
 
   return (
@@ -162,6 +175,7 @@ export default function GroupManagementPanel({ onClose }) {
         {/* Footer */}
         <div className="p-4 border-t border-slate-700 bg-slate-800/50 flex justify-between">
           <button
+            onClick={() => setShowCreateModal(true)}
             className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
@@ -175,6 +189,15 @@ export default function GroupManagementPanel({ onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Modal de creación manual */}
+      {showCreateModal && (
+        <CreateGroupModal
+          onClose={() => setShowCreateModal(false)}
+          onCreateGroup={handleCreateManualGroup}
+          entities={entities}
+        />
+      )}
     </div>
   );
 }

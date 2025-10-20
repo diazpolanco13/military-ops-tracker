@@ -176,7 +176,7 @@ export function useEntityGroups() {
         return distance < 0.5;
       });
 
-      if (nearby.length >= 2) {
+      if (nearby.length >= 1) { // ✅ Cambiado de 2 a 1 (mínimo 2 entidades totales)
         const groupEntities = [entity, ...nearby];
         groupEntities.forEach(e => processed.add(e.id));
 
