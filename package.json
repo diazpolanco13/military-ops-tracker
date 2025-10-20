@@ -9,7 +9,13 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "restart": "bash scripts/restart.sh",
-    "stop": "bash scripts/stop.sh"
+    "stop": "bash scripts/stop.sh",
+    "start:clean": "bash start-clean.sh",
+    "pm2:start": "pm2 start ecosystem.config.cjs",
+    "pm2:stop": "pm2 stop app-mapas",
+    "pm2:restart": "pm2 restart app-mapas",
+    "pm2:status": "pm2 status",
+    "pm2:logs": "pm2 logs app-mapas"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.75.0",

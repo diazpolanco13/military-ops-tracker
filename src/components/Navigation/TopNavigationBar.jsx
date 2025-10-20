@@ -23,6 +23,8 @@ import {
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
 import { useEntityActions } from '../../hooks/useEntityActions';
+import { useHiddenCount } from '../../hooks/useHiddenCount';
+import HiddenEntitiesPanel from '../Sidebar/HiddenEntitiesPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -32,6 +34,9 @@ import { useEntityActions } from '../../hooks/useEntityActions';
 export default function TopNavigationBar({ onTogglePalette, paletteVisible, map }) {
   const [activePanel, setActivePanel] = useState(null);
   const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
+  const [showHiddenPanel, setShowHiddenPanel] = useState(false);
+  const { hiddenCount } = useHiddenCount();
+
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
@@ -86,6 +91,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
           onClick={() => togglePanel('view')}
           tooltip="Gestión de Visibilidad"
           hasSubmenu
+          badge={hiddenCount > 0 ? hiddenCount : null}
         />
 
         {/* 🚢 Tipos */}
@@ -172,7 +178,10 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
                     onStyleChange={handleMapStyleChange}
                   />
                 ) : activePanel === 'view' ? (
-                  <ViewPanel onClose={() => setActivePanel(null)} />
+                  <ViewPanel 
+                    onClose={() => setActivePanel(null)} 
+                    onShowHidden={() => setShowHiddenPanel(true)}
+                  />
                 ) : (
                   <div className="text-slate-300 text-sm">
                     {getPanelContent(activePanel)}
@@ -183,6 +192,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
           </div>
         </>
       )}
+
+      {/* Panel de Entidades Ocultas */}
+      {showHiddenPanel && (
+        <HiddenEntitiesPanel onClose={() => setShowHiddenPanel(false)} />
+      )}
     </>
   );
 }
@@ -190,13 +204,13 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
 /**
  * Botón de navegación horizontal
  */
-function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu }) {
+function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge }) {
   return (
     <button
       onClick={onClick}
       title={tooltip}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-lg transition-all
+        flex items-center gap-2 px-3 py-2 rounded-lg transition-all relative
         ${active 
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
           : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
@@ -206,6 +220,13 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu }) {
       {icon}
       <span className="text-xs font-medium">{label}</span>
       {hasSubmenu && <ChevronDown size={14} className={`transition-transform ${active ? 'rotate-180' : ''}`} />}
+      
+      {/* Badge de conteo */}
+      {badge && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }
@@ -213,7 +234,7 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu }) {
 /**
  * Panel de gestión de visibilidad
  */
-function ViewPanel({ onClose }) {
+function ViewPanel({ onClose, onShowHidden }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
 
@@ -227,9 +248,15 @@ function ViewPanel({ onClose }) {
       return;
     }
 
-    // Acciones futuras (abrir paneles)
-    if (action === 'show-hidden' || action === 'show-archived') {
-      alert('🚧 Función en desarrollo: Panel de ' + (action === 'show-hidden' ? 'Ocultas' : 'Archivadas'));
+    // Acciones de paneles
+    if (action === 'show-hidden') {
+      onShowHidden();
+      onClose();
+      return;
+    }
+    
+    if (action === 'show-archived') {
+      alert('🚧 Función en desarrollo: Panel de Archivadas');
       onClose();
       return;
     }
