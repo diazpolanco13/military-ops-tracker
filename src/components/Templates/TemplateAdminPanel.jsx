@@ -764,9 +764,10 @@ export default function TemplateAdminPanel({ onClose }) {
             </div>
             
             <ImageUploader
-              entityId="template-temp"
+              entityId={null}
               entityName={formData.display_name || 'Plantilla'}
               onUploadComplete={handleImageUploadComplete}
+              allowTemplateUpload={true}
             />
           </div>
         </div>

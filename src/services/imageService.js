@@ -100,24 +100,32 @@ export async function uploadEntityImage(file, entityId) {
     console.log('🔗 URL imagen:', imageUrl);
     console.log('🔗 URL miniatura:', thumbnailUrl);
     
-    // 8. Actualizar tabla entities con las URLs
-    const { error: updateError } = await supabase
-      .from('entities')
-      .update({
-        image_url: imageUrl,
-        image_thumbnail_url: thumbnailUrl,
-      })
-      .eq('id', entityId);
+    // 8. Actualizar tabla entities con las URLs (solo si NO es template temporal)
+    const isTemplate = entityId.startsWith('template-');
     
-    if (updateError) {
-      console.error('❌ Error al actualizar entidad:', updateError);
-      throw new Error(`Error al actualizar entidad: ${updateError.message}`);
+    if (!isTemplate) {
+      const { error: updateError } = await supabase
+        .from('entities')
+        .update({
+          image_url: imageUrl,
+          image_thumbnail_url: thumbnailUrl,
+        })
+        .eq('id', entityId);
+      
+      if (updateError) {
+        console.error('❌ Error al actualizar entidad:', updateError);
+        throw new Error(`Error al actualizar entidad: ${updateError.message}`);
+      }
+      
+      console.log('✅ Entidad actualizada con URLs de imágenes');
+    } else {
+      console.log('✅ Upload para plantilla - skip actualización de BD');
     }
     
-    console.log('✅ Entidad actualizada con URLs de imágenes');
-    
     return {
-      imageUrl,
+      full: imageUrl,
+      thumbnail: thumbnailUrl,
+      imageUrl, // Mantener compatibilidad
       thumbnailUrl,
     };
     

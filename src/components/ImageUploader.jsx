@@ -10,7 +10,7 @@ import { formatFileSize } from '../utils/imageOptimizer';
  * - Optimización automática
  * - Feedback visual del proceso
  */
-export default function ImageUploader({ entityId, entityName, onUploadComplete }) {
+export default function ImageUploader({ entityId, entityName, onUploadComplete, allowTemplateUpload = false }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -22,15 +22,19 @@ export default function ImageUploader({ entityId, entityName, onUploadComplete }
   const handleFileSelect = (selectedFile) => {
     if (!selectedFile) return;
 
-    // Validar tipo de archivo
-    if (!selectedFile.type.startsWith('image/')) {
-      setError('Por favor selecciona una imagen válida (JPG, PNG, WebP)');
+    // Validar tipo de archivo (permitir imágenes y videos para plantillas)
+    const isImage = selectedFile.type.startsWith('image/');
+    const isVideo = selectedFile.type.startsWith('video/') || selectedFile.name.match(/\.(webm|mp4)$/i);
+    
+    if (!isImage && !isVideo) {
+      setError('Por favor selecciona una imagen (JPG, PNG, WebP) o video (WEBM, MP4)');
       return;
     }
 
-    // Validar tamaño (5MB máximo)
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      setError('La imagen es demasiado grande. Máximo 5MB.');
+    // Validar tamaño (10MB máximo para videos, 5MB para imágenes)
+    const maxSize = isVideo ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (selectedFile.size > maxSize) {
+      setError(`El archivo es demasiado grande. Máximo ${isVideo ? '10MB' : '5MB'}.`);
       return;
     }
 
@@ -38,7 +42,7 @@ export default function ImageUploader({ entityId, entityName, onUploadComplete }
     setError(null);
     setSuccess(false);
 
-    // Crear preview
+    // Crear preview (funciona para imagen y video)
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result);
@@ -60,13 +64,16 @@ export default function ImageUploader({ entityId, entityName, onUploadComplete }
 
   // Subir imagen
   const handleUpload = async () => {
-    if (!file || !entityId) return;
+    if (!file) return;
+    
+    // Para plantillas, usar un ID temporal
+    const uploadId = entityId || `template-${Date.now()}`;
 
     setUploading(true);
     setError(null);
 
     try {
-      const result = await uploadEntityImage(file, entityId);
+      const result = await uploadEntityImage(file, uploadId);
       
       setSuccess(true);
       setUploading(false);
@@ -120,7 +127,7 @@ export default function ImageUploader({ entityId, entityName, onUploadComplete }
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={allowTemplateUpload ? "image/*,video/webm,video/mp4" : "image/*"}
           onChange={(e) => handleFileSelect(e.target.files[0])}
           className="hidden"
         />
@@ -130,21 +137,31 @@ export default function ImageUploader({ entityId, entityName, onUploadComplete }
           <div className="text-center">
             <Upload className="w-12 h-12 mx-auto mb-3 text-slate-500" />
             <p className="text-sm text-slate-300 mb-1">
-              Arrastra una imagen aquí o haz click
+              Arrastra {allowTemplateUpload ? 'una imagen o video' : 'una imagen'} aquí o haz click
             </p>
             <p className="text-xs text-slate-500">
-              JPG, PNG o WebP (máx. 5MB)
+              {allowTemplateUpload ? 'PNG, JPG, WEBM, MP4 (máx. 10MB)' : 'JPG, PNG o WebP (máx. 5MB)'}
             </p>
           </div>
         ) : (
-          // Preview de imagen
+          // Preview de imagen o video
           <div className="space-y-3">
             <div className="relative">
-              <img
-                src={preview}
-                alt="Preview"
-                className="w-full h-48 object-cover rounded-md"
-              />
+              {file.type.startsWith('video/') || file.name.match(/\.(webm|mp4)$/i) ? (
+                <video
+                  src={preview}
+                  className="w-full h-48 object-cover rounded-md bg-black"
+                  controls
+                  loop
+                  muted
+                />
+              ) : (
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-md"
+                />
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
