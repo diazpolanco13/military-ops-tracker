@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { Users, Ship, Plane } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
@@ -11,6 +11,19 @@ import { createRoot } from 'react-dom/client';
 export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
   const markerRef = useRef(null);
   const isDraggingRef = useRef(false);
+  const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
+
+  // Escuchar cambios de configuración
+  useEffect(() => {
+    const handleSettingsChange = (e) => {
+      if (e.detail.iconSize !== undefined) {
+        setIconSize(e.detail.iconSize);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
 
   useEffect(() => {
     if (!map || !group || !group.members || group.members.length === 0) return;
@@ -23,6 +36,10 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
     const firstEntity = group.members[0]?.entity;
     const Icon = firstEntity?.type === 'avion' ? Plane : Ship;
     const color = group.icon_color || '#3b82f6';
+    
+    // Tamaño dinámico del grupo (1.5x el tamaño de icono individual)
+    const groupSize = iconSize * 1.5; // Si iconSize es 48, grupo es 72px
+    const badgeSize = groupSize * 0.35; // Badge proporcional
 
     // Crear elemento del marcador
     const el = document.createElement('div');
@@ -34,25 +51,30 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
     root.render(
       <div className="flex flex-col items-center gap-1">
         {/* Icono del grupo con contador */}
-        <div
-          className="group-marker-icon flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm rounded-lg border-4 shadow-xl transition-all hover:scale-110"
-          style={{ 
-            borderColor: color,
-            width: '80px',
-            height: '80px',
-            position: 'relative'
-          }}
-        >
-          {/* Icono */}
-          <Icon size={32} color={color} strokeWidth={2.5} />
-          
-          {/* Contador */}
-          <div 
-            className="absolute -bottom-2 -right-2 bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center border-2 border-white font-bold text-sm shadow-lg"
+          <div
+            className="group-marker-icon flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm rounded-lg border-4 shadow-xl transition-all hover:scale-110"
+            style={{ 
+              borderColor: color,
+              width: `${groupSize}px`,
+              height: `${groupSize}px`,
+              position: 'relative'
+            }}
           >
-            {group.count}
+            {/* Icono */}
+            <Icon size={groupSize * 0.5} color={color} strokeWidth={2.5} />
+            
+            {/* Contador */}
+            <div 
+              className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full flex items-center justify-center border-2 border-white font-bold shadow-lg"
+              style={{
+                width: `${badgeSize}px`,
+                height: `${badgeSize}px`,
+                fontSize: `${badgeSize * 0.45}px`
+              }}
+            >
+              {group.count}
+            </div>
           </div>
-        </div>
         
         {/* Etiqueta con nombre del grupo */}
         <div 
@@ -118,7 +140,7 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
         markerRef.current.remove();
       }
     };
-  }, [map, group, onGroupClick]);
+  }, [map, group, onGroupClick, onGroupMove, iconSize]); // Recrear cuando cambia tamaño
 
   return null;
 }
