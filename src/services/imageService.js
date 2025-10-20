@@ -21,11 +21,19 @@ import {
  */
 export async function uploadEntityImage(file, entityId) {
   try {
-    // 1. Validar archivo
-    validateImageFile(file);
-    
-    console.log('📤 Subiendo imagen para entidad:', entityId);
+    console.log('📤 Subiendo archivo para entidad:', entityId);
     console.log('📦 Tamaño original:', (file.size / 1024).toFixed(2), 'KB');
+    
+    // Detectar si es video o imagen
+    const isVideo = file.type.startsWith('video/') || file.name.match(/\.(webm|mp4)$/i);
+    
+    if (isVideo) {
+      // Para videos, subir directamente sin optimización
+      return await uploadVideoFile(file, entityId);
+    }
+    
+    // 1. Validar archivo de imagen
+    validateImageFile(file);
     
     // 2. Detectar formato de archivo (PNG o JPEG)
     const isPNG = file.type === 'image/png';
@@ -131,6 +139,69 @@ export async function uploadEntityImage(file, entityId) {
     
   } catch (error) {
     console.error('❌ Error en uploadEntityImage:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sube un video (WEBM/MP4) sin optimización
+ * @param {File} file - Archivo de video
+ * @param {string} entityId - ID de la entidad o template
+ * @returns {Promise<{full: string, thumbnail: string}>}
+ */
+async function uploadVideoFile(file, entityId) {
+  try {
+    const ext = file.name.match(/\.(webm|mp4)$/i)?.[1] || 'webm';
+    const videoPath = `entities/${entityId}/video.${ext}`;
+    
+    console.log('🎬 Subiendo video...');
+    
+    // Subir video directamente
+    const { error: uploadError } = await supabase.storage
+      .from('entity-images')
+      .upload(videoPath, file, {
+        contentType: file.type,
+        cacheControl: '3600',
+        upsert: true,
+      });
+    
+    if (uploadError) {
+      throw new Error(`Error al subir video: ${uploadError.message}`);
+    }
+    
+    console.log('✅ Video subido');
+    
+    // Obtener URL pública
+    const { data } = supabase.storage
+      .from('entity-images')
+      .getPublicUrl(videoPath);
+    
+    const videoUrl = data.publicUrl;
+    console.log('🔗 URL video:', videoUrl);
+    
+    // No actualizar BD si es template
+    const isTemplate = entityId.startsWith('template-');
+    
+    if (!isTemplate) {
+      const { error: updateError } = await supabase
+        .from('entities')
+        .update({ image_url: videoUrl })
+        .eq('id', entityId);
+      
+      if (updateError) {
+        console.error('⚠️ Error al actualizar entidad con video:', updateError);
+      }
+    }
+    
+    return {
+      full: videoUrl,
+      thumbnail: videoUrl, // Para videos, usar mismo URL
+      imageUrl: videoUrl,
+      thumbnailUrl: videoUrl,
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en uploadVideoFile:', error);
     throw error;
   }
 }
