@@ -11,6 +11,7 @@ import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useLock } from '../../stores/LockContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
+import DeploymentStats from '../Dashboard/DeploymentStats';
 import { useSelection } from '../../stores/SelectionContext';
 
 // Configurar token de Mapbox
@@ -526,12 +527,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         </div>
       )}
 
-      {/* Contador de entidades */}
-      {mapLoaded && !loading && (
-        <div className="absolute bottom-4 right-4 bg-military-bg-secondary/90 backdrop-blur-sm text-military-text-primary px-3 py-2 rounded-md shadow-lg text-sm">
-          🚢 {entities.length} entidades activas
-        </div>
-      )}
+      {/* Dashboard de estadísticas (reemplaza contador simple) */}
+      {mapLoaded && !loading && <DeploymentStats />}
 
       {/* Botón de subida de imágenes - ELIMINADO, ahora integrado en plantillas y formularios */}
     </div>
