@@ -40,18 +40,18 @@ export async function uploadEntityImage(file, entityId) {
     const ext = isPNG ? 'png' : 'jpg';
     const contentType = isPNG ? 'image/png' : 'image/jpeg';
     
-    // 3. Optimizar imagen principal (mantiene transparencia si es PNG)
+    // 3. Optimizar imagen principal (más agresivo para iconos)
     console.log('🔧 Optimizando imagen principal...');
-    const optimizedBlob = await resizeImage(file, 800, 800, 0.95);
+    const optimizedBlob = await resizeImage(file, 400, 400, 0.85); // Reducido de 800x800
     const optimizedFile = blobToFile(
       optimizedBlob, 
       `${entityId}-original.${ext}`
     );
     console.log('✅ Imagen optimizada:', (optimizedBlob.size / 1024).toFixed(2), 'KB');
     
-    // 4. Crear miniatura (mantiene transparencia y tamaño pequeño)
+    // 4. Crear miniatura (muy pequeña para iconos de mapa)
     console.log('🔧 Creando miniatura...');
-    const thumbnailBlob = await createThumbnail(file, 200);
+    const thumbnailBlob = await createThumbnail(file, 128); // Reducido de 200
     const thumbnailFile = blobToFile(
       thumbnailBlob, 
       `${entityId}-thumbnail.${ext}`

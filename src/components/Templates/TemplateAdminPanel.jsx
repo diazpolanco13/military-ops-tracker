@@ -677,7 +677,7 @@ export default function TemplateAdminPanel({ onClose }) {
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
                         Video WEBM (sidebar)
                       </label>
-                      <p className="text-xs text-slate-500 mb-2">Video corto para detalles</p>
+                      <p className="text-xs text-yellow-400 mb-2">⚡ Recomendado: 720p, &lt;5 segundos, &lt;2MB para carga rápida</p>
                       
                       {formData.image_url ? (
                         <div className="flex items-center gap-3 p-3 bg-slate-900 border border-slate-600 rounded-lg">
