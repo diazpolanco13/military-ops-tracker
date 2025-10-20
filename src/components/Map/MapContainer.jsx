@@ -4,7 +4,9 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
 import { Lock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
+import GroupMarker from './GroupMarker';
 import { useEntities } from '../../hooks/useEntities';
+import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useLock } from '../../stores/LockContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
@@ -29,8 +31,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
 
-  // 📡 Obtener entidades desde Supabase con función de refetch
+  // 📡 Obtener entidades y grupos desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
+  const { groups, loading: loadingGroups } = useEntityGroups();
 
   // Exponer funciones al componente padre
   useEffect(() => {
@@ -397,18 +400,40 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
-      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= umbral */}
-      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && entities
-        .filter(e => e.is_visible !== false)
-        .map((entity) => (
-          <EntityMarker 
-            key={entity.id} 
-            entity={entity} 
+      {/* Marcadores de Grupos (siempre visibles cuando zoom >= umbral) */}
+      {mapLoaded && !loadingGroups && currentZoom >= clusterZoomThreshold && groups
+        .filter(g => g.is_visible && g.count > 0)
+        .map((group) => (
+          <GroupMarker
+            key={group.id}
+            group={group}
             map={map.current}
-            onPositionChange={handlePositionChange}
-            onEntityClick={() => setSelectedEntity(entity)}
+            onGroupClick={(g) => console.log('Click en grupo:', g.name)}
           />
         ))
+      }
+
+      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= umbral */}
+      {/* Solo mostrar entidades que NO estén en ningún grupo */}
+      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && (() => {
+        // IDs de entidades que están en grupos
+        const groupedEntityIds = new Set(
+          groups.flatMap(g => g.members?.map(m => m.entity?.id) || [])
+        );
+        
+        // Filtrar entidades no agrupadas
+        return entities
+          .filter(e => e.is_visible !== false && !groupedEntityIds.has(e.id))
+          .map((entity) => (
+            <EntityMarker 
+              key={entity.id} 
+              entity={entity} 
+              map={map.current}
+              onPositionChange={handlePositionChange}
+              onEntityClick={() => setSelectedEntity(entity)}
+            />
+          ));
+      })()
       }
 
       {/* Indicador de carga */}
