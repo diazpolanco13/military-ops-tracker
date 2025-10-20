@@ -24,7 +24,9 @@ import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { useHiddenCount } from '../../hooks/useHiddenCount';
+import { useArchivedCount } from '../../hooks/useArchivedCount';
 import HiddenEntitiesPanel from '../Sidebar/HiddenEntitiesPanel';
+import ArchivedEntitiesPanel from '../Sidebar/ArchivedEntitiesPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -35,7 +37,9 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   const [activePanel, setActivePanel] = useState(null);
   const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
   const [showHiddenPanel, setShowHiddenPanel] = useState(false);
+  const [showArchivedPanel, setShowArchivedPanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
+  const { archivedCount } = useArchivedCount();
 
 
   const togglePanel = (panelName) => {
@@ -181,6 +185,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
                   <ViewPanel 
                     onClose={() => setActivePanel(null)} 
                     onShowHidden={() => setShowHiddenPanel(true)}
+                    onShowArchived={() => setShowArchivedPanel(true)}
                   />
                 ) : (
                   <div className="text-slate-300 text-sm">
@@ -196,6 +201,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
       {/* Panel de Entidades Ocultas */}
       {showHiddenPanel && (
         <HiddenEntitiesPanel onClose={() => setShowHiddenPanel(false)} />
+      )}
+
+      {/* Panel de Entidades Archivadas */}
+      {showArchivedPanel && (
+        <ArchivedEntitiesPanel onClose={() => setShowArchivedPanel(false)} />
       )}
     </>
   );
@@ -234,7 +244,7 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge })
 /**
  * Panel de gestión de visibilidad
  */
-function ViewPanel({ onClose, onShowHidden }) {
+function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
 
@@ -256,7 +266,7 @@ function ViewPanel({ onClose, onShowHidden }) {
     }
     
     if (action === 'show-archived') {
-      console.log('🚧 Función en desarrollo: Panel de Archivadas');
+      onShowArchived();
       onClose();
       return;
     }
