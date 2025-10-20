@@ -223,11 +223,11 @@ export function useEntityTemplates() {
    */
   async function searchTemplates(searchTerm) {
     try {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('entity_templates')
         .select('*')
         .eq('is_active', true)
-        .or(`display_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,class.ilike.%${searchTerm}%`)
+        .or(`name.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,class.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%`)
         .order('usage_count', { ascending: false });
 
       if (error) throw error;

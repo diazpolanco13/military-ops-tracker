@@ -1,0 +1,432 @@
+{
+  "metadata": {
+    "title": "Despliegue Militar SOUTHCOM en el Caribe - Octubre 2025",
+    "description": "Datos estructurados de activos militares extraídos de reportes periodísticos y gráficos de despliegue. Usado para modelado de base de datos. Categorías principales: Fuerzas Terrestres, Aeronaves de Ala Fija, Helicópteros y Aeronaves de Rotor, Buques Navales, Misiles y Armamento Estratégico, Otros Activos.",
+    "source": "Análisis de imágenes y reportes (CNN, WSJ, NYT, oct. 2025)",
+    "total_troops": ">10000",
+    "date": "2025-10-20"
+  },
+  "categories": [
+    {
+      "name": "Fuerzas Terrestres",
+      "description": "Incluye tropas, unidades expedicionarias y operaciones especiales. Total: ~10,000+ tropas en el teatro.",
+      "assets": [
+        {
+          "type": "Tropas Generales (SOUTHCOM)",
+          "quantity": ">10000",
+          "role": "Apoyo logístico y operaciones terrestres en Puerto Rico y Tobago",
+          "characteristics": {
+            "personal": "Mixto (Ejército, Marina, Fuerza Aérea)",
+            "capacidad": "Despliegue rápido para ejercicios antinarcóticos; incluye ~4,000 marines/sailors en aguas caribeñas",
+            "equipamiento": "Vehículos ligeros (Humvees), artillería móvil"
+          }
+        },
+        {
+          "type": "22nd Marine Expeditionary Unit (MEU) (SOC)",
+          "quantity": "1 (unidad completa, ~2,200 personal)",
+          "role": "Fuerza anfibia lista para asaltos, evacuaciones y contraterrorismo",
+          "characteristics": {
+            "composicion": "Batallón de infantería (GCE), escuadrón aéreo (ACE con Osprey/F-35B), logística (LCE)",
+            "fortaleza": "1,657 marines + ~600 sailors; capacidad para 24 tropas por Osprey o 20,000 lb de carga",
+            "rol_caribe": "Operaciones en Grenada-like (histórico); desplegada con Amphibious Ready Group (ARG)"
+          }
+        },
+        {
+          "type": "160th Special Operations Aviation Regiment (SOAR) (Airborne)",
+          "quantity": "1 regimiento (elementos desplegados)",
+          "role": "Apoyo aéreo especial: asalto nocturno, reconocimiento",
+          "characteristics": {
+            "personal": "~2,700 (aviadores, tripulantes)",
+            "activos_clave": "MH-60/MH-6 (ver helicópteros); MQ-1C drones",
+            "rol_caribe": "Apoyo a Operation Enduring Freedom-Caribbean (desde 2008); misiones de inserción rápida"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Aeronaves de Ala Fija",
+      "description": "Enfocadas en bombardeo, escolta, patrulla y reconocimiento. Desplegadas desde bases en Louisiana y Roosevelt Roads (Puerto Rico).",
+      "assets": [
+        {
+          "type": "B-52H Stratofortress (Bombarderos)",
+          "quantity": "3 (desde Barksdale AFB)",
+          "role": "Bombardeo estratégico; demo de ataque",
+          "characteristics": {
+            "tripulacion": "5",
+            "dimensiones": {
+              "longitud": "48.5 m",
+              "envergadura": "56.4 m",
+              "altura": "12.4 m"
+            },
+            "peso": {
+              "vacio": "83,000 kg",
+              "max_despegue": "221,000 kg"
+            },
+            "motores": "8x Pratt & Whitney TF33 (76 kN cada uno)",
+            "velocidad_max": "1,050 km/h",
+            "rango": "14,200 km (sin reabastecimiento)",
+            "techo": "15,000 m",
+            "armamento": "Hasta 32,000 kg (bombas JDAM, misiles AGM-86/158; 20 misiles internos)"
+          }
+        },
+        {
+          "type": "F-35B Lightning II (Cazas)",
+          "quantity": "10 (embarcados en MEU)",
+          "role": "Escolta, ataque a tierra; STOVL para portaaviones anfibios",
+          "characteristics": {
+            "tripulacion": "1",
+            "dimensiones": {
+              "longitud": "15.6 m",
+              "envergadura": "10.7 m",
+              "altura": "4.4 m"
+            },
+            "peso": {
+              "vacio": "14,700 kg",
+              "max_despegue": "27,200 kg"
+            },
+            "motor": "1x Pratt & Whitney F135 (191 kN con postquemador)",
+            "velocidad_max": "Mach 1.6 (1,960 km/h)",
+            "rango": ">1,700 km",
+            "techo": "15,000 m",
+            "armamento": "6,800 kg (misiles AIM-120, bombas SDB; cañón GAU-22 25 mm)"
+          }
+        },
+        {
+          "type": "P-3/P-8A Poseidon (Patrulla Marítima)",
+          "quantity": "3+ (incl. P-8A Alpha)",
+          "role": "Antisubmarino (ASW), vigilancia",
+          "characteristics": {
+            "tripulacion": "11 (P-3C)",
+            "dimensiones": {
+              "longitud": "35.6 m",
+              "envergadura": "30.4 m",
+              "altura": "10.3 m"
+            },
+            "peso": {
+              "vacio": "27,900 kg",
+              "max_despegue": "61,200 kg"
+            },
+            "motores": "4x Allison T56 (3,660 kW cada uno)",
+            "velocidad_max": "761 km/h",
+            "rango": "2,500 km (combate)",
+            "techo": "8,600 m",
+            "sensores_armamento": "Radar AN/APS-137, sonoboyas, torpedos Mk 46, misiles Harpoon"
+          }
+        },
+        {
+          "type": "C-130J Super Hercules (Transporte)",
+          "quantity": "Varios (rotativos)",
+          "role": "Apoyo logístico, inserciones",
+          "characteristics": {
+            "tripulacion": "5",
+            "dimensiones": {
+              "longitud": "29.8 m",
+              "envergadura": "40.4 m",
+              "altura": "11.7 m"
+            },
+            "peso": {
+              "vacio": "34,400 kg",
+              "max_despegue": "70,300 kg"
+            },
+            "motores": "4x Rolls-Royce AE 2100D3",
+            "velocidad_max": "590 km/h",
+            "rango": "3,800 km",
+            "techo": "10,000 m",
+            "capacidad": "92 tropas o 19,000 kg carga"
+          }
+        },
+        {
+          "type": "RC-135 (Reconocimiento)",
+          "quantity": "Varios",
+          "role": "Inteligencia de señales (SIGINT/ELINT)",
+          "characteristics": {
+            "tripulacion": "25-30",
+            "dimensiones": {
+              "longitud": "41.5 m",
+              "envergadura": "39.9 m",
+              "altura": "12.7 m"
+            },
+            "peso": {
+              "vacio": "56,200 kg",
+              "max_despegue": "146,300 kg"
+            },
+            "motores": "4x CFM F108 (98 kN cada uno)",
+            "velocidad_max": "933 km/h",
+            "rango": "5,550 km",
+            "techo": "15,000 m",
+            "mision": "Ge-localización de señales electromagnéticas en tiempo real"
+          }
+        },
+        {
+          "type": "E-3 Sentry (AWACS)",
+          "quantity": "Varios (rotativos)",
+          "role": "Control aéreo, radar de vigilancia",
+          "characteristics": {
+            "tripulacion": "17-23",
+            "dimensiones": {
+              "longitud": "46.6 m",
+              "envergadura": "44.4 m",
+              "altura": "12.6 m"
+            },
+            "peso": {
+              "vacio": "83,900 kg",
+              "max_despegue": "157,400 kg"
+            },
+            "motores": "4x Pratt & Whitney TF33 (96 kN cada uno)",
+            "velocidad_max": "854 km/h",
+            "rango": "7,400 km",
+            "techo": "8,800 m",
+            "radar": "AN/APY-2 (rango >650 km para blancos altos)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Helicópteros y Aeronaves de Rotor",
+      "description": "Principalmente para operaciones especiales y asalto anfibio.",
+      "assets": [
+        {
+          "type": "MH-60 Black Hawk",
+          "quantity": "Varios (160th SOAR)",
+          "role": "Asalto especial, transporte",
+          "characteristics": {
+            "tripulacion": "4",
+            "dimensiones": {
+              "longitud": "19.8 m",
+              "diametro_rotor": "16.4 m"
+            },
+            "peso": {
+              "vacio": "5,350 kg",
+              "max_despegue": "10,660 kg"
+            },
+            "motores": "2x General Electric T700 (1,450 kW cada uno)",
+            "velocidad_max": "361 km/h",
+            "rango": "460 km",
+            "techo": "6,100 m",
+            "capacidad": "11 tropas; armamento: misiles Hellfire, miniguns"
+          }
+        },
+        {
+          "type": "MH-6 Little Bird",
+          "quantity": "Varios (160th SOAR)",
+          "role": "Ataque ligero, inserción rápida",
+          "characteristics": {
+            "tripulacion": "2-4",
+            "dimensiones": {
+              "longitud": "~12 m",
+              "diametro_rotor": "10.7 m"
+            },
+            "peso": {
+              "vacio": "~1,500 kg",
+              "max_despegue": "3,100 kg"
+            },
+            "motor": "1x Allison 250-C20 (317 kW)",
+            "velocidad_max": "282 km/h",
+            "rango": "611 km",
+            "techo": "5,800 m",
+            "armamento": "Cohetes, miniguns; soporta FRIES para inserción"
+          }
+        },
+        {
+          "type": "V-22 Osprey",
+          "quantity": "12+ (MEU)",
+          "role": "Transporte tiltrotor, asalto vertical",
+          "characteristics": {
+            "tripulacion": "3-4",
+            "dimensiones": {
+              "longitud": "17.5 m",
+              "diametro_rotor": "11.6 m (x2)"
+            },
+            "peso": {
+              "vacio": "14,400 kg",
+              "max_despegue": "27,400 kg (VTOL)"
+            },
+            "motores": "2x Rolls-Royce T406 (4,590 kW cada uno)",
+            "velocidad_max": "509 km/h",
+            "rango": "1,630 km",
+            "techo": "7,600 m",
+            "capacidad": "24 tropas o 9,100 kg interna"
+          }
+        },
+        {
+          "type": "AH-1Z Viper / UH-1Y Venom",
+          "quantity": "6-8 (MEU)",
+          "role": "Ataque y utilidad",
+          "characteristics": {
+            "viper": {
+              "tripulacion": "2",
+              "velocidad_max": "296 km/h",
+              "rango": "685 km",
+              "armamento": "Hellfire/rockets"
+            },
+            "venom": {
+              "capacidad": "6 tropas",
+              "rendimiento": "Similar al Viper"
+            }
+          }
+        },
+        {
+          "type": "CH-53E Super Stallion",
+          "quantity": "Varios (MEU)",
+          "role": "Transporte pesado",
+          "characteristics": {
+            "tripulacion": "5",
+            "dimensiones": {
+              "longitud": "30.2 m",
+              "diametro_rotor": "23.9 m"
+            },
+            "peso_max_despegue": "16,330 kg",
+            "motores": "3x GE T64 (3,400 kW cada uno)",
+            "velocidad_max": "315 km/h",
+            "rango": "830 km",
+            "capacidad": "55 tropas o 14,500 kg"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Buques Navales",
+      "description": "Paquete de 32 buques (potencial ilustrativo), con énfasis en destructores y anfibios. Más del 10% de la flota naval de EE.UU.",
+      "assets": [
+        {
+          "type": "Destructores (Arleigh Burke-class)",
+          "quantity": "Varios (incl. 1 ilustrado)",
+          "ejemplos": "USS The Sullivans (DDG-68)",
+          "role": "Defensa aérea, misiles de crucero",
+          "characteristics": {
+            "desplazamiento": "8,500 t",
+            "dimensiones": {
+              "longitud": "154 m",
+              "manga": "20 m",
+              "calado": "9.4 m"
+            },
+            "velocidad": ">56 km/h",
+            "rango": "8,100 km a 37 km/h",
+            "tripulacion": "303",
+            "sensores": "Radar SPY-1D (Aegis)",
+            "armamento": "90 celdas VLS (Tomahawk, SM-6), cañón 127 mm, torpedos Mk 46"
+          }
+        },
+        {
+          "type": "Fragatas (Oliver Hazard Perry-class)",
+          "quantity": "1+",
+          "ejemplos": "USS Samuel B. Roberts (FFG-58)",
+          "role": "Escolta antisubmarino",
+          "characteristics": {
+            "desplazamiento": "4,200 t",
+            "dimensiones": {
+              "longitud": "138 m",
+              "manga": "14 m",
+              "calado": "6.7 m"
+            },
+            "velocidad": ">54 km/h",
+            "rango": "9,300 km a 33 km/h",
+            "tripulacion": "205 + helicóptero SH-60",
+            "armamento": "Misiles Harpoon, torpedos, cañón 76 mm"
+          }
+        },
+        {
+          "type": "Littoral Combat Ships (LCS, Independence-class)",
+          "quantity": "Varios",
+          "ejemplos": "USS Jackson (LCS-6)",
+          "role": "Operaciones litorales, ASW/MCM",
+          "characteristics": {
+            "desplazamiento": "~3,000 t",
+            "dimensiones": {
+              "longitud": "127 m",
+              "manga": "31.6 m",
+              "calado": "4.3 m"
+            },
+            "velocidad": ">74 km/h",
+            "rango": "Transpacífico (~8,000 km)",
+            "tripulacion": "70-100",
+            "armamento": "Cañón 57 mm, Hellfire (24), NSM; soporta MH-60/MQ-8"
+          }
+        },
+        {
+          "type": "Buques Anfibios",
+          "quantity": "3 ilustrados",
+          "ejemplos": "USS Iwo Jima (LHD-7), USS San Antonio (LPD-17), USS Fort Lauderdale (LPD-28)",
+          "role": "Asalto anfibio, transporte",
+          "characteristics": {
+            "lhd": {
+              "desplazamiento": "40,500 t",
+              "capacidad": "1,800 marines, F-35B/Osprey"
+            },
+            "lpd": {
+              "desplazamiento": "25,000 t",
+              "velocidad": "40 km/h",
+              "rango": "9,000 km",
+              "soporte": "LCAC/LCU"
+            }
+          }
+        },
+        {
+          "type": "Cortadores Guardia Costera",
+          "quantity": "Varios",
+          "ejemplos": "Rápidos respuesta (San Juan)",
+          "role": "Patrulla antinarcóticos",
+          "characteristics": {
+            "desplazamiento": "~500 t",
+            "velocidad": ">50 km/h",
+            "armamento": "Ligero (57 mm)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Misiles y Armamento Estratégico",
+      "description": "Paquete de huelga Tomahawk (potencial).",
+      "assets": [
+        {
+          "type": "Tomahawk Land Attack Missile (TLAM)",
+          "quantity": "32 por buque x 32 buques (1,024 potencial)",
+          "role": "Ataque a tierra preciso",
+          "characteristics": {
+            "longitud": "6.25 m (con booster)",
+            "diametro": "0.52 m",
+            "peso": "1,600 kg",
+            "cabeza": "310 kg explosiva (o submuniciones)",
+            "rango": ">1,600 km",
+            "velocidad": "Mach 0.74 (~920 km/h)",
+            "guia": "GPS/INS/TERCOM/DSMAC"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Otros Activos",
+      "description": "Drones, buques auxiliares y craft de desembarco.",
+      "assets": [
+        {
+          "type": "Drones",
+          "quantity": "Varios",
+          "ejemplos": "MQ-9 Reaper (~varios para vigilancia); MQ-1C Gray Eagle (12 en SOAR)",
+          "role": "Vigilancia y reconocimiento",
+          "characteristics": {
+            "mq9_reaper": "Rango: >1,850 km, altitud: 15,240 m, carga: 1,700 kg (misiles Hellfire)",
+            "mq1c_gray_eagle": "Rango: 200 km, altitud: 7,600 m, duración: 25 horas"
+          }
+        },
+        {
+          "type": "Buques Auxiliares",
+          "quantity": "1 ilustrado",
+          "ejemplos": "MYO Trader (mothership para drones/helicópteros); AC-130 Ghostrider (demo gunsip)",
+          "role": "Apoyo logístico y fuego de apoyo",
+          "characteristics": {
+            "ac130_ghostrider": "Cañones 105/40/25 mm, rango 4,000 km, tripulación: 13, velocidad: 480 km/h"
+          }
+        },
+        {
+          "type": "Landing Craft",
+          "quantity": "Varios",
+          "ejemplos": "Utility (Ejército)",
+          "role": "Desembarcos",
+          "characteristics": {
+            "capacidad": "Tropas y vehículos ligeros, velocidad: ~40 km/h en agua"
+          }
+        }
+      ]
+    }
+  ]
+}
