@@ -156,9 +156,9 @@ async function uploadVideoFile(file, entityId) {
     
     console.log('🎬 Subiendo video...');
     
-    // Subir video directamente
+    // Subir video directamente al bucket de videos
     const { error: uploadError } = await supabase.storage
-      .from('entity-images')
+      .from('entity-videos')
       .upload(videoPath, file, {
         contentType: file.type,
         cacheControl: '3600',
@@ -171,9 +171,9 @@ async function uploadVideoFile(file, entityId) {
     
     console.log('✅ Video subido');
     
-    // Obtener URL pública
+    // Obtener URL pública del bucket de videos
     const { data } = supabase.storage
-      .from('entity-images')
+      .from('entity-videos')
       .getPublicUrl(videoPath);
     
     const videoUrl = data.publicUrl;
