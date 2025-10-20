@@ -104,9 +104,32 @@ La desestructuración fue corregida pero el problema persiste. Esto sugiere que 
 3. **Verificar el estado de loading**: El componente puede estar renderizando antes de que los datos estén disponibles
 4. **Revisar la lógica de renderizado condicional**: El componente puede estar mostrando "No hay entidades" cuando sí hay datos
 
-## 🚨 Estado Crítico
+## ✅ PROBLEMA RESUELTO
 
-**El problema persiste después de 6 intentos de solución.** Los datos están disponibles en el hook pero no llegan al componente de renderizado.
+**Causa raíz identificada y corregida:**
+
+El problema estaba en la desestructuración del modal `EntitiesManagementModal.jsx` en las líneas 22-43. El componente intentaba extraer una propiedad `entities` que NO existía:
+
+```javascript
+// ❌ INCORRECTO
+const {
+  entities: hiddenEntities,  // Intenta extraer 'entities' pero NO existe
+  ...
+} = hiddenData;
+```
+
+El hook `useHiddenEntities` retorna `hiddenEntities` como propiedad, no `entities`. La desestructuración con alias solo funciona si la propiedad original existe.
+
+**Solución aplicada:**
+```javascript
+// ✅ CORRECTO
+const {
+  hiddenEntities,  // Extraer directamente la propiedad correcta
+  ...
+} = hiddenData;
+```
+
+**Fecha de resolución**: 20 de Octubre, 2025
 
 ## 📝 Commits Realizados
 

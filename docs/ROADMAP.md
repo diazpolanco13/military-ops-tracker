@@ -3,9 +3,9 @@
 > **Filosofía**: Sistema tipo IBM i2 Analyst's Notebook para operaciones militares  
 > Desarrollo iterativo con resultados visuales inmediatos
 
-**Última Actualización**: 18 de Octubre, 2025  
-**Versión**: 2.1 - Sistema de Gestión de Entidades  
-**Estado**: Sistema de Visibilidad COMPLETADO ✅ (95% - Solo falta listado visual)
+**Última Actualización**: 20 de Octubre, 2025  
+**Versión**: 2.2 - Sistema de Gestión de Entidades COMPLETO  
+**Estado**: Sistema de Visibilidad 100% COMPLETADO ✅
 
 ---
 
@@ -68,10 +68,11 @@
 - **Archivos eliminados**: 2 (`HiddenEntitiesPanel`, `ArchivedEntitiesPanel`)
 - **Progreso**: 95% completado
 
-### 🐛 **Problema Pendiente:**
-- **Listado visual en modal**: 0% funcional (muestra lista vacía)
-- **Causa**: Datos llegan al hook pero no se renderizan en el componente
-- **Impacto**: Funcionalidad core operativa, solo falta el listado visual
+### ✅ **Problema Resuelto (20 Oct 2025):**
+- **Listado visual en modal**: ✅ 100% funcional
+- **Causa identificada**: Desestructuración incorrecta (intentaba extraer `entities` en vez de `hiddenEntities`)
+- **Solución**: Corregida desestructuración en `EntitiesManagementModal.jsx`
+- **Estado**: Sistema completamente operativo
 
 ---
 
@@ -137,21 +138,25 @@
 
 ## 🎯 PRÓXIMOS PASOS
 
-### **PRIORIDAD ALTA - Completar Sistema de Visibilidad**
+### ✅ **COMPLETADO - Sistema de Visibilidad (20 Oct 2025)**
 
 **1. ✅ Panel de Entidades Ocultas** 
 - ✅ Mostrar lista de entidades con `is_visible = false`
 - ✅ Botón "Mostrar" por entidad
 - ✅ Botón "Mostrar Todas"
 - ✅ Contador de ocultas en navbar
-- ⚠️ **Pendiente**: Listado visual en modal (95% completado)
+- ✅ Listado visual en modal funcionando perfectamente
 
 **2. ✅ Panel de Entidades Archivadas**
 - ✅ Mostrar lista de entidades con `archived_at IS NOT NULL`
 - ✅ Botón "Restaurar" por entidad
 - ✅ Ver fecha de archivo
 - ✅ Filtros por fecha
-- ⚠️ **Pendiente**: Listado visual en modal (95% completado)
+- ✅ Listado visual en modal funcionando perfectamente
+
+---
+
+### **PRIORIDAD ALTA - Funcionalidades Avanzadas**
 
 **3. Modal de Edición de Entidades**
 - Formulario completo similar a InstantiateModal
