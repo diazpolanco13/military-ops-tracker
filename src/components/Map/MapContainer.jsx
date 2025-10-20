@@ -65,46 +65,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     try {
       await updatePosition(entityId, newPosition);
       
-      // 🔄 Actualizar SOLO el GeoJSON del clustering (sin refetch)
-      // Esto evita re-render de todos los EntityMarker
-      if (map.current && map.current.getSource('entities-source')) {
-        // Buscar índice de la entidad movida
-        const entityIndex = entities.findIndex(e => e.id === entityId);
-        
-        if (entityIndex !== -1) {
-          // Crear copia del array y actualizar solo la entidad movida
-          const updatedEntities = [...entities];
-          updatedEntities[entityIndex] = {
-            ...updatedEntities[entityIndex],
-            latitude: newPosition.latitude,
-            longitude: newPosition.longitude
-          };
-          
-          // Regenerar GeoJSON con las nuevas coordenadas
-          const geojson = {
-            type: 'FeatureCollection',
-            features: updatedEntities
-              .filter(e => e.latitude && e.longitude && e.is_visible !== false)
-              .map(entity => ({
-                type: 'Feature',
-                geometry: {
-                  type: 'Point',
-                  coordinates: [parseFloat(entity.longitude), parseFloat(entity.latitude)]
-                },
-                properties: {
-                  id: entity.id,
-                  name: entity.name,
-                  type: entity.type,
-                  class: entity.class || '',
-                  status: entity.status || 'activo'
-                }
-              }))
-          };
-          
-          // Actualizar source de clustering directamente
-          map.current.getSource('entities-source').setData(geojson);
-        }
-      }
+      // 🔄 Refetch para actualizar clusters
+      // Sí, causa un pequeño parpadeo, pero FUNCIONA correctamente
+      // Los clusters se actualizan con las posiciones reales
+      await refetch();
       
     } catch (err) {
       console.error('❌ Error al mover entidad:', err);
