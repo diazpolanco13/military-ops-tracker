@@ -20,7 +20,8 @@ import {
   Trash2,
   ArchiveRestore,
   Lock,
-  Unlock
+  Unlock,
+  Users
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
