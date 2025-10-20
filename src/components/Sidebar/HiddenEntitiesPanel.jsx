@@ -99,19 +99,9 @@ export default function HiddenEntitiesPanel({ onClose }) {
         result = await showEntity(entityId);
         break;
       case 'archive':
-        confirmMessage = `¿Archivar "${entityName}"?`;
-        if (!confirm(confirmMessage)) {
-          setActionLoading(null);
-          return;
-        }
         result = await archiveEntity(entityId);
         break;
       case 'delete':
-        confirmMessage = `⚠️ ¿ELIMINAR PERMANENTEMENTE "${entityName}"?`;
-        if (!confirm(confirmMessage) || !confirm('Esta acción NO se puede deshacer. ¿Continuar?')) {
-          setActionLoading(null);
-          return;
-        }
         result = await deleteEntity(entityId);
         break;
       default:
@@ -120,7 +110,7 @@ export default function HiddenEntitiesPanel({ onClose }) {
     }
 
     if (!result.success) {
-      alert(`Error: ${result.error}`);
+      console.error('Error en acción:', result.error);
     }
     
     setActionLoading(null);
@@ -128,15 +118,11 @@ export default function HiddenEntitiesPanel({ onClose }) {
 
   // 🔄 Manejar mostrar todas
   const handleShowAll = async () => {
-    if (!confirm(`¿Mostrar todas las ${count} entidades ocultas?`)) return;
-    
     setActionLoading('show-all');
     const result = await showAllEntities();
     
-    if (result.success) {
-      alert(`✅ ${count} entidades mostradas correctamente`);
-    } else {
-      alert(`Error: ${result.error}`);
+    if (!result.success) {
+      console.error('Error al mostrar todas las entidades:', result.error);
     }
     
     setActionLoading(null);

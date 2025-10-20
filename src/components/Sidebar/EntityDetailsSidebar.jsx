@@ -60,13 +60,11 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
       }
       onClose();
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error: ${result.error}`);
     }
   };
 
   const handleArchive = async () => {
-    if (!confirm(`¿Archivar "${entity.name}"? Se puede restaurar después.`)) return;
-    
     const result = await archiveEntity(entity.id);
     if (result.success) {
       // Remover del estado para que desaparezca inmediatamente
@@ -75,14 +73,11 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
       }
       onClose();
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error al archivar: ${result.error}`);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE "${entity.name}"?`)) return;
-    if (!confirm(`Esta acción NO se puede deshacer. ¿Estás seguro?`)) return;
-    
     const result = await deleteEntity(entity.id);
     if (result.success) {
       // Remover del estado para que desaparezca inmediatamente
@@ -91,7 +86,7 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
       }
       onClose();
     } else {
-      alert(`Error: ${result.error}`);
+      console.error(`Error al eliminar: ${result.error}`);
     }
   };
 

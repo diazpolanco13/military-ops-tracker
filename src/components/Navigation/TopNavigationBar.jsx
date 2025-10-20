@@ -244,7 +244,7 @@ function ViewPanel({ onClose, onShowHidden }) {
   const handleAction = async (action) => {
     // Acciones que requieren selección
     if ((action === 'hide' || action === 'archive' || action === 'delete') && selectedCount === 0) {
-      alert('Selecciona al menos una entidad primero (Ctrl+Click en el mapa)');
+      console.log('Selecciona al menos una entidad primero (Ctrl+Click en el mapa)');
       return;
     }
 
@@ -256,33 +256,26 @@ function ViewPanel({ onClose, onShowHidden }) {
     }
     
     if (action === 'show-archived') {
-      alert('🚧 Función en desarrollo: Panel de Archivadas');
+      console.log('🚧 Función en desarrollo: Panel de Archivadas');
       onClose();
       return;
     }
 
-    let confirmMessage = '';
     let actionFunction = null;
 
     switch (action) {
       case 'hide':
-        confirmMessage = `¿Ocultar ${selectedCount} entidad${selectedCount > 1 ? 'es' : ''}?`;
         actionFunction = (id) => toggleVisibility(id, true);
         break;
       case 'archive':
-        confirmMessage = `¿Archivar ${selectedCount} entidad${selectedCount > 1 ? 'es' : ''}?`;
         actionFunction = archiveEntity;
         break;
       case 'delete':
-        confirmMessage = `⚠️ ¿ELIMINAR PERMANENTEMENTE ${selectedCount} entidad${selectedCount > 1 ? 'es' : ''}?`;
         actionFunction = deleteEntity;
         break;
       default:
         return;
     }
-
-    if (!confirm(confirmMessage)) return;
-    if (action === 'delete' && !confirm('Esta acción NO se puede deshacer. ¿Continuar?')) return;
 
     // Ejecutar acción para cada entidad seleccionada
     for (const id of selectedIds) {

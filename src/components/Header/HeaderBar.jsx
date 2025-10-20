@@ -17,8 +17,6 @@ export default function HeaderBar({ paletteVisible }) {
 
   // Acciones en lote
   const handleHideSelected = async () => {
-    if (!confirm(`¿Ocultar ${selectedCount} entidades seleccionadas?`)) return;
-    
     for (const id of selectedIds) {
       await toggleVisibility(id, true); // true = actualmente visible
       if (window.removeEntityDirectly) {
@@ -30,8 +28,6 @@ export default function HeaderBar({ paletteVisible }) {
   };
 
   const handleArchiveSelected = async () => {
-    if (!confirm(`¿Archivar ${selectedCount} entidades seleccionadas?`)) return;
-    
     for (const id of selectedIds) {
       await archiveEntity(id);
       if (window.removeEntityDirectly) {
@@ -43,9 +39,6 @@ export default function HeaderBar({ paletteVisible }) {
   };
 
   const handleDeleteSelected = async () => {
-    if (!confirm(`⚠️ ¿ELIMINAR PERMANENTEMENTE ${selectedCount} entidades?`)) return;
-    if (!confirm(`Esta acción NO se puede deshacer. ¿Continuar?`)) return;
-    
     for (const id of selectedIds) {
       await deleteEntity(id);
       if (window.removeEntityDirectly) {
