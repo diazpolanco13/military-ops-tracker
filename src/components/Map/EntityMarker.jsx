@@ -70,9 +70,9 @@ function getEntitySize(type) {
 
 // Función para obtener el texto de la etiqueta
 function getEntityLabel(entity) {
-  if (entity.type === 'tropas' && entity.crew_count) {
-    // Para tropas, mostrar cantidad de efectivos
-    return `👥 ${entity.crew_count.toLocaleString()} efectivos`;
+  // Para tropas, mostrar nombre Y cantidad de efectivos en 2 líneas
+  if (entity.type === 'tropas') {
+    return entity.name; // Solo el nombre, el contador irá en el icono
   }
   return entity.name;
 }
@@ -165,16 +165,29 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
-          {/* Icono */}
-          <div
-            className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
-            style={{ 
-              borderColor: color,
-              width: `${size}px`,
-              height: `${size}px`,
-            }}
-          >
-            <Icon size={size * 0.6} color={color} strokeWidth={2.5} />
+          {/* Icono con badge de efectivos para tropas */}
+          <div style={{ position: 'relative' }}>
+            <div
+              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
+              style={{ 
+                borderColor: color,
+                width: `${size}px`,
+                height: `${size}px`,
+              }}
+            >
+              <Icon size={size * 0.6} color={color} strokeWidth={2.5} />
+            </div>
+            
+            {/* Badge con número de efectivos (solo para tropas) - posicionado a la derecha */}
+            {entity.type === 'tropas' && entity.crew_count && (
+              <div
+                className="absolute top-0 -right-2 translate-x-full bg-green-600 text-white rounded-full px-2 py-1 text-xs font-bold border-2 border-slate-900 shadow-lg whitespace-nowrap"
+              >
+                {entity.crew_count >= 1000 
+                  ? `${(entity.crew_count / 1000).toFixed(1)}k`
+                  : entity.crew_count}
+              </div>
+            )}
           </div>
           
           {/* Etiqueta con nombre */}
