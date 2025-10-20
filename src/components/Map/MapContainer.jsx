@@ -81,6 +81,33 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     }
   };
 
+  // Handler para cuando se arrastra un grupo completo
+  const handleGroupMove = async (group, deltaLat, deltaLng) => {
+    try {
+      // Mover todas las entidades del grupo manteniendo formación
+      const movePromises = group.members.map(async (member) => {
+        const entity = member.entity;
+        if (!entity) return;
+
+        const newPosition = {
+          latitude: parseFloat(entity.latitude) + deltaLat,
+          longitude: parseFloat(entity.longitude) + deltaLng
+        };
+
+        return updatePosition(entity.id, newPosition);
+      });
+
+      await Promise.all(movePromises);
+
+      // Refetch para actualizar todo
+      await refetch();
+      
+    } catch (err) {
+      console.error('❌ Error al mover grupo:', err);
+      alert('Error al mover el grupo. Por favor, intenta de nuevo.');
+    }
+  };
+
   useEffect(() => {
     // Evitar inicializar el mapa más de una vez
     if (map.current) return;
@@ -425,6 +452,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
               setSelectedGroup(g);
               setSelectedEntity(null); // Cerrar sidebar de entidad si está abierto
             }}
+            onGroupMove={handleGroupMove}
           />
         ))
       }

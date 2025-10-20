@@ -6,9 +6,11 @@ import { createRoot } from 'react-dom/client';
 /**
  * 🎯 Marcador de Grupo de Entidades
  * Muestra un icono con contador para grupos de formación
+ * Arrastrable - mueve todas las entidades del grupo manteniendo formación
  */
-export default function GroupMarker({ group, map, onGroupClick }) {
+export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
   const markerRef = useRef(null);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     if (!map || !group || !group.members || group.members.length === 0) return;
@@ -25,7 +27,7 @@ export default function GroupMarker({ group, map, onGroupClick }) {
     // Crear elemento del marcador
     const el = document.createElement('div');
     el.className = 'group-marker-container';
-    el.style.cursor = 'pointer';
+    el.style.cursor = 'grab';
 
     // Renderizar icono de grupo con contador
     const root = createRoot(el);
@@ -66,20 +68,47 @@ export default function GroupMarker({ group, map, onGroupClick }) {
       </div>
     );
 
-    // Click listener
+    // Click listener (solo si no está arrastrando)
     el.addEventListener('click', () => {
-      if (onGroupClick) {
+      if (!isDraggingRef.current && onGroupClick) {
         onGroupClick(group);
       }
     });
 
-    // Crear marcador de Mapbox
+    // Crear marcador de Mapbox ARRASTRABLE
     const marker = new mapboxgl.Marker({
       element: el,
       anchor: 'center',
+      draggable: true, // ✅ Grupo arrastrable
     })
       .setLngLat([centerLng, centerLat])
       .addTo(map);
+
+    // Cuando empieza a arrastrar
+    marker.on('dragstart', () => {
+      isDraggingRef.current = true;
+      el.style.cursor = 'grabbing';
+    });
+
+    // Cuando termina de arrastrar
+    marker.on('dragend', async () => {
+      const newLngLat = marker.getLngLat();
+      
+      // Calcular desplazamiento
+      const deltaLat = newLngLat.lat - centerLat;
+      const deltaLng = newLngLat.lng - centerLng;
+
+      // Notificar al padre para mover todas las entidades del grupo
+      if (onGroupMove) {
+        await onGroupMove(group, deltaLat, deltaLng);
+      }
+
+      // Restaurar cursor después de un delay
+      setTimeout(() => {
+        el.style.cursor = 'grab';
+        isDraggingRef.current = false;
+      }, 100);
+    });
 
     markerRef.current = marker;
 
