@@ -4,6 +4,7 @@ import { Ship, Anchor, Plane, Users } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
+import { supabase } from '../../lib/supabase';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -86,8 +87,34 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
   const [useImages, setUseImages] = useState(() => localStorage.getItem('useImages') === 'true');
+  const [template, setTemplate] = useState(null);
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
+
+  // Cargar plantilla si existe template_id y useImages está activado
+  useEffect(() => {
+    async function loadTemplate() {
+      if (useImages && entity?.template_id) {
+        try {
+          const { data } = await supabase
+            .from('entity_templates')
+            .select('icon_url, image_url')
+            .eq('id', entity.template_id)
+            .single();
+
+          if (data) {
+            setTemplate(data);
+          }
+        } catch (err) {
+          console.error('Error loading template for marker:', err);
+        }
+      } else {
+        setTemplate(null);
+      }
+    }
+
+    loadTemplate();
+  }, [entity?.template_id, useImages]);
 
   // Escuchar cambios de configuración
   useEffect(() => {
@@ -125,7 +152,9 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     const size = getEntitySize(entity.type);
 
     // Determinar si usar imagen o icono según configuración
-    const shouldUseImage = useImages && entity.image_thumbnail_url;
+    // Buscar imagen en: entity, o heredar de template (icon_url o image_url)
+    const imageUrl = entity.image_thumbnail_url || template?.icon_url || template?.image_url;
+    const shouldUseImage = useImages && imageUrl;
 
     // Si configuración permite y tiene imagen, usar imagen
     if (shouldUseImage) {
@@ -142,7 +171,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
             }}
           >
             <img 
-              src={entity.image_thumbnail_url}
+              src={imageUrl}
               alt={entity.name}
               className="w-full h-full object-cover"
               onError={(e) => {
