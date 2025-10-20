@@ -197,21 +197,17 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
       <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
         {/* Video de fondo (prioridad sobre imagen) */}
         {videoUrl ? (
-          <div className="relative z-10 h-full w-full">
+          <div className="relative z-10 h-full w-full bg-black flex items-center justify-center">
             <video
               src={videoUrl}
               autoPlay
               loop
               muted
               playsInline
-              className="w-full h-full object-cover"
-              style={{
-                filter: 'brightness(0.8) contrast(1.2) saturate(1.1)',
-                transform: 'scale(1.05)' // Para evitar bordes negros
-              }}
+              className="w-full h-full object-contain"
             />
-            {/* Overlay sutil para mejor legibilidad del texto */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+            {/* Overlay sutil solo en los bordes para mejor legibilidad */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
           </div>
         ) : imageUrl ? (
           <>

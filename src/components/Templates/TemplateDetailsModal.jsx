@@ -76,15 +76,17 @@ export default function TemplateDetailsModal({ template, onClose, onUseTemplate 
 
                   if (isVideo && !videoError) {
                     return (
-                      <video 
-                        src={mediaUrl}
-                        className="w-full h-64 object-cover bg-black"
-                        loop
-                        muted
-                        autoPlay
-                        playsInline
-                        onError={() => setVideoError(true)}
-                      />
+                      <div className="w-full h-64 bg-black flex items-center justify-center">
+                        <video 
+                          src={mediaUrl}
+                          className="w-full h-full object-contain"
+                          loop
+                          muted
+                          autoPlay
+                          playsInline
+                          onError={() => setVideoError(true)}
+                        />
+                      </div>
                     );
                   } else if (template.image_url && !imageError && !isVideo) {
                     return (
