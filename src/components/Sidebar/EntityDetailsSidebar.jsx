@@ -193,20 +193,20 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
         zIndex: 60 
       }}
     >
-      {/* Header con imagen/video de fondo */}
-      <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
+      {/* Header con imagen/video de fondo - Aspect ratio 16:9 para videos */}
+      <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0" style={{ aspectRatio: videoUrl ? '16/9' : 'auto', height: videoUrl ? 'auto' : '256px', maxHeight: '400px' }}>
         {/* Video de fondo (prioridad sobre imagen) */}
         {videoUrl ? (
-          <div className="relative z-10 h-full w-full bg-black flex items-center justify-center">
+          <div className="relative z-10 h-full w-full bg-black">
             <video
               src={videoUrl}
               autoPlay
               loop
               muted
               playsInline
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             />
-            {/* Overlay sutil solo en los bordes para mejor legibilidad */}
+            {/* Overlay sutil para mejor legibilidad del texto */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
           </div>
         ) : imageUrl ? (
