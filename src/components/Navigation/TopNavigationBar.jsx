@@ -25,8 +25,7 @@ import { useSelection } from '../../stores/SelectionContext';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
-import HiddenEntitiesPanel from '../Sidebar/HiddenEntitiesPanel';
-import ArchivedEntitiesPanel from '../Sidebar/ArchivedEntitiesPanel';
+import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -36,8 +35,7 @@ import ArchivedEntitiesPanel from '../Sidebar/ArchivedEntitiesPanel';
 export default function TopNavigationBar({ onTogglePalette, paletteVisible, map }) {
   const [activePanel, setActivePanel] = useState(null);
   const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
-  const [showHiddenPanel, setShowHiddenPanel] = useState(false);
-  const [showArchivedPanel, setShowArchivedPanel] = useState(false);
+  const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
@@ -184,8 +182,8 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
                 ) : activePanel === 'view' ? (
                   <ViewPanel 
                     onClose={() => setActivePanel(null)} 
-                    onShowHidden={() => setShowHiddenPanel(true)}
-                    onShowArchived={() => setShowArchivedPanel(true)}
+                    onShowHidden={() => setShowEntitiesModal('hidden')}
+                    onShowArchived={() => setShowEntitiesModal('archived')}
                   />
                 ) : (
                   <div className="text-slate-300 text-sm">
@@ -198,14 +196,12 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
         </>
       )}
 
-      {/* Panel de Entidades Ocultas */}
-      {showHiddenPanel && (
-        <HiddenEntitiesPanel onClose={() => setShowHiddenPanel(false)} />
-      )}
-
-      {/* Panel de Entidades Archivadas */}
-      {showArchivedPanel && (
-        <ArchivedEntitiesPanel onClose={() => setShowArchivedPanel(false)} />
+      {/* Modal Unificado de Gestión de Entidades */}
+      {showEntitiesModal && (
+        <EntitiesManagementModal 
+          type={showEntitiesModal} 
+          onClose={() => setShowEntitiesModal(null)} 
+        />
       )}
     </>
   );
