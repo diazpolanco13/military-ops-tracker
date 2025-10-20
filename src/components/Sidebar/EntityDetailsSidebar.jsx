@@ -2,6 +2,7 @@ import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship
 import { useState, useEffect } from 'react';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { supabase } from '../../lib/supabase';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 const TYPE_ICONS = {
   destructor: Ship,
@@ -53,6 +54,8 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
   const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
   const [template, setTemplate] = useState(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
 
   // Cargar plantilla si existe template_id
   useEffect(() => {
@@ -120,6 +123,16 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
     } else {
       console.error(`Error al eliminar: ${result.error}`);
     }
+  };
+
+  // Abrir diálogo de confirmación de archivo
+  const handleArchiveClick = () => {
+    setShowArchiveConfirm(true);
+  };
+
+  // Abrir diálogo de confirmación de eliminación
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
   };
 
   // Estado vacío cuando no hay entidad
@@ -410,7 +423,7 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
             {/* Fila 2: Archivar y Eliminar */}
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={handleArchive}
+                onClick={handleArchiveClick}
                 disabled={processing}
                 className="flex items-center justify-center gap-2 px-3 py-2 bg-yellow-900/30 hover:bg-yellow-900/50 disabled:opacity-50 disabled:cursor-not-allowed text-yellow-400 rounded-lg transition-colors text-sm font-medium"
                 title="Archivar entidad"
@@ -420,7 +433,7 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
               </button>
               
               <button
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 disabled={processing}
                 className="flex items-center justify-center gap-2 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed text-red-400 rounded-lg transition-colors text-sm font-medium"
                 title="Eliminar permanentemente"
@@ -450,6 +463,30 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
           </div>
         </div>
       </div>
+
+      {/* Diálogo de confirmación de archivo */}
+      <ConfirmDialog
+        isOpen={showArchiveConfirm}
+        onClose={() => setShowArchiveConfirm(false)}
+        onConfirm={handleArchive}
+        title="¿Archivar esta entidad?"
+        message={`La entidad "${entity.name}" se archivará y podrá ser restaurada más tarde desde el menú Ver → Ver Archivadas.`}
+        confirmText="Archivar"
+        cancelText="Cancelar"
+        type="warning"
+      />
+
+      {/* Diálogo de confirmación de eliminación */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="⚠️ ¿Eliminar permanentemente?"
+        message={`La entidad "${entity.name}" será eliminada de forma PERMANENTE. Esta acción NO se puede deshacer.`}
+        confirmText="Eliminar Permanentemente"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   );
 }
