@@ -64,6 +64,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const handlePositionChange = async (entityId, newPosition) => {
     try {
       await updatePosition(entityId, newPosition);
+      
+      // 🔄 Forzar refetch para actualizar clusters
+      await refetch();
     } catch (err) {
       console.error('❌ Error al mover entidad:', err);
       alert('Error al actualizar posición. Por favor, intenta de nuevo.');
