@@ -69,27 +69,40 @@ export default function TemplateDetailsModal({ template, onClose, onUseTemplate 
             {/* Imagen/Video si existe */}
             {(template.image_url || template.video_url) && (
               <div className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
-                {template.video_url && !videoError ? (
-                  <video 
-                    src={template.video_url}
-                    className="w-full h-64 object-cover"
-                    controls
-                    loop
-                    muted
-                    onError={() => setVideoError(true)}
-                  />
-                ) : template.image_url && !imageError ? (
-                  <img 
-                    src={template.image_url}
-                    alt={template.name}
-                    className="w-full h-64 object-cover"
-                    onError={() => setImageError(true)}
-                  />
-                ) : (
-                  <div className="w-full h-64 bg-slate-700 flex items-center justify-center">
-                    <TypeIcon className="w-20 h-20 text-slate-500" />
-                  </div>
-                )}
+                {(() => {
+                  // Determinar si es video o imagen
+                  const mediaUrl = template.video_url || template.image_url;
+                  const isVideo = mediaUrl?.match(/\.(webm|mp4|mov|avi)$/i) || template.video_url;
+
+                  if (isVideo && !videoError) {
+                    return (
+                      <video 
+                        src={mediaUrl}
+                        className="w-full h-64 object-cover bg-black"
+                        controls
+                        loop
+                        muted
+                        autoPlay
+                        onError={() => setVideoError(true)}
+                      />
+                    );
+                  } else if (template.image_url && !imageError && !isVideo) {
+                    return (
+                      <img 
+                        src={template.image_url}
+                        alt={template.name}
+                        className="w-full h-64 object-cover"
+                        onError={() => setImageError(true)}
+                      />
+                    );
+                  } else {
+                    return (
+                      <div className="w-full h-64 bg-slate-700 flex items-center justify-center">
+                        <TypeIcon className="w-20 h-20 text-slate-500" />
+                      </div>
+                    );
+                  }
+                })()}
               </div>
             )}
 
