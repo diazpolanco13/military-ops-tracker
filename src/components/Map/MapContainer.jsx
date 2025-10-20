@@ -10,6 +10,7 @@ import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useLock } from '../../stores/LockContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
+import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
 import { useSelection } from '../../stores/SelectionContext';
 
 // Configurar token de Mapbox
@@ -20,6 +21,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
   const [currentZoom, setCurrentZoom] = useState(6);
   const [clusterZoomThreshold, setClusterZoomThreshold] = useState(() => {
@@ -377,11 +379,22 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Sidebar de detalles - Fixed, fuera del flujo */}
+      {/* Sidebar de detalles de entidad individual */}
       <EntityDetailsSidebar
         entity={selectedEntity}
         onClose={() => setSelectedEntity(null)}
-        isOpen={!!selectedEntity}
+        isOpen={!!selectedEntity && !selectedGroup}
+      />
+
+      {/* Sidebar de detalles de grupo */}
+      <GroupDetailsSidebar
+        group={selectedGroup}
+        onClose={() => setSelectedGroup(null)}
+        onSelectMember={(entity) => {
+          setSelectedEntity(entity);
+          setSelectedGroup(null);
+        }}
+        isOpen={!!selectedGroup}
       />
 
       {/* Contenedor del mapa - Empieza después de navbar */}
@@ -408,7 +421,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             key={group.id}
             group={group}
             map={map.current}
-            onGroupClick={(g) => console.log('Click en grupo:', g.name)}
+            onGroupClick={(g) => {
+              setSelectedGroup(g);
+              setSelectedEntity(null); // Cerrar sidebar de entidad si está abierto
+            }}
           />
         ))
       }
