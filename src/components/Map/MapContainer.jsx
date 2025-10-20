@@ -20,6 +20,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
   const [currentZoom, setCurrentZoom] = useState(6);
+  const [clusterZoomThreshold, setClusterZoomThreshold] = useState(() => {
+    return parseInt(localStorage.getItem('clusterZoomThreshold') || '8');
+  });
+  const [clusterRadius, setClusterRadius] = useState(() => {
+    return parseInt(localStorage.getItem('clusterRadius') || '60');
+  });
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
 
@@ -34,6 +40,21 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       window.removeEntityDirectly = removeEntity;
     }
   }, [refetch, addEntity, removeEntity, onRefetchNeeded]);
+
+  // Escuchar cambios de configuración
+  useEffect(() => {
+    const handleSettingsChange = (e) => {
+      if (e.detail.clusterZoomThreshold !== undefined) {
+        setClusterZoomThreshold(e.detail.clusterZoomThreshold);
+      }
+      if (e.detail.clusterRadius !== undefined) {
+        setClusterRadius(e.detail.clusterRadius);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
 
   
   // 🎯 Hook para actualizar posiciones
@@ -163,7 +184,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   useEffect(() => {
     if (!map.current || !mapLoaded || loading || !entities || entities.length === 0) return;
 
-    const ZOOM_THRESHOLD = 8; // Umbral para cambiar de clustering a marcadores
     const sourceId = 'entities-source';
     const clusterLayerId = 'clusters';
     const clusterCountLayerId = 'cluster-count';
@@ -196,13 +216,13 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       return;
     }
 
-    // Agregar source con clustering habilitado
+    // Agregar source con clustering habilitado (usando configuración)
     map.current.addSource(sourceId, {
       type: 'geojson',
       data: geojson,
       cluster: true,
-      clusterMaxZoom: 9, // Clustering hasta zoom 9
-      clusterRadius: 60 // Radio en píxeles
+      clusterMaxZoom: clusterZoomThreshold - 1, // Clustering hasta umbral - 1
+      clusterRadius: clusterRadius // Radio configurable
     });
 
     // Layer para clusters (círculos grandes con gradiente)
@@ -318,8 +338,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       const zoom = map.current.getZoom();
       setCurrentZoom(zoom);
       
-      // Mostrar/ocultar layers según zoom
-      const showClustering = zoom < ZOOM_THRESHOLD;
+      // Mostrar/ocultar layers según zoom (usando configuración)
+      const showClustering = zoom < clusterZoomThreshold;
       
       if (map.current.getLayer(clusterLayerId)) {
         map.current.setLayoutProperty(clusterLayerId, 'visibility', showClustering ? 'visible' : 'none');
@@ -344,7 +364,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
       }
     };
-  }, [mapLoaded, entities, loading, selectEntity]);
+  }, [mapLoaded, entities, loading, selectEntity, clusterZoomThreshold, clusterRadius]);
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
@@ -371,8 +391,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
-      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= 8 */}
-      {mapLoaded && !loading && currentZoom >= 8 && entities
+      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= umbral */}
+      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && entities
         .filter(e => e.is_visible !== false)
         .map((entity) => (
           <EntityMarker 

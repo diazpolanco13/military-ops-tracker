@@ -29,6 +29,7 @@ import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
+import SettingsPanel from '../Settings/SettingsPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -39,6 +40,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   const [activePanel, setActivePanel] = useState(null);
   const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
@@ -146,8 +148,8 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
         <NavButton
           icon={<Settings className="w-5 h-5" />}
           label="Config"
-          active={activePanel === 'settings'}
-          onClick={() => togglePanel('settings')}
+          active={showSettingsPanel}
+          onClick={() => setShowSettingsPanel(true)}
           tooltip="Configuración"
         />
       </div>
@@ -205,6 +207,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
           type={showEntitiesModal} 
           onClose={() => setShowEntitiesModal(null)} 
         />
+      )}
+
+      {/* Panel de Configuración */}
+      {showSettingsPanel && (
+        <SettingsPanel onClose={() => setShowSettingsPanel(false)} />
       )}
     </>
   );
