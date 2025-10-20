@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { Ship, Anchor, Plane } from 'lucide-react';
+import { Ship, Anchor, Plane, Users } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
@@ -25,6 +25,8 @@ function getEntityIcon(type) {
       return Anchor;
     case 'avion':
       return Plane;
+    case 'tropas':
+      return Users;
     default:
       return Ship;
   }
@@ -39,6 +41,8 @@ function getEntityColor(type) {
       return '#3b82f6'; // Azul
     case 'avion':
       return '#6b7280'; // Gris
+    case 'tropas':
+      return '#22c55e'; // Verde
     default:
       return '#10b981'; // Verde
   }
@@ -57,9 +61,20 @@ function getEntitySize(type) {
       return baseSize * 1.17; // ~56px con base 48
     case 'avion':
       return baseSize; // 48px con base 48
+    case 'tropas':
+      return baseSize * 1.17; // Mismo que fragatas
     default:
       return baseSize;
   }
+}
+
+// Función para obtener el texto de la etiqueta
+function getEntityLabel(entity) {
+  if (entity.type === 'tropas' && entity.crew_count) {
+    // Para tropas, mostrar cantidad de efectivos
+    return `👥 ${entity.crew_count.toLocaleString()} efectivos`;
+  }
+  return entity.name;
 }
 
 /**
@@ -140,7 +155,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
               textOverflow: 'ellipsis'
             }}
           >
-            {entity.name}
+            {getEntityLabel(entity)}
           </div>
         </div>
       );
@@ -173,7 +188,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
               textOverflow: 'ellipsis'
             }}
           >
-            {entity.name}
+            {getEntityLabel(entity)}
           </div>
         </div>
       );
