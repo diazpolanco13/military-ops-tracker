@@ -159,10 +159,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     };
   }, []);
 
-  // 🗺️ Sistema de Clustering de Entidades
+  // 🗺️ Sistema Híbrido: Clustering en zoom out, Marcadores en zoom in
   useEffect(() => {
     if (!map.current || !mapLoaded || loading || !entities || entities.length === 0) return;
 
+    const ZOOM_THRESHOLD = 8; // Umbral para cambiar de clustering a marcadores
     const sourceId = 'entities-source';
     const clusterLayerId = 'clusters';
     const clusterCountLayerId = 'cluster-count';
@@ -312,10 +313,27 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       map.current.getCanvas().style.cursor = '';
     });
 
-    // Detectar cambios de zoom
-    map.current.on('zoom', () => {
-      setCurrentZoom(map.current.getZoom());
-    });
+    // Detectar cambios de zoom y alternar entre clustering y marcadores
+    const handleZoomChange = () => {
+      const zoom = map.current.getZoom();
+      setCurrentZoom(zoom);
+      
+      // Mostrar/ocultar layers según zoom
+      const showClustering = zoom < ZOOM_THRESHOLD;
+      
+      if (map.current.getLayer(clusterLayerId)) {
+        map.current.setLayoutProperty(clusterLayerId, 'visibility', showClustering ? 'visible' : 'none');
+      }
+      if (map.current.getLayer(clusterCountLayerId)) {
+        map.current.setLayoutProperty(clusterCountLayerId, 'visibility', showClustering ? 'visible' : 'none');
+      }
+      if (map.current.getLayer(unclusteredLayerId)) {
+        map.current.setLayoutProperty(unclusteredLayerId, 'visibility', showClustering ? 'visible' : 'none');
+      }
+    };
+    
+    map.current.on('zoom', handleZoomChange);
+    handleZoomChange(); // Ejecutar inmediatamente
 
     // Cleanup
     return () => {
@@ -353,17 +371,19 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
-      {/* Marcadores individuales - DESACTIVADOS, usando clustering
-      {mapLoaded && !loading && entities.map((entity) => (
-        <EntityMarker 
-          key={entity.id} 
-          entity={entity} 
-          map={map.current}
-          onPositionChange={handlePositionChange}
-          onEntityClick={() => setSelectedEntity(entity)}
-        />
-      ))}
-      */}
+      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= 8 */}
+      {mapLoaded && !loading && currentZoom >= 8 && entities
+        .filter(e => e.is_visible !== false)
+        .map((entity) => (
+          <EntityMarker 
+            key={entity.id} 
+            entity={entity} 
+            map={map.current}
+            onPositionChange={handlePositionChange}
+            onEntityClick={() => setSelectedEntity(entity)}
+          />
+        ))
+      }
 
       {/* Indicador de carga */}
       {loading && (
