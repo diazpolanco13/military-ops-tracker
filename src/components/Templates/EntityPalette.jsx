@@ -31,19 +31,14 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     }
   }, [loading, getTopTemplates]);
 
-  // Búsqueda en tiempo real
+  // Búsqueda en tiempo real (lado del cliente)
   useEffect(() => {
-    async function performSearch() {
-      if (searchTerm.trim().length > 0) {
-        const results = await searchTemplates(searchTerm);
-        setSearchResults(results);
-      } else {
-        setSearchResults([]);
-      }
+    if (searchTerm.trim().length > 0) {
+      const results = searchTemplates(searchTerm);
+      setSearchResults(results);
+    } else {
+      setSearchResults([]);
     }
-
-    const debounce = setTimeout(performSearch, 300);
-    return () => clearTimeout(debounce);
   }, [searchTerm, searchTemplates]);
 
   // Obtener jerarquía de plantillas

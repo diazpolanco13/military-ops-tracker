@@ -218,24 +218,33 @@ export function useEntityTemplates() {
   }
 
   /**
-   * Buscar plantillas por texto
+   * Buscar plantillas por texto (búsqueda del lado del cliente)
    * @param {string} searchTerm - Término de búsqueda
    */
-  async function searchTemplates(searchTerm) {
-    try {
-      const { data, error} = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('is_active', true)
-        .or(`name.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,class.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%`)
-        .order('usage_count', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error('Error searching templates:', err);
+  function searchTemplates(searchTerm) {
+    if (!searchTerm || searchTerm.trim().length === 0) {
       return [];
     }
+
+    const term = searchTerm.toLowerCase().trim();
+    
+    return templates.filter(template => {
+      const searchableText = [
+        template.name,
+        template.display_name,
+        template.description,
+        template.class,
+        template.code,
+        template.entity_type,
+        template.category,
+        template.sub_type
+      ]
+        .filter(Boolean) // Eliminar valores null/undefined
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(term);
+    });
   }
 
   /**
