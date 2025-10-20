@@ -99,8 +99,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
       await Promise.all(movePromises);
 
-      // Refetch para actualizar todo
-      await refetch();
+      // Refetch en background con delay para evitar re-render brusco
+      setTimeout(() => {
+        refetch();
+        fetchGroups(); // También refrescar grupos para actualizar centro
+      }, 200);
       
     } catch (err) {
       console.error('❌ Error al mover grupo:', err);
