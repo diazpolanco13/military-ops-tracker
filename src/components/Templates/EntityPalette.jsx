@@ -39,7 +39,8 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     } else {
       setSearchResults([]);
     }
-  }, [searchTerm, searchTemplates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]); // ✅ Solo depender de searchTerm para evitar loops
 
   // Obtener jerarquía de plantillas
   const hierarchy = getTemplatesHierarchy();
