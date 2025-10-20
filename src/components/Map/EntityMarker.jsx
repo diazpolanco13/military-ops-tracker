@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { Ship, Anchor, Plane } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
@@ -44,17 +44,21 @@ function getEntityColor(type) {
   }
 }
 
-// Función para obtener el tamaño según el tipo
+// Función para obtener el tamaño según el tipo y configuración
 function getEntitySize(type) {
+  // Obtener tamaño base de la configuración (default: 48)
+  const baseSize = parseInt(localStorage.getItem('iconSize') || '48');
+  
+  // Ajustar proporcionalmente según el tipo
   switch (type) {
     case 'destructor':
-      return 64; // Aumentado de 32
+      return baseSize * 1.33; // ~64px con base 48
     case 'fragata':
-      return 56; // Aumentado de 28
+      return baseSize * 1.17; // ~56px con base 48
     case 'avion':
-      return 48; // Aumentado de 24
+      return baseSize; // 48px con base 48
     default:
-      return 48; // Aumentado de 24
+      return baseSize;
   }
 }
 
@@ -65,8 +69,21 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   const markerRef = useRef(null);
   const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
+  const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
+
+  // Escuchar cambios de configuración de tamaño
+  useEffect(() => {
+    const handleSettingsChange = (e) => {
+      if (e.detail.iconSize !== undefined) {
+        setIconSize(e.detail.iconSize);
+      }
+    };
+
+    window.addEventListener('settingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('settingsChanged', handleSettingsChange);
+  }, []);
 
   // Verificar si esta entidad está seleccionada
   const selected = isSelected(entity.id);
@@ -234,7 +251,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
         markerRef.current.remove();
       }
     };
-  }, [map]); // ⚠️ Solo depende de 'map'
+  }, [map, iconSize]); // Recrear cuando cambia el tamaño de icono
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {
