@@ -180,6 +180,14 @@ export function useHiddenEntities() {
     };
   }, []);
 
+  // 📊 Obtener estadísticas por tipo
+  const getEntityCountsByType = () => {
+    return hiddenEntities.reduce((acc, entity) => {
+      acc[entity.type] = (acc[entity.type] || 0) + 1;
+      return acc;
+    }, {});
+  };
+
   return {
     hiddenEntities,
     loading,
@@ -190,5 +198,6 @@ export function useHiddenEntities() {
     archiveEntity,
     deleteEntity,
     count: hiddenEntities.length,
+    getEntityCountsByType,
   };
 }
