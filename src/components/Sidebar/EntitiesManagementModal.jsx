@@ -39,9 +39,24 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const filteredEntities = (entities || []).filter(entity => {
     const matchesSearch = searchTerm === '' || 
                           entity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          entity.class.toLowerCase().includes(searchTerm.toLowerCase());
+                          (entity.class && entity.class.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = selectedType === 'all' || entity.type === selectedType;
-    return matchesSearch && matchesType;
+    const result = matchesSearch && matchesType;
+    
+    // Debug temporal
+    if (!result) {
+      console.log('Entity filtered out:', {
+        name: entity.name,
+        type: entity.type,
+        class: entity.class,
+        searchTerm,
+        selectedType,
+        matchesSearch,
+        matchesType
+      });
+    }
+    
+    return result;
   });
 
   const entityTypes = [...new Set((entities || []).map(entity => entity.type))];
