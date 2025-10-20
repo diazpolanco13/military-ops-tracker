@@ -1,12 +1,14 @@
-import { X, Users, Plane, Ship, MapPin, Gauge, Eye } from 'lucide-react';
+import { X, Users, Plane, Ship, MapPin, Gauge, Eye, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 /**
  * 📊 Sidebar de Detalles de Grupo
  * Muestra información del escuadrón/formación y lista de miembros
  */
-export default function GroupDetailsSidebar({ group, onClose, onSelectMember, isOpen = false }) {
+export default function GroupDetailsSidebar({ group, onClose, onSelectMember, onDissolveGroup, isOpen = false }) {
   const [expandedMember, setExpandedMember] = useState(null);
+  const [showDissolveConfirm, setShowDissolveConfirm] = useState(false);
 
   if (!group) {
     return (
@@ -182,14 +184,32 @@ export default function GroupDetailsSidebar({ group, onClose, onSelectMember, is
             </button>
 
             <button
+              onClick={() => setShowDissolveConfirm(true)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded-lg transition-colors text-sm font-medium"
             >
-              <X size={16} />
+              <Trash2 size={16} />
               Disolver Grupo
             </button>
           </div>
         </div>
       </div>
+
+      {/* Diálogo de confirmación de disolución */}
+      <ConfirmDialog
+        isOpen={showDissolveConfirm}
+        onClose={() => setShowDissolveConfirm(false)}
+        onConfirm={async () => {
+          if (onDissolveGroup) {
+            await onDissolveGroup(group.id);
+            onClose();
+          }
+        }}
+        title="¿Disolver este grupo?"
+        message={`El grupo "${group.name}" será disuelto. Las ${group.count} entidades volverán a aparecer individualmente en el mapa.`}
+        confirmText="Disolver Grupo"
+        cancelText="Cancelar"
+        type="warning"
+      />
     </div>
   );
 }

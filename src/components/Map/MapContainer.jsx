@@ -35,7 +35,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   // 📡 Obtener entidades y grupos desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
-  const { groups, loading: loadingGroups } = useEntityGroups();
+  const { groups, loading: loadingGroups, deleteGroup, fetchGroups } = useEntityGroups();
 
   // Exponer funciones al componente padre
   useEffect(() => {
@@ -419,6 +419,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         onClose={() => setSelectedGroup(null)}
         onSelectMember={(entity) => {
           setSelectedEntity(entity);
+          setSelectedGroup(null);
+        }}
+        onDissolveGroup={async (groupId) => {
+          await deleteGroup(groupId);
+          await fetchGroups();
           setSelectedGroup(null);
         }}
         isOpen={!!selectedGroup}
