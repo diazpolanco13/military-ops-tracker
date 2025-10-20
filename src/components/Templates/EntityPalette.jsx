@@ -3,6 +3,7 @@ import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Setti
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
 import TemplateCard from './TemplateCard';
 import TemplateAdminPanel from './TemplateAdminPanel';
+import TemplateDetailsModal from './TemplateDetailsModal';
 
 /**
  * Panel lateral de paleta de plantillas tipo IBM Analyst's Notebook
@@ -19,6 +20,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
   const [favorites, setFavorites] = useState([]);
   const [topTemplates, setTopTemplates] = useState([]);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [selectedTemplateForDetails, setSelectedTemplateForDetails] = useState(null);
 
   // Cargar plantillas más usadas
   useEffect(() => {
@@ -71,6 +73,18 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
         return [...prev, templateId];
       }
     });
+  };
+
+  // Mostrar detalles de plantilla
+  const handleShowDetails = (template) => {
+    setSelectedTemplateForDetails(template);
+  };
+
+  // Usar plantilla desde el modal de detalles
+  const handleUseTemplate = (template) => {
+    if (onSelectTemplate) {
+      onSelectTemplate(template);
+    }
   };
 
   // Filtrar plantillas según tab activa
@@ -202,6 +216,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
                 onClick={onSelectTemplate}
                 isFavorite={favorites.includes(template.id)}
                 onToggleFavorite={toggleFavorite}
+                onShowDetails={handleShowDetails}
               />
             ))}
           </div>
@@ -270,6 +285,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
                               onClick={onSelectTemplate}
                               isFavorite={favorites.includes(template.id)}
                               onToggleFavorite={toggleFavorite}
+                              onShowDetails={handleShowDetails}
                             />
                           ))}
                         </div>
@@ -307,6 +323,15 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
       {/* Panel de Administración */}
       {showAdminPanel && (
         <TemplateAdminPanel onClose={() => setShowAdminPanel(false)} />
+      )}
+
+      {/* Modal de Detalles de Plantilla */}
+      {selectedTemplateForDetails && (
+        <TemplateDetailsModal
+          template={selectedTemplateForDetails}
+          onClose={() => setSelectedTemplateForDetails(null)}
+          onUseTemplate={handleUseTemplate}
+        />
       )}
     </div>
   );

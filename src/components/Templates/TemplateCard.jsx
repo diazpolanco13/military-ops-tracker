@@ -1,11 +1,11 @@
-import { Ship, Plane, Users, Shield, Star } from 'lucide-react';
+import { Ship, Plane, Users, Shield, Star, Info } from 'lucide-react';
 import { useState } from 'react';
 
 /**
  * Tarjeta de plantilla arrastrable tipo IBM Analyst's Notebook
  * Muestra información resumida y permite arrastrar al mapa
  */
-export default function TemplateCard({ template, onDragStart, onClick, isFavorite, onToggleFavorite }) {
+export default function TemplateCard({ template, onDragStart, onClick, isFavorite, onToggleFavorite, onShowDetails }) {
   const [isDragging, setIsDragging] = useState(false);
 
   // Iconos por tipo de entidad
@@ -56,6 +56,13 @@ export default function TemplateCard({ template, onDragStart, onClick, isFavorit
     }
   };
 
+  const handleShowDetails = (e) => {
+    e.stopPropagation();
+    if (onShowDetails) {
+      onShowDetails(template);
+    }
+  };
+
   return (
     <div
       draggable
@@ -72,17 +79,26 @@ export default function TemplateCard({ template, onDragStart, onClick, isFavorit
         ${isFavorite ? 'border-l-4 border-l-yellow-500' : ''}
       `}
     >
-      {/* Badge de favorito */}
-      <button
-        onClick={handleToggleFavorite}
-        className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-slate-600 transition-colors"
-        title={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-      >
-        <Star
-          size={14}
-          className={`${isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-slate-500'}`}
-        />
-      </button>
+      {/* Botones superiores */}
+      <div className="absolute top-2 right-2 z-10 flex gap-1">
+        <button
+          onClick={handleShowDetails}
+          className="p-1 rounded-full bg-slate-700/80 hover:bg-blue-600 transition-colors"
+          title="Ver detalles completos"
+        >
+          <Info size={14} className="text-slate-300" />
+        </button>
+        <button
+          onClick={handleToggleFavorite}
+          className="p-1 rounded-full hover:bg-slate-600 transition-colors"
+          title={isFavorite ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+        >
+          <Star
+            size={14}
+            className={`${isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-slate-500'}`}
+          />
+        </button>
+      </div>
 
       {/* Contenido principal */}
       <div className="p-3 space-y-2">
