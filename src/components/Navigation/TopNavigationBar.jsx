@@ -30,6 +30,7 @@ import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
+import GroupManagementPanel from '../Groups/GroupManagementPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -41,6 +42,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [showGroupsPanel, setShowGroupsPanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
@@ -118,6 +120,15 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
           active={activePanel === 'zones'}
           onClick={() => togglePanel('zones')}
           tooltip="Zonas de Interés"
+        />
+
+        {/* 👥 Grupos */}
+        <NavButton
+          icon={<Users className="w-5 h-5" />}
+          label="Grupos"
+          active={showGroupsPanel}
+          onClick={() => setShowGroupsPanel(true)}
+          tooltip="Gestión de Grupos"
         />
 
         {/* Separador */}
@@ -212,6 +223,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
       {/* Panel de Configuración */}
       {showSettingsPanel && (
         <SettingsPanel onClose={() => setShowSettingsPanel(false)} />
+      )}
+
+      {/* Panel de Gestión de Grupos */}
+      {showGroupsPanel && (
+        <GroupManagementPanel onClose={() => setShowGroupsPanel(false)} />
       )}
     </>
   );
