@@ -117,13 +117,26 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const getBatchActionColor = () => isHidden ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700';
 
   // Validaciones de seguridad
-  if (!entities) {
+  if (!entities || loading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-8">
           <div className="flex items-center gap-3 text-white">
             <Loader2 className="w-6 h-6 animate-spin" />
             <span>Cargando entidades...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-8">
+          <div className="flex items-center gap-3 text-red-400">
+            <AlertTriangle className="w-6 h-6" />
+            <span>Error: {error}</span>
           </div>
         </div>
       </div>
