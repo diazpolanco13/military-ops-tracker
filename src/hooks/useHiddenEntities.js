@@ -24,6 +24,13 @@ export function useHiddenEntities() {
 
       if (error) throw error;
 
+      console.log('🔍 DEBUG useHiddenEntities - Datos recibidos:', {
+        dataLength: data?.length,
+        data: data,
+        isVisible: data?.map(e => e.is_visible),
+        archivedAt: data?.map(e => e.archived_at)
+      });
+
       setHiddenEntities(data || []);
       setError(null);
     } catch (err) {

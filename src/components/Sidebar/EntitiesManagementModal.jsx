@@ -36,6 +36,17 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const [expandedEntity, setExpandedEntity] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
+  // Debug temporal
+  console.log('🔍 DEBUG EntitiesManagementModal:', {
+    type,
+    entitiesLength: entities?.length,
+    entities: entities,
+    loading,
+    error,
+    isHidden,
+    isArchived
+  });
+
   const filteredEntities = (entities || []).filter(entity => {
     const matchesSearch = searchTerm === '' || 
                           entity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
