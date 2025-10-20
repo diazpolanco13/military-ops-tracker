@@ -79,10 +79,10 @@ export default function TemplateDetailsModal({ template, onClose, onUseTemplate 
                       <video 
                         src={mediaUrl}
                         className="w-full h-64 object-cover bg-black"
-                        controls
                         loop
                         muted
                         autoPlay
+                        playsInline
                         onError={() => setVideoError(true)}
                       />
                     );
