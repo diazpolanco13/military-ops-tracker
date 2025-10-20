@@ -19,22 +19,28 @@ export default function SettingsPanel({ onClose }) {
     return parseInt(localStorage.getItem('iconSize') || '48');
   });
 
+  const [useImages, setUseImages] = useState(() => {
+    return localStorage.getItem('useImages') === 'true';
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
     localStorage.setItem('clusterRadius', clusterRadius);
     localStorage.setItem('iconSize', iconSize);
+    localStorage.setItem('useImages', useImages);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
-      detail: { clusterZoomThreshold, clusterRadius, iconSize }
+      detail: { clusterZoomThreshold, clusterRadius, iconSize, useImages }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(8);
     setClusterRadius(60);
     setIconSize(48);
+    setUseImages(false);
   };
 
   return (
@@ -116,12 +122,36 @@ export default function SettingsPanel({ onClose }) {
             </div>
           </div>
 
-          {/* Sección: Iconos */}
+          {/* Sección: Visualización */}
           <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
             <h3 className="text-sm font-semibold text-green-400 mb-4 flex items-center gap-2">
               <Eye className="w-4 h-4" />
-              TAMAÑO DE ICONOS
+              VISUALIZACIÓN DE ENTIDADES
             </h3>
+
+            {/* Toggle Iconos/Imágenes */}
+            <div className="mb-4 pb-4 border-b border-slate-700">
+              <label className="flex items-center justify-between mb-2">
+                <span className="text-sm text-slate-300">Usar imágenes de plantillas:</span>
+                <button
+                  onClick={() => setUseImages(!useImages)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    useImages ? 'bg-green-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      useImages ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </label>
+              <p className="text-xs text-slate-400">
+                {useImages 
+                  ? '✅ Mostrando imágenes de plantillas cuando estén disponibles'
+                  : '❌ Mostrando solo iconos (más rápido)'}
+              </p>
+            </div>
 
             <div>
               <label className="flex items-center justify-between mb-2">

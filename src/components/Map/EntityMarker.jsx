@@ -85,14 +85,18 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
+  const [useImages, setUseImages] = useState(() => localStorage.getItem('useImages') === 'true');
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
 
-  // Escuchar cambios de configuración de tamaño
+  // Escuchar cambios de configuración
   useEffect(() => {
     const handleSettingsChange = (e) => {
       if (e.detail.iconSize !== undefined) {
         setIconSize(e.detail.iconSize);
+      }
+      if (e.detail.useImages !== undefined) {
+        setUseImages(e.detail.useImages);
       }
     };
 
@@ -120,8 +124,11 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     const color = getEntityColor(entity.type);
     const size = getEntitySize(entity.type);
 
-    // Si tiene imagen thumbnail, usar esa como icono
-    if (entity.image_thumbnail_url) {
+    // Determinar si usar imagen o icono según configuración
+    const shouldUseImage = useImages && entity.image_thumbnail_url;
+
+    // Si configuración permite y tiene imagen, usar imagen
+    if (shouldUseImage) {
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
@@ -279,7 +286,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
         markerRef.current.remove();
       }
     };
-  }, [map, iconSize]); // Recrear cuando cambia el tamaño de icono
+  }, [map, iconSize, useImages]); // Recrear cuando cambia tamaño o toggle imágenes
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {
