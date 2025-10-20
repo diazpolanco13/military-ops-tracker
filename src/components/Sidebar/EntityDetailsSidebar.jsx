@@ -1,5 +1,7 @@
 import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship, Anchor, Plane, Users, Edit2, Eye, EyeOff, Archive, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useEntityActions } from '../../hooks/useEntityActions';
+import { supabase } from '../../lib/supabase';
 
 const TYPE_ICONS = {
   destructor: Ship,
@@ -49,6 +51,36 @@ const STATUS_CONFIG = {
  */
 export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }) {
   const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
+  const [template, setTemplate] = useState(null);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
+
+  // Cargar plantilla si existe template_id
+  useEffect(() => {
+    async function loadTemplate() {
+      if (entity?.template_id) {
+        setLoadingTemplate(true);
+        try {
+          const { data, error } = await supabase
+            .from('entity_templates')
+            .select('*')
+            .eq('id', entity.template_id)
+            .single();
+
+          if (!error && data) {
+            setTemplate(data);
+          }
+        } catch (err) {
+          console.error('Error loading template:', err);
+        } finally {
+          setLoadingTemplate(false);
+        }
+      } else {
+        setTemplate(null);
+      }
+    }
+
+    loadTemplate();
+  }, [entity?.template_id]);
 
   // Handlers para las acciones
   const handleToggleVisibility = async () => {
@@ -114,6 +146,11 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
     );
   }
 
+  // Función helper para obtener valor (entidad o heredado de plantilla)
+  const getValue = (field) => {
+    return entity[field] ?? template?.[field] ?? null;
+  };
+
   const Icon = TYPE_ICONS[entity.type] || Ship;
   const statusConfig = STATUS_CONFIG[entity.status] || STATUS_CONFIG.activo;
 
@@ -126,6 +163,10 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
         minute: '2-digit',
       })
     : 'N/A';
+
+  // Obtener video/imagen (priorizar entidad, luego plantilla)
+  const videoUrl = entity.video_url || template?.video_url || template?.image_url?.match(/\.(webm|mp4)$/i) ? template?.image_url : null;
+  const imageUrl = entity.image_thumbnail_url || entity.image_url || template?.image_url;
 
   return (
     <div
@@ -142,32 +183,32 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
       {/* Header con imagen/video de fondo */}
       <div className="relative h-64 bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden flex-shrink-0">
         {/* Video de fondo (prioridad sobre imagen) */}
-        {entity.video_url ? (
+        {videoUrl ? (
           <div className="relative z-10 h-full w-full">
             <video
-              src={entity.video_url}
+              src={videoUrl}
               autoPlay
               loop
               muted
               playsInline
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-cover"
               style={{
                 filter: 'brightness(0.8) contrast(1.2) saturate(1.1)',
                 transform: 'scale(1.05)' // Para evitar bordes negros
               }}
             />
             {/* Overlay sutil para mejor legibilidad del texto */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 rounded-lg" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
           </div>
-        ) : entity.image_thumbnail_url ? (
+        ) : imageUrl ? (
           <>
             <div
               className="absolute inset-0 bg-cover bg-center filter blur-lg opacity-30"
-              style={{ backgroundImage: `url(${entity.image_thumbnail_url})` }}
+              style={{ backgroundImage: `url(${imageUrl})` }}
             />
             <div className="relative z-10 flex items-center justify-center h-full p-6">
               <img
-                src={entity.image_thumbnail_url}
+                src={imageUrl}
                 alt={entity.name}
                 className="max-h-full max-w-full object-contain drop-shadow-2xl"
               />
@@ -253,7 +294,7 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
                 {entity.speed || 0} kn
               </p>
               <p className="text-slate-500 text-xs">
-                máx: {entity.max_speed_knots || 'N/A'} kn
+                máx: {getValue('max_speed_knots') || 'N/A'} kn
               </p>
             </div>
 
@@ -271,7 +312,7 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
           </div>
 
           {/* Especificaciones Técnicas */}
-          {(entity.displacement_tons || entity.length_meters || entity.crew_count) && (
+          {(getValue('displacement_tons') || getValue('length_meters') || getValue('crew_count')) && (
             <div className="bg-gradient-to-br from-blue-950/30 to-slate-800/30 rounded-lg p-4 border border-blue-900/30">
               <h3 className="text-sm font-bold text-blue-400 uppercase tracking-wide mb-4 flex items-center gap-2">
                 <Shield className="w-4 h-4" />
@@ -279,38 +320,38 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
               </h3>
               
               <div className="space-y-3">
-                {entity.displacement_tons && (
+                {getValue('displacement_tons') && (
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/30">
                     <span className="text-xs text-slate-400">Desplazamiento</span>
-                    <span className="text-sm text-white font-bold">{entity.displacement_tons.toLocaleString()} tons</span>
+                    <span className="text-sm text-white font-bold">{getValue('displacement_tons').toLocaleString()} tons</span>
                   </div>
                 )}
                 
-                {entity.length_meters && (
+                {getValue('length_meters') && (
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/30">
                     <span className="text-xs text-slate-400">Longitud</span>
-                    <span className="text-sm text-white font-bold">{entity.length_meters} m</span>
+                    <span className="text-sm text-white font-bold">{getValue('length_meters')} m</span>
                   </div>
                 )}
                 
-                {entity.beam_meters && (
+                {getValue('beam_meters') && (
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/30">
                     <span className="text-xs text-slate-400">Manga</span>
-                    <span className="text-sm text-white font-bold">{entity.beam_meters} m</span>
+                    <span className="text-sm text-white font-bold">{getValue('beam_meters')} m</span>
                   </div>
                 )}
                 
-                {entity.crew_count && (
+                {getValue('crew_count') && (
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/30">
                     <span className="text-xs text-slate-400">Tripulación</span>
-                    <span className="text-sm text-white font-bold">{entity.crew_count} miembros</span>
+                    <span className="text-sm text-white font-bold">{getValue('crew_count')} miembros</span>
                   </div>
                 )}
                 
-                {entity.range_km && (
+                {getValue('range_km') && (
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/30">
                     <span className="text-xs text-slate-400">Alcance</span>
-                    <span className="text-sm text-white font-bold">{entity.range_km.toLocaleString()} km</span>
+                    <span className="text-sm text-white font-bold">{getValue('range_km').toLocaleString()} km</span>
                   </div>
                 )}
                 
@@ -325,14 +366,14 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
           )}
 
           {/* Armamento */}
-          {entity.armamento && (
+          {getValue('armamento') && (
             <div className="bg-gradient-to-br from-red-950/30 to-slate-800/30 rounded-lg p-4 border border-red-900/30">
               <h3 className="text-sm font-bold text-red-400 uppercase tracking-wide mb-3 flex items-center gap-2">
                 <Swords className="w-4 h-4" />
                 Armamento
               </h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {entity.armamento}
+                {getValue('armamento')}
               </p>
             </div>
           )}
