@@ -4,7 +4,6 @@ import { Ship, Anchor, Plane, Users } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
-import { supabase } from '../../lib/supabase';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -81,40 +80,16 @@ function getEntityLabel(entity) {
 /**
  * Componente de marcador individual
  */
-export default function EntityMarker({ entity, map, onPositionChange, onEntityClick }) {
+export default function EntityMarker({ entity, template, map, onPositionChange, onEntityClick }) {
   const markerRef = useRef(null);
   const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
   const [useImages, setUseImages] = useState(() => localStorage.getItem('useImages') === 'true');
-  const [template, setTemplate] = useState(null);
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
-
-  // Cargar plantilla si existe template_id y useImages está activado
-  useEffect(() => {
-    async function loadTemplate() {
-      if (useImages && entity?.template_id) {
-        try {
-          const { data } = await supabase
-            .from('entity_templates')
-            .select('icon_url, image_url')
-            .eq('id', entity.template_id)
-            .single();
-
-          if (data) {
-            setTemplate(data);
-          }
-        } catch (err) {
-          console.error('Error loading template for marker:', err);
-        }
-      } else {
-        setTemplate(null);
-      }
-    }
-
-    loadTemplate();
-  }, [entity?.template_id, useImages]);
+  
+  // Template ahora viene como prop desde MapContainer (cacheado)
 
   // Escuchar cambios de configuración
   useEffect(() => {
@@ -315,7 +290,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
         markerRef.current.remove();
       }
     };
-  }, [map, iconSize, useImages]); // Recrear cuando cambia tamaño o toggle imágenes
+  }, [map, iconSize, useImages, template]); // Recrear cuando cambia tamaño, toggle o template
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {

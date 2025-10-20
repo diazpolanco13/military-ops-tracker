@@ -13,6 +13,7 @@ import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
 import DeploymentStats from '../Dashboard/DeploymentStats';
 import { useSelection } from '../../stores/SelectionContext';
+import { supabase } from '../../lib/supabase';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -37,6 +38,39 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // 📡 Obtener entidades y grupos desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
   const { groups, loading: loadingGroups, deleteGroup, fetchGroups } = useEntityGroups();
+  const [templatesCache, setTemplatesCache] = useState({});
+
+  // Cachear plantillas para evitar recargas constantes
+  useEffect(() => {
+    async function loadTemplates() {
+      const useImages = localStorage.getItem('useImages') === 'true';
+      if (!useImages || !entities || entities.length === 0) return;
+
+      // Obtener IDs únicos de plantillas
+      const templateIds = [...new Set(entities.map(e => e.template_id).filter(Boolean))];
+      
+      if (templateIds.length === 0) return;
+
+      try {
+        const { data } = await supabase
+          .from('entity_templates')
+          .select('id, icon_url, image_url')
+          .in('id', templateIds);
+
+        if (data) {
+          const cache = {};
+          data.forEach(t => {
+            cache[t.id] = t;
+          });
+          setTemplatesCache(cache);
+        }
+      } catch (err) {
+        console.error('Error caching templates:', err);
+      }
+    }
+
+    loadTemplates();
+  }, [entities]);
 
   // Exponer funciones al componente padre
   useEffect(() => {
@@ -481,6 +515,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             <EntityMarker 
               key={entity.id} 
               entity={entity} 
+              template={templatesCache[entity.template_id]}
               map={map.current}
               onPositionChange={handlePositionChange}
               onEntityClick={() => setSelectedEntity(entity)}
