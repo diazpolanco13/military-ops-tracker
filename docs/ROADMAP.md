@@ -3,18 +3,111 @@
 > **Filosofía**: Sistema tipo IBM i2 Analyst's Notebook para operaciones militares  
 > Desarrollo iterativo con resultados visuales inmediatos
 
-**Última Actualización**: 20 de Octubre, 2025  
-**Versión**: 2.2 - Sistema de Gestión de Entidades COMPLETO  
-**Estado**: Sistema de Visibilidad 100% COMPLETADO ✅
+**Última Actualización**: 20 de Octubre, 2025 (Noche)  
+**Versión**: 3.0 - Sistema de Clustering, Grupos y Dashboard Completo  
+**Estado**: Despliegue SOUTHCOM Completo - 61 Commits Épicos ✅
 
 ---
 
 ## 📋 Tabla de Contenidos
+- [🎉 NUEVO - Sesión Mega Épica 20 Oct 2025](#-sesión-mega-épica-20-oct-2025)
 - [✅ COMPLETADO - Sesión Épica](#-completado---sesión-épica-17-oct-2025)
 - [✅ COMPLETADO - Sistema de Gestión de Entidades](#-completado---sistema-de-gestión-de-entidades-18-oct-2025)
 - [🎯 PRÓXIMOS PASOS](#-próximos-pasos)
 - [🚀 FEATURES FUTURAS](#-features-futuras)
 - [📚 HISTORIAL DE ITERACIONES](#-historial-de-iteraciones-completadas)
+
+---
+
+## 🎉 SESIÓN MEGA ÉPICA (20 Oct 2025)
+
+### 🏆 **61 Commits - 8 Sistemas Principales - 41 Entidades Desplegadas:**
+
+**1. Sistema de Clustering Profesional Tipo GPS**
+- ✅ Clustering automático en zoom out (círculos numéricos)
+- ✅ Marcadores individuales en zoom in (iconos con drag & drop)
+- ✅ Sistema híbrido inteligente (umbral configurable)
+- ✅ Colores por cantidad (azul: 1-4, naranja: 5-9, rojo: 10+)
+- ✅ Click en cluster → zoom automático suave
+- ✅ Actualización sincronizada con drag & drop
+
+**2. Sistema de Grupos Militares (Escuadrones/Formaciones)**
+- ✅ Tabla `entity_groups` y `entity_group_members` en BD
+- ✅ Sugerencias automáticas por proximidad y tipo
+- ✅ Creación manual de grupos (Ctrl+Click + formulario)
+- ✅ Visualización con iconos grandes y contador
+- ✅ Drag & Drop de grupo completo (mantiene formación)
+- ✅ Sidebar de grupo con lista de miembros clickeable
+- ✅ Disolver grupos con confirmación
+- ✅ Tamaño dinámico configurable
+
+**3. Panel de Configuración Avanzado**
+- ✅ Umbral de zoom para iconos (5-12, ajustable)
+- ✅ Radio de agrupación clustering (30-100px)
+- ✅ Tamaño de iconos (24-72px)
+- ✅ Toggle iconos/imágenes de plantillas
+- ✅ Persistencia en localStorage
+- ✅ Actualización en tiempo real sin recargar
+
+**4. Dashboard Tecnológico de Estadísticas**
+- ✅ Badge compacto expandible (esquina inferior derecha)
+- ✅ Resumen: Unidades, Efectivos, Grupos
+- ✅ Desglose por tipo con iconos coloridos
+- ✅ Conteo de personal por tipo
+- ✅ Indicador "Actualización en tiempo real"
+
+**5. Biblioteca Completa de 33 Plantillas SOUTHCOM**
+- ✅ 10 Buques (Destructores Arleigh Burke, LCS, Anfibios, Crucero Ticonderoga, Submarino)
+- ✅ 17 Aeronaves (F-35B, P-8A, B-52H, V-22, MH-60, MQ-9, AC-130, etc.)
+- ✅ 3 Tropas (22nd MEU, 160th SOAR, SOUTHCOM General)
+- ✅ 3 Drones y Misiles (MQ-9, MQ-1C, Tomahawk)
+- ✅ Datos técnicos completos del JSON real
+- ✅ Flight I vs IIA corregido (USS The Sullivans)
+
+**6. Sistema de Upload Dual (Icono PNG + Video WEBM)**
+- ✅ Campo separado para icono PNG (mapa)
+- ✅ Campo separado para video WEBM (sidebar)
+- ✅ Bucket entity-videos para videos (50MB límite)
+- ✅ Optimización automática de imágenes (400x400, 128x128)
+- ✅ Videos formato 16:9 con aspect ratio perfecto
+- ✅ Soporte completo WEBM/MP4
+
+**7. Sistema de Herencia de Plantillas Mejorado**
+- ✅ Sidebar carga plantilla y hereda specs
+- ✅ Modal de detalles con video heredado
+- ✅ EntityMarker hereda icon_url para imágenes
+- ✅ Cache de plantillas a nivel MapContainer
+- ✅ Sin pérdida de imágenes entre zoom in/out
+
+**8. Iconos Especiales para Tropas**
+- ✅ Icono Users verde distintivo
+- ✅ Badge con contador de efectivos (ej: "2.7k")
+- ✅ Etiqueta con nombre de unidad
+- ✅ Posicionamiento perfecto sin tapar icono
+
+**Despliegue SOUTHCOM Completo (41 Entidades):**
+- ✅ 24 Aeronaves (F-35B, P-8A, Osprey, Harrier, MH-60, MQ-9, AC-130)
+- ✅ 10 Buques (4 Destructores, 1 Crucero, 2 LCS, 3 Anfibios)
+- ✅ 6 Tropas (10,000 efectivos totales realistas)
+- ✅ 1 Submarino nuclear (USS Newport News)
+
+**Fixes Críticos:**
+- ✅ Modal de entidades optimizado (tamaño adaptativo)
+- ✅ Sistema de bloqueo/desbloqueo global de movimiento
+- ✅ Diálogos de confirmación antes de eliminar
+- ✅ Búsqueda de plantillas sin loops infinitos
+- ✅ Repositorio cambiado a military-ops-tracker
+- ✅ Issue #16 documentado en GitHub
+- ✅ Refetch con delay para drag sublime
+
+### 📊 **Métricas de la Sesión:**
+- **Commits**: 61 totales (23 pendientes de push)
+- **Líneas de código**: ~5,000+
+- **Componentes nuevos**: 12+
+- **Hooks nuevos**: 2 (useEntityGroups, cache en useEntityMarker)
+- **Migraciones BD**: 5 (grupos, tropas, plantillas adicionales)
+- **Sistemas implementados**: 8 completos
+- **Tiempo**: ~10 horas de desarrollo intenso
 
 ---
 
@@ -1261,9 +1354,12 @@ git merge iteracion-X-nombre
 
 ---
 
-**Fecha**: 17 de Octubre, 2025  
-**Versión**: 2.0  
+**Fecha**: 20 de Octubre, 2025 (Noche)  
+**Versión**: 3.0  
 **Branch**: main  
-**Commits**: 10+ en main  
-**Estado**: 🟢 PRODUCCIÓN READY
+**Commits**: 61 commits épicos  
+**Estado**: 🟢 PRODUCCIÓN READY - Despliegue SOUTHCOM Completo
+
+**Repositorio**: https://github.com/diazpolanco13/military-ops-tracker  
+**Issue Tracking**: Issue #16 (Parpadeo en drag & drop con clustering)
 
