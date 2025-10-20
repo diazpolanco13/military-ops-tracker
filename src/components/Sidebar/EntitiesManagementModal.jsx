@@ -36,7 +36,7 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const [expandedEntity, setExpandedEntity] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  const filteredEntities = entities.filter(entity => {
+  const filteredEntities = (entities || []).filter(entity => {
     const matchesSearch = searchTerm === '' || 
                           entity.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           entity.class.toLowerCase().includes(searchTerm.toLowerCase());
@@ -44,7 +44,7 @@ export default function EntitiesManagementModal({ type, onClose }) {
     return matchesSearch && matchesType;
   });
 
-  const entityTypes = [...new Set(entities.map(entity => entity.type))];
+  const entityTypes = [...new Set((entities || []).map(entity => entity.type))];
   const entityCountsByType = getEntityCountsByType();
 
   // 🔄 Manejar acción individual
@@ -115,6 +115,20 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const getBatchActionText = () => isHidden ? 'Mostrar Todas' : 'Restaurar Todas';
   const getBatchActionIcon = () => isHidden ? Eye : RotateCcw;
   const getBatchActionColor = () => isHidden ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700';
+
+  // Validaciones de seguridad
+  if (!entities) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-8">
+          <div className="flex items-center gap-3 text-white">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span>Cargando entidades...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const TitleIcon = getIcon();
   const BatchIcon = getBatchActionIcon();
