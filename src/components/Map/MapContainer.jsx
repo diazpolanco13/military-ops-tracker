@@ -8,6 +8,7 @@ import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useLock } from '../../stores/LockContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
+import { useSelection } from '../../stores/SelectionContext';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -18,7 +19,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
+  const [currentZoom, setCurrentZoom] = useState(6);
   const { isLocked } = useLock();
+  const { selectEntity } = useSelection();
 
   // 📡 Obtener entidades desde Supabase con función de refetch
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
@@ -156,6 +159,175 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     };
   }, []);
 
+  // 🗺️ Sistema de Clustering de Entidades
+  useEffect(() => {
+    if (!map.current || !mapLoaded || loading || !entities || entities.length === 0) return;
+
+    const sourceId = 'entities-source';
+    const clusterLayerId = 'clusters';
+    const clusterCountLayerId = 'cluster-count';
+    const unclusteredLayerId = 'unclustered-point';
+
+    // Convertir entidades visibles a GeoJSON
+    const geojson = {
+      type: 'FeatureCollection',
+      features: entities
+        .filter(e => e.latitude && e.longitude && e.is_visible !== false)
+        .map(entity => ({
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [parseFloat(entity.longitude), parseFloat(entity.latitude)]
+          },
+          properties: {
+            id: entity.id,
+            name: entity.name,
+            type: entity.type,
+            class: entity.class || '',
+            status: entity.status || 'activo'
+          }
+        }))
+    };
+
+    // Si el source ya existe, solo actualizar datos
+    if (map.current.getSource(sourceId)) {
+      map.current.getSource(sourceId).setData(geojson);
+      return;
+    }
+
+    // Agregar source con clustering habilitado
+    map.current.addSource(sourceId, {
+      type: 'geojson',
+      data: geojson,
+      cluster: true,
+      clusterMaxZoom: 9, // Clustering hasta zoom 9
+      clusterRadius: 60 // Radio en píxeles
+    });
+
+    // Layer para clusters (círculos grandes con gradiente)
+    map.current.addLayer({
+      id: clusterLayerId,
+      type: 'circle',
+      source: sourceId,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          '#3b82f6', // Azul: 1-4 entidades
+          5,
+          '#f59e0b', // Naranja: 5-9 entidades
+          10,
+          '#ef4444'  // Rojo: 10+ entidades
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          25, // Radio base
+          5,
+          30, // 5-9 entidades
+          10,
+          35  // 10+ entidades
+        ],
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9
+      }
+    });
+
+    // Layer para el número de entidades en el cluster
+    map.current.addLayer({
+      id: clusterCountLayerId,
+      type: 'symbol',
+      source: sourceId,
+      filter: ['has', 'point_count'],
+      layout: {
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-size': 16
+      },
+      paint: {
+        'text-color': '#ffffff'
+      }
+    });
+
+    // Layer para marcadores individuales
+    map.current.addLayer({
+      id: unclusteredLayerId,
+      type: 'circle',
+      source: sourceId,
+      filter: ['!', ['has', 'point_count']],
+      paint: {
+        'circle-color': '#ef4444',
+        'circle-radius': 14,
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9
+      }
+    });
+
+    // Click en cluster → hacer zoom
+    map.current.on('click', clusterLayerId, (e) => {
+      const features = map.current.queryRenderedFeatures(e.point, {
+        layers: [clusterLayerId]
+      });
+      
+      if (features.length > 0) {
+        const clusterId = features[0].properties.cluster_id;
+        map.current.getSource(sourceId).getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          map.current.easeTo({
+            center: features[0].geometry.coordinates,
+            zoom: zoom + 0.5,
+            duration: 500
+          });
+        });
+      }
+    });
+
+    // Click en marcador individual → abrir sidebar
+    map.current.on('click', unclusteredLayerId, (e) => {
+      const feature = e.features[0];
+      const entityId = feature.properties.id;
+      
+      // Buscar entidad completa
+      const entity = entities.find(e => e.id === entityId);
+      if (entity) {
+        setSelectedEntity(entity);
+        selectEntity(entity.id);
+      }
+    });
+
+    // Cursores
+    map.current.on('mouseenter', clusterLayerId, () => {
+      map.current.getCanvas().style.cursor = 'pointer';
+    });
+    map.current.on('mouseleave', clusterLayerId, () => {
+      map.current.getCanvas().style.cursor = '';
+    });
+    map.current.on('mouseenter', unclusteredLayerId, () => {
+      map.current.getCanvas().style.cursor = 'pointer';
+    });
+    map.current.on('mouseleave', unclusteredLayerId, () => {
+      map.current.getCanvas().style.cursor = '';
+    });
+
+    // Detectar cambios de zoom
+    map.current.on('zoom', () => {
+      setCurrentZoom(map.current.getZoom());
+    });
+
+    // Cleanup
+    return () => {
+      if (map.current) {
+        if (map.current.getLayer(clusterLayerId)) map.current.removeLayer(clusterLayerId);
+        if (map.current.getLayer(clusterCountLayerId)) map.current.removeLayer(clusterCountLayerId);
+        if (map.current.getLayer(unclusteredLayerId)) map.current.removeLayer(unclusteredLayerId);
+        if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
+      }
+    };
+  }, [mapLoaded, entities, loading, selectEntity]);
+
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       {/* Sidebar de detalles - Fixed, fuera del flujo */}
@@ -181,7 +353,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
-      {/* Marcadores de entidades militares */}
+      {/* Marcadores individuales - DESACTIVADOS, usando clustering
       {mapLoaded && !loading && entities.map((entity) => (
         <EntityMarker 
           key={entity.id} 
@@ -191,6 +363,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           onEntityClick={() => setSelectedEntity(entity)}
         />
       ))}
+      */}
 
       {/* Indicador de carga */}
       {loading && (
