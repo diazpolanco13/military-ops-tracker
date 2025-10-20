@@ -65,39 +65,14 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     try {
       await updatePosition(entityId, newPosition);
       
-      // 🔄 Actualizar solo el GeoJSON del clustering (sin refetch completo)
-      if (map.current && map.current.getSource('entities-source')) {
-        // Actualizar entidad localmente
-        const updatedEntities = entities.map(e => 
-          e.id === entityId 
-            ? { ...e, latitude: newPosition.latitude, longitude: newPosition.longitude }
-            : e
-        );
-        
-        // Regenerar GeoJSON solo con las nuevas coordenadas
-        const geojson = {
-          type: 'FeatureCollection',
-          features: updatedEntities
-            .filter(e => e.latitude && e.longitude && e.is_visible !== false)
-            .map(entity => ({
-              type: 'Feature',
-              geometry: {
-                type: 'Point',
-                coordinates: [parseFloat(entity.longitude), parseFloat(entity.latitude)]
-              },
-              properties: {
-                id: entity.id,
-                name: entity.name,
-                type: entity.type,
-                class: entity.class || '',
-                status: entity.status || 'activo'
-              }
-            }))
-        };
-        
-        // Actualizar source del clustering sin re-renderizar
-        map.current.getSource('entities-source').setData(geojson);
-      }
+      // 🔄 Refetch silencioso en background (no afecta visualmente)
+      // Estamos en modo iconos (zoom >= umbral), así que el refetch
+      // solo actualiza el array 'entities' sin causar re-render visible
+      // Cuando hagamos zoom out, los clusters estarán actualizados
+      setTimeout(() => {
+        refetch();
+      }, 100); // Pequeño delay para que el marcador termine de moverse
+      
     } catch (err) {
       console.error('❌ Error al mover entidad:', err);
       alert('Error al actualizar posición. Por favor, intenta de nuevo.');
