@@ -115,13 +115,30 @@ export default function TemplateAdminPanel({ onClose }) {
   };
 
   const handleImageUploadComplete = (urls) => {
-    // Actualizar formData con las URLs de las imágenes subidas
-    setFormData({
-      ...formData,
-      image_url: urls.full,
-      icon_url: urls.thumbnail // Para icono pequeño
-    });
+    // Actualizar formData según el tipo de upload
+    if (uploadingForTemplate === 'icon') {
+      // Subiendo icono PNG para el mapa
+      setFormData({
+        ...formData,
+        icon_url: urls.thumbnail || urls.full // Usar thumbnail o full
+      });
+    } else if (uploadingForTemplate === 'video') {
+      // Subiendo video WEBM para el sidebar
+      setFormData({
+        ...formData,
+        image_url: urls.full // Video va en image_url
+      });
+    } else {
+      // Fallback al comportamiento anterior
+      setFormData({
+        ...formData,
+        image_url: urls.full,
+        icon_url: urls.thumbnail
+      });
+    }
+    
     setShowImageUploader(false);
+    setUploadingForTemplate(null);
   };
 
   const filteredTemplates = templates.filter(t =>
@@ -614,49 +631,92 @@ export default function TemplateAdminPanel({ onClose }) {
                       </select>
                     </div>
 
-                    <div className="col-span-2">
+                    {/* Icono PNG (sin fondo para el mapa) */}
+                    <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Imagen de la Plantilla
+                        Icono PNG (mapa)
                       </label>
+                      <p className="text-xs text-slate-500 mb-2">PNG sin fondo, transparente</p>
                       
-                      {formData.image_url ? (
+                      {formData.icon_url ? (
                         <div className="flex items-center gap-3 p-3 bg-slate-900 border border-slate-600 rounded-lg">
                           <img 
-                            src={formData.image_url} 
-                            alt="Preview" 
-                            className="w-16 h-16 object-cover rounded-lg"
+                            src={formData.icon_url} 
+                            alt="Icono" 
+                            className="w-12 h-12 object-contain rounded-lg bg-slate-800"
                           />
                           <div className="flex-1">
-                            <p className="text-sm text-white">Imagen cargada</p>
-                            <p className="text-xs text-slate-400 truncate">{formData.image_url}</p>
+                            <p className="text-xs text-white">Icono PNG</p>
+                            <p className="text-xs text-slate-400 truncate">{formData.icon_url.split('/').pop()}</p>
                           </div>
                           <button
                             type="button"
-                            onClick={() => setFormData({...formData, image_url: '', icon_url: ''})}
-                            className="p-2 hover:bg-slate-700 rounded-lg text-red-400 transition-colors"
+                            onClick={() => setFormData({...formData, icon_url: ''})}
+                            className="p-1 hover:bg-slate-700 rounded text-red-400 transition-colors"
                           >
-                            <X size={18} />
+                            <X size={16} />
                           </button>
                         </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => {
-                            setUploadingForTemplate('temp');
+                            setUploadingForTemplate('icon');
                             setShowImageUploader(true);
                           }}
-                          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border-2 border-dashed border-blue-500/50 hover:border-blue-500 text-blue-300 rounded-lg transition-all"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 border-2 border-dashed border-blue-500/50 hover:border-blue-500 text-blue-300 rounded-lg transition-all text-sm"
                         >
-                          <Upload size={20} />
-                          <span>Subir Imagen a Supabase Storage</span>
+                          <ImageIcon size={16} />
+                          Subir Icono PNG
                         </button>
                       )}
+                    </div>
+
+                    {/* Video WEBM (para sidebar) */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Video WEBM (sidebar)
+                      </label>
+                      <p className="text-xs text-slate-500 mb-2">Video corto para detalles</p>
                       
-                      <p className="text-xs text-slate-500 mt-1.5">
-                        💡 Esta imagen será heredada por todas las entidades creadas desde esta plantilla
-                      </p>
+                      {formData.image_url ? (
+                        <div className="flex items-center gap-3 p-3 bg-slate-900 border border-slate-600 rounded-lg">
+                          {formData.image_url.match(/\.(webm|mp4)$/i) ? (
+                            <video src={formData.image_url} className="w-12 h-12 object-cover rounded-lg" muted />
+                          ) : (
+                            <img src={formData.image_url} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
+                          )}
+                          <div className="flex-1">
+                            <p className="text-xs text-white">Video/Imagen</p>
+                            <p className="text-xs text-slate-400 truncate">{formData.image_url.split('/').pop()}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setFormData({...formData, image_url: ''})}
+                            className="p-1 hover:bg-slate-700 rounded text-red-400 transition-colors"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUploadingForTemplate('video');
+                            setShowImageUploader(true);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600/20 hover:bg-purple-600/30 border-2 border-dashed border-purple-500/50 hover:border-purple-500 text-purple-300 rounded-lg transition-all text-sm"
+                        >
+                          <Upload size={16} />
+                          Subir Video WEBM
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  <p className="text-xs text-slate-500 col-span-2 -mt-2">
+                    💡 Icono PNG: usado en el mapa. Video WEBM: usado en sidebar y modal de detalles
+                  </p>
                 </div>
 
                 {/* Botones de acción */}
