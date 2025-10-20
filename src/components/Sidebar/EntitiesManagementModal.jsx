@@ -20,32 +20,40 @@ export default function EntitiesManagementModal({ type, onClose }) {
   const archivedData = useArchivedEntities();
   
   const {
-    entities,
-    loading,
-    error,
+    entities: hiddenEntities,
+    loading: hiddenLoading,
+    error: hiddenError,
     showEntity,
     showAllEntities,
     archiveEntity,
     deleteEntity,
-    count,
-    getEntityCountsByType
-  } = isHidden ? hiddenData : archivedData;
+    count: hiddenCount,
+    getEntityCountsByType: hiddenGetEntityCountsByType
+  } = hiddenData;
+
+  const {
+    entities: archivedEntities,
+    loading: archivedLoading,
+    error: archivedError,
+    restoreEntity,
+    restoreAllEntities,
+    deleteArchivedEntity,
+    count: archivedCount,
+    getEntityCountsByType: archivedGetEntityCountsByType
+  } = archivedData;
+
+  // Seleccionar datos según el tipo
+  const entities = isHidden ? hiddenEntities : archivedEntities;
+  const loading = isHidden ? hiddenLoading : archivedLoading;
+  const error = isHidden ? hiddenError : archivedError;
+  const count = isHidden ? hiddenCount : archivedCount;
+  const getEntityCountsByType = isHidden ? hiddenGetEntityCountsByType : archivedGetEntityCountsByType;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [expandedEntity, setExpandedEntity] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
 
-  // Debug temporal
-  console.log('🔍 DEBUG EntitiesManagementModal:', {
-    type,
-    entitiesLength: entities?.length,
-    entities: entities,
-    loading,
-    error,
-    isHidden,
-    isArchived
-  });
 
   const filteredEntities = (entities || []).filter(entity => {
     const matchesSearch = searchTerm === '' || 
@@ -54,18 +62,6 @@ export default function EntitiesManagementModal({ type, onClose }) {
     const matchesType = selectedType === 'all' || entity.type === selectedType;
     const result = matchesSearch && matchesType;
     
-    // Debug temporal
-    if (!result) {
-      console.log('Entity filtered out:', {
-        name: entity.name,
-        type: entity.type,
-        class: entity.class,
-        searchTerm,
-        selectedType,
-        matchesSearch,
-        matchesType
-      });
-    }
     
     return result;
   });
@@ -124,7 +120,7 @@ export default function EntitiesManagementModal({ type, onClose }) {
     if (isHidden) {
       result = await showAllEntities();
     } else {
-      result = await archivedData.restoreAllEntities();
+      result = await restoreAllEntities();
     }
     
     if (!result.success) {
