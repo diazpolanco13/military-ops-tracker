@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
+import { Lock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
 import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
+import { useLock } from '../../stores/LockContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 
 // Configurar token de Mapbox
@@ -16,6 +18,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
+  const { isLocked } = useLock();
 
   // 📡 Obtener entidades desde Supabase con función de refetch
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
@@ -216,6 +219,14 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           }}
         >
           📍 {dragPreview.lat.toFixed(4)}°, {dragPreview.lng.toFixed(4)}°
+        </div>
+      )}
+
+      {/* Indicador de bloqueo */}
+      {isLocked && (
+        <div className="absolute top-20 right-4 bg-orange-600/90 backdrop-blur-sm text-white px-3 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 animate-pulse">
+          <Lock className="w-4 h-4" />
+          <span className="font-semibold">Movimiento Bloqueado</span>
         </div>
       )}
 

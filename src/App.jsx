@@ -5,6 +5,7 @@ import TopNavigationBar from './components/Navigation/TopNavigationBar';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
+import { LockProvider } from './stores/LockContext';
 
 function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -50,9 +51,10 @@ function App() {
   };
 
   return (
-    <SelectionProvider>
-      {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
-      <TopNavigationBar 
+    <LockProvider>
+      <SelectionProvider>
+        {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
+        <TopNavigationBar 
         onTogglePalette={() => setShowPalette(!showPalette)}
         paletteVisible={showPalette}
         map={mapInstance}
@@ -96,7 +98,8 @@ function App() {
           </div>
         )}
       </div>
-    </SelectionProvider>
+      </SelectionProvider>
+    </LockProvider>
   );
 }
 

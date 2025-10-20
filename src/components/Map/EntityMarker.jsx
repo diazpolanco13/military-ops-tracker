@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import { Ship, Anchor, Plane } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
+import { useLock } from '../../stores/LockContext';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -65,6 +66,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
   const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
+  const { isLocked } = useLock();
 
   // Verificar si esta entidad está seleccionada
   const selected = isSelected(entity.id);
@@ -184,7 +186,7 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
     const marker = new mapboxgl.Marker({
       element: el,
       anchor: 'center',
-      draggable: true,
+      draggable: !isLocked, // Respetar estado de bloqueo
     })
       .setLngLat([entity.longitude, entity.latitude])
       .addTo(map);
@@ -262,6 +264,22 @@ export default function EntityMarker({ entity, map, onPositionChange, onEntityCl
       marker.setLngLat([entity.longitude, entity.latitude]);
     }
   }, [entity.latitude, entity.longitude, entity.name]);
+
+  // 🔒 ACTUALIZAR DRAGGABLE SEGÚN ESTADO DE BLOQUEO
+  useEffect(() => {
+    if (!markerRef.current) return;
+    
+    const marker = markerRef.current;
+    const el = elementRef.current;
+    
+    // Actualizar draggable
+    marker.setDraggable(!isLocked);
+    
+    // Actualizar cursor
+    if (el) {
+      el.style.cursor = isLocked ? 'not-allowed' : 'grab';
+    }
+  }, [isLocked]);
 
   // 🎨 ACTUALIZAR ESTILOS SEGÚN SELECCIÓN
   useEffect(() => {

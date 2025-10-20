@@ -18,13 +18,16 @@ import {
   EyeOff,
   Archive,
   Trash2,
-  ArchiveRestore
+  ArchiveRestore,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
+import { useLock } from '../../stores/LockContext';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 
 /**
@@ -243,6 +246,7 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge })
 function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
+  const { isLocked, toggleLock } = useLock();
 
   const selectedCount = getSelectedCount();
   const selectedIds = getSelectedIds();
@@ -265,6 +269,12 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       onShowArchived();
       onClose();
       return;
+    }
+
+    // Acción de bloqueo/desbloqueo
+    if (action === 'toggle-lock') {
+      toggleLock();
+      return; // No cerrar el panel
     }
 
     let actionFunction = null;
@@ -296,6 +306,16 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   };
 
   const VIEW_ACTIONS = [
+    {
+      id: 'toggle-lock',
+      title: isLocked ? 'Desbloquear Movimiento' : 'Bloquear Movimiento',
+      description: isLocked ? 'Permitir mover entidades' : 'Evitar movimientos accidentales',
+      icon: isLocked ? Lock : Unlock,
+      color: isLocked ? 'bg-orange-900/30' : 'bg-green-900/30',
+      hoverColor: isLocked ? 'hover:bg-orange-900/50' : 'hover:bg-green-900/50',
+      textColor: isLocked ? 'text-orange-400' : 'text-green-400',
+      requiresSelection: false,
+    },
     {
       id: 'hide',
       title: 'Ocultar Seleccionadas',
