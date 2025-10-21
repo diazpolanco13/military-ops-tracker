@@ -6,7 +6,7 @@ import { createContext, useContext, useState } from 'react';
 const LockContext = createContext();
 
 export function LockProvider({ children }) {
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(true); // 🔒 Bloqueado por defecto - posiciones verificadas
 
   const toggleLock = () => {
     setIsLocked(prev => !prev);
