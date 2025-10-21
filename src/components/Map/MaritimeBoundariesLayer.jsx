@@ -92,13 +92,29 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
 
     const { source, fillLayer, lineLayer } = layersRef.current;
 
+    // 🔄 CRUCIAL: Re-agregar capas cuando el mapa cambia de estilo
+    // Mapbox elimina todas las sources/layers al hacer setStyle()
+    const handleStyleLoad = () => {
+      console.log('🗺️ Style loaded, re-adding maritime layers');
+      addLayer();
+    };
+
     // Esperar a que el mapa esté completamente cargado
     if (!map.isStyleLoaded()) {
       map.once('load', addLayer);
       return;
     }
 
+    // Agregar capa inicial
     addLayer();
+
+    // ⚡ IMPORTANTE: Escuchar cambios de estilo de mapa
+    map.on('style.load', handleStyleLoad);
+
+    // Cleanup
+    return () => {
+      map.off('style.load', handleStyleLoad);
+    };
 
     function addLayer() {
       console.log('🗺️ Adding maritime boundaries layer...', {
@@ -182,8 +198,9 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
       }
     }
 
-    // Cleanup
+    // Cleanup: remover layers y event listeners
     return () => {
+      map.off('style.load', handleStyleLoad);
       removeLayer();
     };
   }, [map, boundaries, colorMap]);

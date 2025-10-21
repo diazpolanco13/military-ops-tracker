@@ -20,6 +20,27 @@ export const MAPBOX_STYLES = {
   NAVIGATION_DAY: 'mapbox://styles/mapbox/navigation-day-v1',         // ☀️ Navegación diurna
 };
 
+/**
+ * Obtener el estilo de mapa guardado o usar default
+ */
+export function getSavedMapStyle() {
+  const savedStyleId = localStorage.getItem('selectedMapStyle') || 'satellite-streets';
+  
+  // Mapear ID a URL
+  const styleMap = {
+    'dark': MAPBOX_STYLES.DARK,
+    'satellite-streets': MAPBOX_STYLES.SATELLITE_STREETS,
+    'navigation-night': MAPBOX_STYLES.NAVIGATION_NIGHT,
+    'light': MAPBOX_STYLES.LIGHT,
+    'streets': MAPBOX_STYLES.STREETS,
+    'outdoors': MAPBOX_STYLES.OUTDOORS,
+    'satellite': MAPBOX_STYLES.SATELLITE,
+    'navigation-day': MAPBOX_STYLES.NAVIGATION_DAY,
+  };
+  
+  return styleMap[savedStyleId] || MAPBOX_STYLES.SATELLITE_STREETS;
+}
+
 export const MAP_CONFIG = {
   // Centro en Venezuela y el Caribe
   center: [
@@ -28,8 +49,8 @@ export const MAP_CONFIG = {
   ],
   zoom: parseInt(import.meta.env.VITE_MAP_DEFAULT_ZOOM) || 10,
   
-  // Estilo activo (cámbialo aquí)
-  style: MAPBOX_STYLES.SATELLITE_STREETS,  // 🛰️ Satélite con calles (RECOMENDADO para militar)
+  // Estilo activo (ahora dinámico desde localStorage)
+  style: getSavedMapStyle(),
   
   // Opciones del mapa
   options: {

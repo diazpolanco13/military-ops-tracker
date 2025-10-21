@@ -45,7 +45,10 @@ import ZonesPanel from './ZonesPanel';
  */
 export default function TopNavigationBar({ onTogglePalette, paletteVisible, map }) {
   const [activePanel, setActivePanel] = useState(null);
-  const [currentMapStyle, setCurrentMapStyle] = useState('satellite-streets');
+  // 🗺️ Persistir selección de mapa en localStorage
+  const [currentMapStyle, setCurrentMapStyle] = useState(() => {
+    return localStorage.getItem('selectedMapStyle') || 'satellite-streets';
+  });
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showGroupsPanel, setShowGroupsPanel] = useState(false);
@@ -71,6 +74,10 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
     if (map) {
       map.setStyle(styleUrl);
       setCurrentMapStyle(styleId);
+      
+      // 💾 Guardar selección en localStorage
+      localStorage.setItem('selectedMapStyle', styleId);
+      
       // NO cerrar panel - permitir probar múltiples estilos
     }
   };
