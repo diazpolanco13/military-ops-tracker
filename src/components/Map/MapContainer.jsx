@@ -5,10 +5,13 @@ import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
 import { Lock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
 import GroupMarker from './GroupMarker';
+import MaritimeBoundariesLayer from './MaritimeBoundariesLayer';
 import { useEntities } from '../../hooks/useEntities';
 import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
+import { useMaritimeBoundaries } from '../../hooks/useMaritimeBoundaries';
 import { useLock } from '../../stores/LockContext';
+import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
 import DeploymentStats from '../Dashboard/DeploymentStats';
@@ -34,6 +37,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   });
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
+
+  // 🌊 Obtener configuración de límites marítimos desde contexto
+  const { showBoundaries, selectedCountries } = useMaritimeBoundariesContext();
+
+  // 🌊 Hook para obtener límites marítimos
+  const { boundaries } = useMaritimeBoundaries(selectedCountries, showBoundaries);
 
   // 📡 Obtener entidades y grupos desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
@@ -479,6 +488,15 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           bottom: 0
         }}
       />
+
+      {/* 🌊 Capa de Límites Marítimos */}
+      {mapLoaded && (
+        <MaritimeBoundariesLayer
+          map={map.current}
+          boundaries={boundaries}
+          visible={showBoundaries}
+        />
+      )}
 
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}

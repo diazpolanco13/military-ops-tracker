@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
+import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
 
 function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -53,12 +54,13 @@ function App() {
   return (
     <LockProvider>
       <SelectionProvider>
-        {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
-        <TopNavigationBar 
-        onTogglePalette={() => setShowPalette(!showPalette)}
-        paletteVisible={showPalette}
-        map={mapInstance}
-      />
+        <MaritimeBoundariesProvider>
+          {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
+          <TopNavigationBar 
+          onTogglePalette={() => setShowPalette(!showPalette)}
+          paletteVisible={showPalette}
+          map={mapInstance}
+        />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
       
@@ -98,6 +100,7 @@ function App() {
           </div>
         )}
       </div>
+        </MaritimeBoundariesProvider>
       </SelectionProvider>
     </LockProvider>
   );

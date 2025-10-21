@@ -21,7 +21,8 @@ import {
   ArchiveRestore,
   Lock,
   Unlock,
-  Users
+  Users,
+  Waves
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -29,6 +30,7 @@ import { useEntityActions } from '../../hooks/useEntityActions';
 import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
+import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import GroupManagementPanel from '../Groups/GroupManagementPanel';
@@ -271,6 +273,7 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
   const { isLocked, toggleLock } = useLock();
+  const { showBoundaries, toggleBoundaries } = useMaritimeBoundariesContext();
 
   const selectedCount = getSelectedCount();
   const selectedIds = getSelectedIds();
@@ -298,6 +301,12 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
     // Acción de bloqueo/desbloqueo
     if (action === 'toggle-lock') {
       toggleLock();
+      return; // No cerrar el panel
+    }
+
+    // Acción de límites marítimos
+    if (action === 'toggle-maritime') {
+      toggleBoundaries();
       return; // No cerrar el panel
     }
 
@@ -338,6 +347,16 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       color: isLocked ? 'bg-orange-900/30' : 'bg-green-900/30',
       hoverColor: isLocked ? 'hover:bg-orange-900/50' : 'hover:bg-green-900/50',
       textColor: isLocked ? 'text-orange-400' : 'text-green-400',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-maritime',
+      title: showBoundaries ? 'Ocultar Límites Marítimos' : 'Mostrar Límites Marítimos',
+      description: showBoundaries ? 'Ocultar EEZ y territoriales' : 'Ver EEZ de 200 NM y territoriales',
+      icon: Waves,
+      color: showBoundaries ? 'bg-cyan-900/30' : 'bg-slate-800/30',
+      hoverColor: showBoundaries ? 'hover:bg-cyan-900/50' : 'hover:bg-slate-700',
+      textColor: showBoundaries ? 'text-cyan-400' : 'text-slate-400',
       requiresSelection: false,
     },
     {
