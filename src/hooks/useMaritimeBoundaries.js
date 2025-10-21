@@ -19,8 +19,9 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Endpoint de ArcGIS REST FeatureServer
-  const BASE_URL = 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Maritime_Boundaries_v1/FeatureServer/0/query';
+  // Endpoint de Marine Regions WFS para EEZ (más confiable)
+  // Alternativa: usar datos estáticos de Natural Earth
+  const BASE_URL = 'https://geo.vliz.be/geoserver/MarineRegions/ows';
 
   useEffect(() => {
     if (!enabled || countries.length === 0) {
@@ -55,16 +56,18 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
       setError(null);
 
       try {
-        // Construir WHERE clause para múltiples países
-        // Campo: ISO_SOV1 (ISO 3166-1 alpha-3)
-        const whereClause = countries.map(c => `ISO_SOV1='${c}'`).join(' OR ');
+        // Construir filtro CQL para Marine Regions WFS
+        // Campo: iso_sov1 (códigos ISO3)
+        const cqlFilter = countries.map(c => `iso_sov1='${c}'`).join(' OR ');
 
         const params = new URLSearchParams({
-          where: whereClause,
-          outFields: '*', // Todos los campos
-          f: 'geojson', // Formato GeoJSON
-          returnGeometry: 'true',
-          spatialRel: 'esriSpatialRelIntersects',
+          service: 'WFS',
+          version: '2.0.0',
+          request: 'GetFeature',
+          typeName: 'MarineRegions:eez', // Capa de EEZ
+          outputFormat: 'application/json', // GeoJSON
+          srsName: 'EPSG:4326',
+          cql_filter: cqlFilter,
         });
 
         const response = await fetch(`${BASE_URL}?${params}`);
@@ -74,6 +77,12 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
         }
 
         const data = await response.json();
+
+        console.log('🌊 Maritime boundaries loaded:', {
+          countries,
+          featuresCount: data.features?.length || 0,
+          data
+        });
 
         // Guardar en caché
         try {
@@ -87,7 +96,7 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
 
         setBoundaries(data);
       } catch (err) {
-        console.error('Error fetching maritime boundaries:', err);
+        console.error('❌ Error fetching maritime boundaries:', err);
         setError(err.message);
       } finally {
         setLoading(false);

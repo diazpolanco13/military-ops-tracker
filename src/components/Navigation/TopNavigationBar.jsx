@@ -34,6 +34,7 @@ import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesCon
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import GroupManagementPanel from '../Groups/GroupManagementPanel';
+import MaritimeCountriesPanel from '../Settings/MaritimeCountriesPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -46,6 +47,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showGroupsPanel, setShowGroupsPanel] = useState(false);
+  const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
@@ -231,6 +233,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
       {/* Panel de Gestión de Grupos */}
       {showGroupsPanel && (
         <GroupManagementPanel onClose={() => setShowGroupsPanel(false)} />
+      )}
+
+      {/* Panel de Países Marítimos */}
+      {showMaritimePanel && (
+        <MaritimeCountriesPanel onClose={() => setShowMaritimePanel(false)} />
       )}
     </>
   );

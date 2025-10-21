@@ -46,8 +46,16 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
 
   // 🗺️ Agregar/actualizar capa cuando cambien los límites
   useEffect(() => {
+    console.log('🌊 MaritimeBoundariesLayer effect:', { 
+      hasMap: !!map, 
+      hasBoundaries: !!boundaries,
+      featuresCount: boundaries?.features?.length,
+      visible
+    });
+
     if (!map || !boundaries || !boundaries.features || boundaries.features.length === 0) {
       // Remover capas si no hay boundaries
+      console.log('⚠️ No boundaries to display, removing layers');
       removeLayer();
       return;
     }
@@ -63,6 +71,11 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
     addLayer();
 
     function addLayer() {
+      console.log('🗺️ Adding maritime boundaries layer...', {
+        sourceId: source,
+        featuresCount: boundaries.features.length
+      });
+
       // Remover capas existentes primero
       if (map.getLayer(fillLayer)) map.removeLayer(fillLayer);
       if (map.getLayer(lineLayer)) map.removeLayer(lineLayer);
@@ -73,6 +86,8 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
         type: 'geojson',
         data: boundaries,
       });
+
+      console.log('✅ Source added:', source);
 
       const styles = getLayerStyles();
 
@@ -97,6 +112,8 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
         },
         paint: styles.line,
       });
+
+      console.log('✅ Layers added:', { fillLayer, lineLayer, visible });
 
       // 🖱️ Agregar popup al hacer hover
       map.on('mouseenter', fillLayer, (e) => {
