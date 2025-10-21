@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
@@ -41,12 +41,25 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   // 🌊 Obtener configuración de límites marítimos desde BD
   const { showBoundaries } = useMaritimeBoundariesContext();
-  const { getVisibleCountryCodes, getColorMap } = useMaritimeSettings();
+  const { settings, loading: loadingMaritime } = useMaritimeSettings();
   
-  const visibleCountryCodes = getVisibleCountryCodes();
-  const colorMap = getColorMap();
+  // 🎯 Memorizar códigos de países visibles (solo recalcular cuando cambien settings)
+  const visibleCountryCodes = useMemo(() => {
+    if (!settings || loadingMaritime) return [];
+    return settings.filter(s => s.is_visible).map(s => s.country_code);
+  }, [settings, loadingMaritime]);
+  
+  // 🎨 Memorizar mapa de colores (solo recalcular cuando cambien settings)
+  const colorMap = useMemo(() => {
+    if (!settings || loadingMaritime) return {};
+    const colors = {};
+    settings.forEach(s => {
+      colors[s.country_code] = s.color;
+    });
+    return colors;
+  }, [settings, loadingMaritime]);
 
-  // 🌊 Hook para obtener límites marítimos
+  // 🌊 Hook para obtener límites marítimos (solo cuando cambien los códigos)
   const { boundaries } = useMaritimeBoundaries(visibleCountryCodes, showBoundaries);
 
   // 📡 Obtener entidades y grupos desde Supabase

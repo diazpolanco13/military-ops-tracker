@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * 🌊 Hook para obtener límites marítimos de países desde ArcGIS REST API
@@ -18,6 +18,7 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
   const [boundaries, setBoundaries] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const prevCountriesRef = useRef('');
 
   // Endpoint de Marine Regions WFS para EEZ (más confiable)
   // Alternativa: usar datos estáticos de Natural Earth
@@ -29,8 +30,18 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
       return;
     }
 
+    // Crear key estable (ordenar para evitar diferencias por orden)
+    const sortedCountries = [...countries].sort().join('_');
+    
+    // ⚡ OPTIMIZACIÓN: Solo fetch si los países cambiaron realmente
+    if (prevCountriesRef.current === sortedCountries) {
+      return; // Mismos países, no hacer nada
+    }
+    
+    prevCountriesRef.current = sortedCountries;
+    const cacheKey = `maritime_boundaries_${sortedCountries}`;
+    
     // Verificar caché en localStorage
-    const cacheKey = `maritime_boundaries_${countries.sort().join('_')}`;
     const cached = localStorage.getItem(cacheKey);
     
     if (cached) {
