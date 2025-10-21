@@ -11,22 +11,16 @@ import { COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
  * @param {object} boundaries - GeoJSON de límites marítimos
  * @param {boolean} visible - Si la capa es visible
  */
-export default function MaritimeBoundariesLayer({ map, boundaries, visible = true }) {
+export default function MaritimeBoundariesLayer({ map, boundaries, visible = true, colorMap = COUNTRY_COLORS }) {
   const layersRef = useRef({
     source: 'maritime-boundaries',
     fillLayer: 'maritime-boundaries-fill',
     lineLayer: 'maritime-boundaries-line',
   });
 
-  // 🎨 Obtener colores personalizados desde localStorage
-  const getCountryColors = () => {
-    const saved = localStorage.getItem('maritimeCountryColors');
-    return saved ? JSON.parse(saved) : COUNTRY_COLORS;
-  };
-
-  // 🎨 Estilos por país (cada país con su color distintivo)
+  // 🎨 Estilos por país (usando colorMap dinámico desde BD)
   const getLayerStyles = () => {
-    const colors = getCountryColors();
+    const colors = colorMap || COUNTRY_COLORS;
     
     // Crear array de match para Mapbox expression
     const colorMatches = [];
@@ -192,7 +186,7 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
     return () => {
       removeLayer();
     };
-  }, [map, boundaries]);
+  }, [map, boundaries, colorMap]);
 
   // 👁️ Toggle visibilidad cuando cambia el prop
   useEffect(() => {

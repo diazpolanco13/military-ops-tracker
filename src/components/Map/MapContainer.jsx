@@ -10,6 +10,7 @@ import { useEntities } from '../../hooks/useEntities';
 import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useMaritimeBoundaries } from '../../hooks/useMaritimeBoundaries';
+import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
@@ -38,11 +39,15 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
 
-  // 🌊 Obtener configuración de límites marítimos desde contexto
-  const { showBoundaries, selectedCountries } = useMaritimeBoundariesContext();
+  // 🌊 Obtener configuración de límites marítimos desde BD
+  const { showBoundaries } = useMaritimeBoundariesContext();
+  const { getVisibleCountryCodes, getColorMap } = useMaritimeSettings();
+  
+  const visibleCountryCodes = getVisibleCountryCodes();
+  const colorMap = getColorMap();
 
   // 🌊 Hook para obtener límites marítimos
-  const { boundaries } = useMaritimeBoundaries(selectedCountries, showBoundaries);
+  const { boundaries } = useMaritimeBoundaries(visibleCountryCodes, showBoundaries);
 
   // 📡 Obtener entidades y grupos desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
@@ -495,6 +500,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           map={map.current}
           boundaries={boundaries}
           visible={showBoundaries}
+          colorMap={colorMap}
         />
       )}
 

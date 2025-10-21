@@ -35,7 +35,7 @@ import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesCon
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import GroupManagementPanel from '../Groups/GroupManagementPanel';
-import MaritimeCountriesPanel from '../Settings/MaritimeCountriesPanel';
+import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
 import ZonesPanel from './ZonesPanel';
 
 /**
@@ -251,9 +251,9 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
         <GroupManagementPanel onClose={() => setShowGroupsPanel(false)} />
       )}
 
-      {/* Panel de Países Marítimos */}
+      {/* Gestor de Límites Marítimos */}
       {showMaritimePanel && (
-        <MaritimeCountriesPanel onClose={() => setShowMaritimePanel(false)} />
+        <MaritimeBoundariesManager onClose={() => setShowMaritimePanel(false)} />
       )}
     </>
   );

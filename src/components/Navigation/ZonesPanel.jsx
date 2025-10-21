@@ -20,8 +20,8 @@ export default function ZonesPanel({ onClose, onOpenMaritimeConfig }) {
     },
     {
       id: 'configure-maritime',
-      title: 'Configurar Países y Colores',
-      description: 'Seleccionar países y personalizar colores',
+      title: 'Gestor de Países',
+      description: 'Buscar, agregar y personalizar límites',
       icon: Palette,
       color: 'bg-purple-900/30',
       hoverColor: 'hover:bg-purple-900/50',
