@@ -12,12 +12,22 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
   const markerRef = useRef(null);
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
+  
+  // 🏷️ Configuración de etiquetas
+  const [showLabelName, setShowLabelName] = useState(() => localStorage.getItem('showLabelName') !== 'false');
+  const [showLabelType, setShowLabelType] = useState(() => localStorage.getItem('showLabelType') !== 'false');
 
   // Escuchar cambios de configuración
   useEffect(() => {
     const handleSettingsChange = (e) => {
       if (e.detail.iconSize !== undefined) {
         setIconSize(e.detail.iconSize);
+      }
+      if (e.detail.showLabelName !== undefined) {
+        setShowLabelName(e.detail.showLabelName);
+      }
+      if (e.detail.showLabelType !== undefined) {
+        setShowLabelType(e.detail.showLabelType);
       }
     };
 
@@ -76,16 +86,36 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
             </div>
           </div>
         
-        {/* Etiqueta con nombre del grupo */}
-        <div 
-          className="px-3 py-1 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border-2"
-          style={{ 
-            borderColor: color,
-            maxWidth: '200px',
-            textAlign: 'center'
-          }}
-        >
-          {group.name}
+        {/* Contenedor de etiquetas configurables */}
+        <div className="flex flex-col items-center gap-0.5">
+          {/* Etiqueta con nombre del grupo */}
+          {showLabelName && (
+            <div 
+              className="px-3 py-1 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border-2"
+              style={{ 
+                borderColor: color,
+                maxWidth: '200px',
+                textAlign: 'center'
+              }}
+            >
+              {group.name}
+            </div>
+          )}
+          
+          {/* Etiqueta con tipo "Grupo" */}
+          {showLabelType && (
+            <div 
+              className="px-1.5 py-0.5 bg-slate-800/90 backdrop-blur-sm text-slate-300 rounded shadow-md whitespace-nowrap"
+              style={{ 
+                fontSize: '10px',
+                maxWidth: '150px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {group.group_type || 'Grupo'}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -140,7 +170,7 @@ export default function GroupMarker({ group, map, onGroupClick, onGroupMove }) {
         markerRef.current.remove();
       }
     };
-  }, [map, group, onGroupClick, onGroupMove, iconSize]); // Recrear cuando cambia tamaño
+  }, [map, group, onGroupClick, onGroupMove, iconSize, showLabelName, showLabelType]); // Recrear cuando cambia configuración
 
   return null;
 }
