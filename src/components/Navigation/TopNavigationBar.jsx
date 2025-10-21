@@ -22,7 +22,8 @@ import {
   Lock,
   Unlock,
   Users,
-  Waves
+  Waves,
+  Palette
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
