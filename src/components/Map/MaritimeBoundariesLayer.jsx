@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
+import { COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
 
 /**
  * 🌊 Capa de Límites Marítimos para Mapbox GL JS
  * 
- * Renderiza límites marítimos (EEZ, Territorial, Contiguous) como capas de Mapbox
- * usando GeoJSON desde la API de ArcGIS
+ * Renderiza límites marítimos (EEZ) como capas de Mapbox con colores por país
+ * usando GeoJSON desde Marine Regions API
  * 
  * @param {object} map - Instancia de Mapbox GL JS map
  * @param {object} boundaries - GeoJSON de límites marítimos
@@ -17,32 +18,67 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
     lineLayer: 'maritime-boundaries-line',
   });
 
-  // 🎨 Estilos por tipo de límite (según campo en GeoJSON)
-  const getLayerStyles = () => ({
-    fill: {
-      'fill-color': [
-        'match',
-        ['get', 'BOUNDARY_TYPE'], // Campo que identifica el tipo
-        'EEZ', '#3b82f6',          // Azul para EEZ
-        'Territorial', '#ef4444',  // Rojo para Territorial
-        'Contiguous', '#f59e0b',   // Naranja para Contiguous
-        '#10b981' // Verde por defecto
-      ],
-      'fill-opacity': 0.15,
-    },
-    line: {
-      'line-color': [
-        'match',
-        ['get', 'BOUNDARY_TYPE'],
-        'EEZ', '#3b82f6',
-        'Territorial', '#ef4444',
-        'Contiguous', '#f59e0b',
-        '#10b981'
-      ],
-      'line-width': 2,
-      'line-opacity': 0.6,
-    },
-  });
+  // 🎨 Obtener colores personalizados desde localStorage
+  const getCountryColors = () => {
+    const saved = localStorage.getItem('maritimeCountryColors');
+    return saved ? JSON.parse(saved) : COUNTRY_COLORS;
+  };
+
+  // 🎨 Estilos por país (cada país con su color distintivo)
+  const getLayerStyles = () => {
+    const colors = getCountryColors();
+    
+    // Crear array de match para Mapbox expression
+    const colorMatches = [];
+    Object.entries(colors).forEach(([iso3, color]) => {
+      colorMatches.push(iso3, color);
+    });
+
+    return {
+      fill: {
+        'fill-color': [
+          'match',
+          ['get', 'iso_sov1'], // Campo que identifica el país (ISO3)
+          ...colorMatches,
+          '#64748b' // Gris por defecto
+        ],
+        'fill-opacity': 0.2,
+      },
+      line: {
+        'line-color': [
+          'match',
+          ['get', 'iso_sov1'],
+          ...colorMatches,
+          '#64748b'
+        ],
+        'line-width': 2,
+        'line-opacity': 0.7,
+      },
+    };
+  };
+
+  // 🎨 Escuchar cambios de color
+  useEffect(() => {
+    const handleColorChange = () => {
+      if (!map) return;
+      
+      const { fillLayer, lineLayer } = layersRef.current;
+      const styles = getLayerStyles();
+      
+      // Actualizar paint properties
+      if (map.getLayer(fillLayer)) {
+        map.setPaintProperty(fillLayer, 'fill-color', styles.fill['fill-color']);
+      }
+      if (map.getLayer(lineLayer)) {
+        map.setPaintProperty(lineLayer, 'line-color', styles.line['line-color']);
+      }
+      
+      console.log('🎨 Maritime colors updated');
+    };
+
+    window.addEventListener('maritimeColorsChanged', handleColorChange);
+    return () => window.removeEventListener('maritimeColorsChanged', handleColorChange);
+  }, [map]);
 
   // 🗺️ Agregar/actualizar capa cuando cambien los límites
   useEffect(() => {
@@ -115,33 +151,21 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
 
       console.log('✅ Layers added:', { fillLayer, lineLayer, visible });
 
-      // 🖱️ Agregar popup al hacer hover
+      // 🖱️ Agregar interacción al hacer hover
       map.on('mouseenter', fillLayer, (e) => {
         map.getCanvas().style.cursor = 'pointer';
         
         if (e.features && e.features.length > 0) {
           const feature = e.features[0];
           const props = feature.properties;
+          const countryColor = COUNTRY_COLORS[props.iso_sov1] || '#64748b';
           
-          // Crear popup con info del límite
-          const popupContent = `
-            <div style="padding: 8px; max-width: 250px;">
-              <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold; color: #1e293b;">
-                ${props.TERRITORY || props.COUNTRY || 'Límite Marítimo'}
-              </h3>
-              <div style="font-size: 12px; color: #475569;">
-                <div><strong>Tipo:</strong> ${props.BOUNDARY_TYPE || 'N/A'}</div>
-                ${props.ISO_SOV1 ? `<div><strong>País:</strong> ${props.ISO_SOV1}</div>` : ''}
-                ${props.AREA_KM2 ? `<div><strong>Área:</strong> ${Number(props.AREA_KM2).toLocaleString()} km²</div>` : ''}
-              </div>
-            </div>
-          `;
-
-          // Mostrar popup (opcional, comentado por performance)
-          // new mapboxgl.Popup()
-          //   .setLngLat(e.lngLat)
-          //   .setHTML(popupContent)
-          //   .addTo(map);
+          console.log('🖱️ Hover on maritime boundary:', {
+            country: props.geoname || props.territory,
+            iso3: props.iso_sov1,
+            color: countryColor,
+            area: props.area_km2
+          });
         }
       });
 

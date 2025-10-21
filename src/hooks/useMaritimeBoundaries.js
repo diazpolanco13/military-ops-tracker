@@ -133,26 +133,28 @@ export const CARIBBEAN_COUNTRIES = {
 };
 
 /**
- * 🎨 Configuración de estilos por tipo de límite
+ * 🎨 Colores por país (personalizables)
+ * Cada país tiene su color distintivo para los límites marítimos
  */
-export const BOUNDARY_STYLES = {
-  EEZ: {
-    color: '#3b82f6', // Azul
-    opacity: 0.3,
-    weight: 2,
-    fillOpacity: 0.1,
-  },
-  TERRITORIAL: {
-    color: '#ef4444', // Rojo
-    opacity: 0.5,
-    weight: 2,
-    fillOpacity: 0.15,
-  },
-  CONTIGUOUS: {
-    color: '#f59e0b', // Naranja
-    opacity: 0.4,
-    weight: 2,
-    fillOpacity: 0.12,
-  },
+export const COUNTRY_COLORS = {
+  VEN: '#ef4444', // Venezuela - Rojo
+  CUB: '#f97316', // Cuba - Naranja
+  COL: '#fbbf24', // Colombia - Amarillo
+  JAM: '#84cc16', // Jamaica - Verde lima
+  HTI: '#22c55e', // Haití - Verde
+  DOM: '#14b8a6', // Rep. Dominicana - Turquesa
+  PRI: '#06b6d4', // Puerto Rico - Cyan
+  TTO: '#0ea5e9', // Trinidad & Tobago - Azul cielo
+  BHS: '#3b82f6', // Bahamas - Azul
+  ABW: '#6366f1', // Aruba - Índigo
+  CUW: '#8b5cf6', // Curaçao - Violeta
+  PAN: '#a855f7', // Panamá - Púrpura
+  CRI: '#d946ef', // Costa Rica - Fucsia
+  NIC: '#ec4899', // Nicaragua - Rosa
+  HND: '#f43f5e', // Honduras - Rosa oscuro
+  BLZ: '#10b981', // Belice - Esmeralda
+  GTM: '#059669', // Guatemala - Verde oscuro
+  MEX: '#dc2626', // México - Rojo oscuro
+  USA: '#1e40af', // Estados Unidos - Azul marino
 };
 

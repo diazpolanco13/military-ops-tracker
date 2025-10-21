@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Layers, 
   Map as MapIcon, 
@@ -51,6 +51,15 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
+  // 🌊 Escuchar evento para abrir panel de límites marítimos
+  useEffect(() => {
+    const handleOpenMaritimePanel = () => {
+      setShowMaritimePanel(true);
+    };
+
+    window.addEventListener('openMaritimePanel', handleOpenMaritimePanel);
+    return () => window.removeEventListener('openMaritimePanel', handleOpenMaritimePanel);
+  }, []);
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
@@ -317,6 +326,14 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       return; // No cerrar el panel
     }
 
+    // Abrir panel de configuración de límites marítimos
+    if (action === 'configure-maritime') {
+      onClose();
+      // Usar el estado del componente padre
+      window.dispatchEvent(new CustomEvent('openMaritimePanel'));
+      return;
+    }
+
     let actionFunction = null;
 
     switch (action) {
@@ -413,6 +430,16 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       hoverColor: 'hover:bg-red-900/50',
       textColor: 'text-red-400',
       requiresSelection: true,
+    },
+    {
+      id: 'configure-maritime',
+      title: 'Configurar Límites Marítimos',
+      description: 'Seleccionar países y colores',
+      icon: Palette,
+      color: 'bg-cyan-900/30',
+      hoverColor: 'hover:bg-cyan-900/50',
+      textColor: 'text-cyan-400',
+      requiresSelection: false,
     },
   ];
 

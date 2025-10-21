@@ -1,6 +1,7 @@
-import { X, Waves, Check } from 'lucide-react';
+import { X, Waves, Check, Palette } from 'lucide-react';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
-import { CARIBBEAN_COUNTRIES } from '../../hooks/useMaritimeBoundaries';
+import { CARIBBEAN_COUNTRIES, COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
+import { useState } from 'react';
 
 /**
  * 🌊 Panel para seleccionar países cuyos límites marítimos mostrar
@@ -8,7 +9,12 @@ import { CARIBBEAN_COUNTRIES } from '../../hooks/useMaritimeBoundaries';
 export default function MaritimeCountriesPanel({ onClose }) {
   const { selectedCountries, toggleCountry, updateCountries } = useMaritimeBoundariesContext();
 
-  // Organizar países por región
+  const [countryColors, setCountryColors] = useState(() => {
+    const saved = localStorage.getItem('maritimeCountryColors');
+    return saved ? JSON.parse(saved) : COUNTRY_COLORS;
+  });
+
+  // Organizar países por región con sus colores
   const COUNTRIES_BY_REGION = {
     'Grandes Antillas': [
       { code: CARIBBEAN_COUNTRIES.CUBA, name: 'Cuba', flag: '🇨🇺' },
@@ -39,6 +45,17 @@ export default function MaritimeCountriesPanel({ onClose }) {
     'Norteamérica': [
       { code: CARIBBEAN_COUNTRIES.USA, name: 'Estados Unidos', flag: '🇺🇸' },
     ],
+  };
+
+  const handleColorChange = (countryCode, newColor) => {
+    const updated = { ...countryColors, [countryCode]: newColor };
+    setCountryColors(updated);
+    localStorage.setItem('maritimeCountryColors', JSON.stringify(updated));
+    
+    // Disparar evento para actualizar el mapa
+    window.dispatchEvent(new CustomEvent('maritimeColorsChanged', {
+      detail: { colors: updated }
+    }));
   };
 
   const selectAll = () => {
@@ -114,26 +131,47 @@ export default function MaritimeCountriesPanel({ onClose }) {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {countries.map((country) => {
                   const isSelected = selectedCountries.includes(country.code);
+                  const currentColor = countryColors[country.code] || COUNTRY_COLORS[country.code] || '#64748b';
                   
                   return (
-                    <button
+                    <div
                       key={country.code}
-                      onClick={() => toggleCountry(country.code)}
-                      className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                      className={`flex items-center gap-2 p-3 rounded-lg transition-all ${
                         isSelected
                           ? 'bg-cyan-900/50 border-2 border-cyan-500'
-                          : 'bg-slate-800/50 border-2 border-slate-700 hover:border-slate-600'
+                          : 'bg-slate-800/50 border-2 border-slate-700'
                       }`}
                     >
-                      <span className="text-2xl">{country.flag}</span>
-                      <div className="flex-1 text-left">
-                        <div className="text-sm font-medium text-white">{country.name}</div>
-                        <div className="text-xs text-slate-400">{country.code}</div>
+                      {/* Checkbox para seleccionar */}
+                      <button
+                        onClick={() => toggleCountry(country.code)}
+                        className="flex items-center gap-2 flex-1"
+                      >
+                        <span className="text-2xl">{country.flag}</span>
+                        <div className="flex-1 text-left">
+                          <div className="text-sm font-medium text-white">{country.name}</div>
+                          <div className="text-xs text-slate-400">{country.code}</div>
+                        </div>
+                        {isSelected && (
+                          <Check className="w-5 h-5 text-cyan-400" />
+                        )}
+                      </button>
+                      
+                      {/* Selector de color */}
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-8 h-8 rounded border-2 border-white/20"
+                          style={{ backgroundColor: currentColor }}
+                        />
+                        <input
+                          type="color"
+                          value={currentColor}
+                          onChange={(e) => handleColorChange(country.code, e.target.value)}
+                          className="w-8 h-8 rounded cursor-pointer"
+                          title={`Cambiar color de ${country.name}`}
+                        />
                       </div>
-                      {isSelected && (
-                        <Check className="w-5 h-5 text-cyan-400" />
-                      )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
