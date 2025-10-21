@@ -119,6 +119,8 @@ export const CARIBBEAN_COUNTRIES = {
   DOMINICAN_REPUBLIC: 'DOM',
   PUERTO_RICO: 'PRI', // Territorio USA
   TRINIDAD_TOBAGO: 'TTO',
+  GUYANA: 'GUY',
+  SURINAME: 'SUR',
   BAHAMAS: 'BHS',
   ARUBA: 'ABW',
   CURACAO: 'CUW',
@@ -145,6 +147,8 @@ export const COUNTRY_COLORS = {
   DOM: '#14b8a6', // Rep. Dominicana - Turquesa
   PRI: '#06b6d4', // Puerto Rico - Cyan
   TTO: '#0ea5e9', // Trinidad & Tobago - Azul cielo
+  GUY: '#10b981', // Guyana - Verde esmeralda
+  SUR: '#14b8a6', // Suriname - Turquesa oscuro
   BHS: '#3b82f6', // Bahamas - Azul
   ABW: '#6366f1', // Aruba - Índigo
   CUW: '#8b5cf6', // Curaçao - Violeta

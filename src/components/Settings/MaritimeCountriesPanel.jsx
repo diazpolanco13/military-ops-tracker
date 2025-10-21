@@ -26,6 +26,8 @@ export default function MaritimeCountriesPanel({ onClose }) {
     'Sudamérica': [
       { code: CARIBBEAN_COUNTRIES.VENEZUELA, name: 'Venezuela', flag: '🇻🇪' },
       { code: CARIBBEAN_COUNTRIES.COLOMBIA, name: 'Colombia', flag: '🇨🇴' },
+      { code: CARIBBEAN_COUNTRIES.GUYANA, name: 'Guyana', flag: '🇬🇾' },
+      { code: CARIBBEAN_COUNTRIES.SURINAME, name: 'Suriname', flag: '🇸🇷' },
     ],
     'Pequeñas Antillas': [
       { code: CARIBBEAN_COUNTRIES.TRINIDAD_TOBAGO, name: 'Trinidad y Tobago', flag: '🇹🇹' },
@@ -75,6 +77,9 @@ export default function MaritimeCountriesPanel({ onClose }) {
       CARIBBEAN_COUNTRIES.JAMAICA,
       CARIBBEAN_COUNTRIES.HAITI,
       CARIBBEAN_COUNTRIES.DOMINICAN_REPUBLIC,
+      CARIBBEAN_COUNTRIES.PUERTO_RICO,
+      CARIBBEAN_COUNTRIES.TRINIDAD_TOBAGO,
+      CARIBBEAN_COUNTRIES.GUYANA,
     ]);
   };
 
