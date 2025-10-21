@@ -79,8 +79,13 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
         const data = await response.json();
 
         console.log('🌊 Maritime boundaries loaded:', {
-          countries,
+          requestedCountries: countries,
           featuresCount: data.features?.length || 0,
+          loadedCountries: data.features?.map(f => ({
+            name: f.properties.geoname || f.properties.territory,
+            iso3: f.properties.iso_sov1,
+            iso2: f.properties.iso_ter1
+          })),
           data
         });
 
@@ -117,7 +122,7 @@ export const CARIBBEAN_COUNTRIES = {
   JAMAICA: 'JAM',
   HAITI: 'HTI',
   DOMINICAN_REPUBLIC: 'DOM',
-  PUERTO_RICO: 'PRI', // Territorio USA
+  PUERTO_RICO: 'USA', // Territorio USA - se filtra por geoname
   TRINIDAD_TOBAGO: 'TTO',
   GUYANA: 'GUY',
   SURINAME: 'SUR',
@@ -145,7 +150,7 @@ export const COUNTRY_COLORS = {
   JAM: '#84cc16', // Jamaica - Verde lima
   HTI: '#22c55e', // Haití - Verde
   DOM: '#14b8a6', // Rep. Dominicana - Turquesa
-  PRI: '#06b6d4', // Puerto Rico - Cyan
+  PRI: '#06b6d4', // Puerto Rico - Cyan (mismo que USA para consistencia)
   TTO: '#0ea5e9', // Trinidad & Tobago - Azul cielo
   GUY: '#10b981', // Guyana - Verde esmeralda
   SUR: '#14b8a6', // Suriname - Turquesa oscuro
@@ -159,6 +164,6 @@ export const COUNTRY_COLORS = {
   BLZ: '#10b981', // Belice - Esmeralda
   GTM: '#059669', // Guatemala - Verde oscuro
   MEX: '#dc2626', // México - Rojo oscuro
-  USA: '#1e40af', // Estados Unidos - Azul marino
+  USA: '#06b6d4', // Estados Unidos - Cyan (incluye Puerto Rico, USVI)
 };
 
