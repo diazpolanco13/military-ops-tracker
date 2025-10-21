@@ -27,6 +27,14 @@ export default function MaritimeBoundariesManager({ onClose }) {
     s.country_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  console.log('🔍 Search filter:', {
+    searchTerm,
+    totalSettings: settings.length,
+    filtered: filteredSettings.length,
+    settings,
+    filteredSettings
+  });
+
   const handleAddCountry = async () => {
     if (!newCountryCode || !newCountryName) {
       alert('Por favor, completa código y nombre del país');
