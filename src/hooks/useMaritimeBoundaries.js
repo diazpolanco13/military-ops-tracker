@@ -20,6 +20,20 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
   const [error, setError] = useState(null);
   const prevCountriesRef = useRef('');
 
+  // 🧹 Limpiar localStorage de cachés viejos (una sola vez)
+  useEffect(() => {
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('maritime_boundaries_')) {
+          localStorage.removeItem(key);
+          console.log('🧹 Removed old cache:', key);
+        }
+      });
+    } catch (e) {
+      console.warn('Error cleaning cache:', e);
+    }
+  }, []); // Solo al montar
+
   // Endpoint de Marine Regions WFS para EEZ (más confiable)
   // Alternativa: usar datos estáticos de Natural Earth
   const BASE_URL = 'https://geo.vliz.be/geoserver/MarineRegions/ows';
@@ -39,25 +53,6 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
     }
     
     prevCountriesRef.current = sortedCountries;
-    const cacheKey = `maritime_boundaries_${sortedCountries}`;
-    
-    // Verificar caché en localStorage
-    const cached = localStorage.getItem(cacheKey);
-    
-    if (cached) {
-      try {
-        const cachedData = JSON.parse(cached);
-        const cacheAge = Date.now() - cachedData.timestamp;
-        
-        // Cache válido por 7 días
-        if (cacheAge < 7 * 24 * 60 * 60 * 1000) {
-          setBoundaries(cachedData.data);
-          return;
-        }
-      } catch (e) {
-        console.warn('Error parsing cached boundaries:', e);
-      }
-    }
 
     // Fetch desde API
     fetchBoundaries();
@@ -97,18 +92,11 @@ export function useMaritimeBoundaries(countries = [], enabled = true) {
             iso3: f.properties.iso_sov1,
             iso2: f.properties.iso_ter1
           })),
-          data
         });
 
-        // Guardar en caché
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({
-            data,
-            timestamp: Date.now(),
-          }));
-        } catch (e) {
-          console.warn('Error caching boundaries:', e);
-        }
+        // ⚠️ NO CACHEAR EN LOCALSTORAGE - Los GeoJSON son demasiado grandes
+        // QuotaExceededError: excede límite de 5-10MB de localStorage
+        // En su lugar, usamos solo memoria (useState) que se limpia al recargar
 
         setBoundaries(data);
       } catch (err) {
