@@ -91,36 +91,61 @@ export default function MaritimeBoundariesManager({ onClose }) {
           </div>
 
           {/* Agregar nuevo país */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Código ISO3 (ej: FRA)"
-              value={newCountryCode}
-              onChange={(e) => setNewCountryCode(e.target.value)}
-              maxLength={3}
-              className="w-32 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 uppercase"
-            />
-            <input
-              type="text"
-              placeholder="Nombre del país (ej: Francia)"
-              value={newCountryName}
-              onChange={(e) => setNewCountryName(e.target.value)}
-              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500"
-            />
-            <input
-              type="color"
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              className="w-12 h-10 rounded cursor-pointer"
-              title="Color del límite"
-            />
-            <button
-              onClick={handleAddCountry}
-              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded flex items-center gap-2 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Agregar
-            </button>
+          <div className="bg-slate-800/50 border border-cyan-900/30 rounded-lg p-3">
+            <div className="text-xs text-cyan-400 font-semibold mb-2 uppercase tracking-wide">
+              ➕ Agregar Nuevo País
+            </div>
+            <div className="flex gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-400">Código ISO3</label>
+                <input
+                  type="text"
+                  placeholder="FRA"
+                  value={newCountryCode}
+                  onChange={(e) => setNewCountryCode(e.target.value)}
+                  maxLength={3}
+                  className="w-24 px-3 py-2 bg-slate-700 border-2 border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 uppercase font-mono text-center"
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1 flex-1">
+                <label className="text-xs text-slate-400">Nombre del País</label>
+                <input
+                  type="text"
+                  placeholder="Francia"
+                  value={newCountryName}
+                  onChange={(e) => setNewCountryName(e.target.value)}
+                  className="px-3 py-2 bg-slate-700 border-2 border-slate-600 rounded text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-slate-400">Color</label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-10 h-10 rounded border-2 border-white/20"
+                    style={{ backgroundColor: newColor }}
+                  />
+                  <input
+                    type="color"
+                    value={newColor}
+                    onChange={(e) => setNewColor(e.target.value)}
+                    className="w-10 h-10 rounded cursor-pointer"
+                    title="Seleccionar color"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-1 justify-end">
+                <button
+                  onClick={handleAddCountry}
+                  className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded flex items-center gap-2 transition-colors h-10"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
