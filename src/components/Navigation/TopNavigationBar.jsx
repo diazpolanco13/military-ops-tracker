@@ -77,17 +77,18 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
 
   return (
     <>
-      {/* 🎨 BARRA SUPERIOR FIJA */}
-      <div className="fixed top-0 left-0 right-0 h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center px-4 gap-2 shadow-2xl z-50">
+      {/* 🎨 BARRA SUPERIOR FIJA - RESPONSIVE */}
+      <div className="fixed top-0 left-0 right-0 h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center px-2 sm:px-4 gap-1 sm:gap-2 shadow-2xl z-50 overflow-x-auto">
         
         {/* 🏢 Logo / Inicio */}
-        <div className="flex items-center gap-2 pr-4 border-r border-slate-700">
-          <Anchor className="w-6 h-6 text-cyan-400" />
-          <span className="text-white font-bold text-sm">Military Ops</span>
+        <div className="flex items-center gap-1 sm:gap-2 pr-2 sm:pr-4 border-r border-slate-700 flex-shrink-0">
+          <Anchor className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
+          <span className="text-white font-bold text-xs sm:text-sm hidden sm:block">Military Ops</span>
+          <span className="text-white font-bold text-xs sm:hidden">MO</span>
         </div>
 
-        {/* Separador */}
-        <div className="h-8 w-px bg-slate-700" />
+        {/* Separador - Oculto en móvil */}
+        <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
         {/* 🎨 Paleta de Plantillas */}
         <NavButton
@@ -147,8 +148,8 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
           tooltip="Gestión de Grupos"
         />
 
-        {/* Separador */}
-        <div className="h-8 w-px bg-slate-700" />
+        {/* Separador - Oculto en móvil */}
+        <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
         {/* 🔍 Búsqueda */}
         <NavButton
@@ -268,7 +269,7 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge })
       onClick={onClick}
       title={tooltip}
       className={`
-        flex items-center gap-2 px-3 py-2 rounded-lg transition-all relative
+        flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg transition-all relative flex-shrink-0
         ${active 
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' 
           : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
@@ -276,8 +277,9 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge })
       `}
     >
       {icon}
-      <span className="text-xs font-medium">{label}</span>
-      {hasSubmenu && <ChevronDown size={14} className={`transition-transform ${active ? 'rotate-180' : ''}`} />}
+      {/* Label oculto en móvil (< 640px), visible en tablet+ */}
+      <span className="text-xs font-medium hidden sm:inline">{label}</span>
+      {hasSubmenu && <ChevronDown size={14} className={`transition-transform ${active ? 'rotate-180' : ''} hidden sm:inline`} />}
       
       {/* Badge de conteo */}
       {badge && (
