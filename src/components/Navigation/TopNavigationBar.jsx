@@ -36,6 +36,7 @@ import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import GroupManagementPanel from '../Groups/GroupManagementPanel';
 import MaritimeCountriesPanel from '../Settings/MaritimeCountriesPanel';
+import ZonesPanel from './ZonesPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -216,6 +217,11 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
                     onShowHidden={() => setShowEntitiesModal('hidden')}
                     onShowArchived={() => setShowEntitiesModal('archived')}
                   />
+                ) : activePanel === 'zones' ? (
+                  <ZonesPanel 
+                    onClose={() => setActivePanel(null)}
+                    onOpenMaritimeConfig={() => setShowMaritimePanel(true)}
+                  />
                 ) : (
                   <div className="text-slate-300 text-sm">
                     {getPanelContent(activePanel)}
@@ -290,7 +296,6 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
   const { isLocked, toggleLock } = useLock();
-  const { showBoundaries, toggleBoundaries } = useMaritimeBoundariesContext();
 
   const selectedCount = getSelectedCount();
   const selectedIds = getSelectedIds();
@@ -319,20 +324,6 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
     if (action === 'toggle-lock') {
       toggleLock();
       return; // No cerrar el panel
-    }
-
-    // Acción de límites marítimos
-    if (action === 'toggle-maritime') {
-      toggleBoundaries();
-      return; // No cerrar el panel
-    }
-
-    // Abrir panel de configuración de límites marítimos
-    if (action === 'configure-maritime') {
-      onClose();
-      // Usar el estado del componente padre
-      window.dispatchEvent(new CustomEvent('openMaritimePanel'));
-      return;
     }
 
     let actionFunction = null;
@@ -372,16 +363,6 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       color: isLocked ? 'bg-orange-900/30' : 'bg-green-900/30',
       hoverColor: isLocked ? 'hover:bg-orange-900/50' : 'hover:bg-green-900/50',
       textColor: isLocked ? 'text-orange-400' : 'text-green-400',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-maritime',
-      title: showBoundaries ? 'Ocultar Límites Marítimos' : 'Mostrar Límites Marítimos',
-      description: showBoundaries ? 'Ocultar EEZ y territoriales' : 'Ver EEZ de 200 NM y territoriales',
-      icon: Waves,
-      color: showBoundaries ? 'bg-cyan-900/30' : 'bg-slate-800/30',
-      hoverColor: showBoundaries ? 'hover:bg-cyan-900/50' : 'hover:bg-slate-700',
-      textColor: showBoundaries ? 'text-cyan-400' : 'text-slate-400',
       requiresSelection: false,
     },
     {
@@ -431,16 +412,6 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       hoverColor: 'hover:bg-red-900/50',
       textColor: 'text-red-400',
       requiresSelection: true,
-    },
-    {
-      id: 'configure-maritime',
-      title: 'Configurar Límites Marítimos',
-      description: 'Seleccionar países y colores',
-      icon: Palette,
-      color: 'bg-cyan-900/30',
-      hoverColor: 'hover:bg-cyan-900/50',
-      textColor: 'text-cyan-400',
-      requiresSelection: false,
     },
   ];
 
