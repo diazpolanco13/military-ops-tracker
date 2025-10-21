@@ -77,6 +77,25 @@ function getEntityLabel(entity) {
   return entity.name;
 }
 
+// Función para obtener el texto del tipo (traducido)
+function getEntityType(entity) {
+  const typeLabels = {
+    'destructor': 'Destructor',
+    'fragata': 'Fragata',
+    'avion': 'Aeronave',
+    'tropas': 'Tropas',
+    'tanque': 'Tanque',
+    'submarino': 'Submarino',
+  };
+  
+  return typeLabels[entity.type] || entity.type;
+}
+
+// Función para obtener la clase/modelo
+function getEntityClass(entity) {
+  return entity.class || '';
+}
+
 /**
  * Componente de marcador individual
  */
@@ -86,6 +105,12 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
   const [useImages, setUseImages] = useState(() => localStorage.getItem('useImages') === 'true');
+  
+  // 🏷️ NUEVO: Configuración de etiquetas
+  const [showLabelName, setShowLabelName] = useState(() => localStorage.getItem('showLabelName') !== 'false');
+  const [showLabelType, setShowLabelType] = useState(() => localStorage.getItem('showLabelType') !== 'false');
+  const [showLabelClass, setShowLabelClass] = useState(() => localStorage.getItem('showLabelClass') === 'true');
+  
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
   
@@ -99,6 +124,15 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
       }
       if (e.detail.useImages !== undefined) {
         setUseImages(e.detail.useImages);
+      }
+      if (e.detail.showLabelName !== undefined) {
+        setShowLabelName(e.detail.showLabelName);
+      }
+      if (e.detail.showLabelType !== undefined) {
+        setShowLabelType(e.detail.showLabelType);
+      }
+      if (e.detail.showLabelClass !== undefined) {
+        setShowLabelClass(e.detail.showLabelClass);
       }
     };
 
@@ -155,18 +189,53 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
             />
           </div>
           
-          {/* Etiqueta con nombre */}
-          <div 
-            className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
-            style={{ 
-              borderColor: color,
-              borderWidth: '1px',
-              maxWidth: '150px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {getEntityLabel(entity)}
+          {/* Contenedor de etiquetas (nombre + tipo + clase) */}
+          <div className="flex flex-col items-center gap-0.5">
+            {/* Etiqueta con nombre */}
+            {showLabelName && (
+              <div 
+                className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
+                style={{ 
+                  borderColor: color,
+                  borderWidth: '1px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityLabel(entity)}
+              </div>
+            )}
+            
+            {/* Etiqueta con tipo (Destructor, Submarino, etc.) */}
+            {showLabelType && (
+              <div 
+                className="px-1.5 py-0.5 bg-slate-800/90 backdrop-blur-sm text-slate-300 rounded shadow-md whitespace-nowrap"
+                style={{ 
+                  fontSize: '10px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityType(entity)}
+              </div>
+            )}
+            
+            {/* Etiqueta con clase/modelo (opcional) */}
+            {showLabelClass && getEntityClass(entity) && (
+              <div 
+                className="px-1.5 py-0.5 bg-slate-700/80 backdrop-blur-sm text-slate-400 rounded shadow-sm whitespace-nowrap"
+                style={{ 
+                  fontSize: '9px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityClass(entity)}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -201,18 +270,53 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
             )}
           </div>
           
-          {/* Etiqueta con nombre */}
-          <div 
-            className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
-            style={{ 
-              borderColor: color,
-              borderWidth: '1px',
-              maxWidth: '150px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {getEntityLabel(entity)}
+          {/* Contenedor de etiquetas (nombre + tipo + clase) */}
+          <div className="flex flex-col items-center gap-0.5">
+            {/* Etiqueta con nombre */}
+            {showLabelName && (
+              <div 
+                className="px-2 py-0.5 bg-slate-900/95 backdrop-blur-sm text-white text-xs font-semibold rounded shadow-lg border whitespace-nowrap"
+                style={{ 
+                  borderColor: color,
+                  borderWidth: '1px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityLabel(entity)}
+              </div>
+            )}
+            
+            {/* Etiqueta con tipo (Destructor, Submarino, etc.) */}
+            {showLabelType && (
+              <div 
+                className="px-1.5 py-0.5 bg-slate-800/90 backdrop-blur-sm text-slate-300 rounded shadow-md whitespace-nowrap"
+                style={{ 
+                  fontSize: '10px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityType(entity)}
+              </div>
+            )}
+            
+            {/* Etiqueta con clase/modelo (opcional) */}
+            {showLabelClass && getEntityClass(entity) && (
+              <div 
+                className="px-1.5 py-0.5 bg-slate-700/80 backdrop-blur-sm text-slate-400 rounded shadow-sm whitespace-nowrap"
+                style={{ 
+                  fontSize: '9px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {getEntityClass(entity)}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -290,7 +394,7 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
         markerRef.current.remove();
       }
     };
-  }, [map, iconSize, useImages, template]); // Recrear cuando cambia tamaño, toggle o template
+  }, [map, iconSize, useImages, template, showLabelName, showLabelType, showLabelClass]); // Recrear cuando cambia configuración
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {

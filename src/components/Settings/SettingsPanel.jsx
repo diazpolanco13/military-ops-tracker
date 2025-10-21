@@ -1,4 +1,4 @@
-import { X, Settings, Layers, Eye, Zap } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 /**
@@ -23,24 +23,51 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('useImages') === 'true';
   });
 
+  // 🏷️ NUEVO: Configuración de etiquetas
+  const [showLabelName, setShowLabelName] = useState(() => {
+    return localStorage.getItem('showLabelName') !== 'false'; // Default: true
+  });
+
+  const [showLabelType, setShowLabelType] = useState(() => {
+    return localStorage.getItem('showLabelType') !== 'false'; // Default: true
+  });
+
+  const [showLabelClass, setShowLabelClass] = useState(() => {
+    return localStorage.getItem('showLabelClass') === 'true'; // Default: false
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
     localStorage.setItem('clusterRadius', clusterRadius);
     localStorage.setItem('iconSize', iconSize);
     localStorage.setItem('useImages', useImages);
+    localStorage.setItem('showLabelName', showLabelName);
+    localStorage.setItem('showLabelType', showLabelType);
+    localStorage.setItem('showLabelClass', showLabelClass);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
-      detail: { clusterZoomThreshold, clusterRadius, iconSize, useImages }
+      detail: { 
+        clusterZoomThreshold, 
+        clusterRadius, 
+        iconSize, 
+        useImages,
+        showLabelName,
+        showLabelType,
+        showLabelClass
+      }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(8);
     setClusterRadius(60);
     setIconSize(48);
     setUseImages(false);
+    setShowLabelName(true);
+    setShowLabelType(true);
+    setShowLabelClass(false);
   };
 
   return (
@@ -175,6 +202,104 @@ export default function SettingsPanel({ onClose }) {
               <p className="text-xs text-slate-400 mt-2">
                 ℹ️ Tamaño de los iconos de barcos/aviones en el mapa.
               </p>
+            </div>
+          </div>
+
+          {/* 🏷️ NUEVA SECCIÓN: Etiquetas de Información */}
+          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <h3 className="text-sm font-semibold text-purple-400 mb-4 flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              ETIQUETAS DE INFORMACIÓN
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Controla qué información se muestra debajo de cada entidad en el mapa.
+            </p>
+
+            <div className="space-y-3">
+              {/* Toggle: Nombre del barco */}
+              <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                <div>
+                  <div className="text-sm font-medium text-white">Nombre de la entidad</div>
+                  <div className="text-xs text-slate-400">USS Newport News, MV Ocean Trader, etc.</div>
+                </div>
+                <button
+                  onClick={() => setShowLabelName(!showLabelName)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    showLabelName ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      showLabelName ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle: Tipo de barco */}
+              <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                <div>
+                  <div className="text-sm font-medium text-white">Tipo de entidad</div>
+                  <div className="text-xs text-slate-400">Destructor, Submarino, Aeronave, etc.</div>
+                </div>
+                <button
+                  onClick={() => setShowLabelType(!showLabelType)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    showLabelType ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      showLabelType ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggle: Modelo/Clase del barco */}
+              <div className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg">
+                <div>
+                  <div className="text-sm font-medium text-white">Modelo/Clase</div>
+                  <div className="text-xs text-slate-400">Arleigh Burke Flight IIA, Los Angeles Class, etc.</div>
+                </div>
+                <button
+                  onClick={() => setShowLabelClass(!showLabelClass)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    showLabelClass ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      showLabelClass ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Vista previa */}
+            <div className="mt-4 p-3 bg-slate-900/50 rounded border border-purple-900/30">
+              <div className="text-xs text-slate-400 mb-2">Vista previa:</div>
+              <div className="flex flex-col items-center gap-0.5">
+                {showLabelName && (
+                  <div className="px-2 py-0.5 bg-slate-800 text-white text-xs font-semibold rounded border border-red-500">
+                    USS Newport News
+                  </div>
+                )}
+                {showLabelType && (
+                  <div className="px-1.5 py-0.5 bg-slate-700 text-slate-300 rounded text-[10px]">
+                    Submarino
+                  </div>
+                )}
+                {showLabelClass && (
+                  <div className="px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded text-[9px]">
+                    Los Angeles Class
+                  </div>
+                )}
+                {!showLabelName && !showLabelType && !showLabelClass && (
+                  <div className="text-xs text-slate-500 italic">Sin etiquetas</div>
+                )}
+              </div>
             </div>
           </div>
 
