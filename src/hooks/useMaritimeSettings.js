@@ -51,8 +51,15 @@ export function useMaritimeSettings() {
 
       if (error) throw error;
       
+      console.log('✅ Country added to DB:', data);
+      
       // Actualizar estado local
-      setSettings(prev => [...prev, data]);
+      setSettings(prev => {
+        const updated = [...prev, data];
+        console.log('📊 Settings updated:', { prev: prev.length, new: updated.length });
+        return updated;
+      });
+      
       return { success: true, data };
     } catch (err) {
       console.error('Error adding country:', err);

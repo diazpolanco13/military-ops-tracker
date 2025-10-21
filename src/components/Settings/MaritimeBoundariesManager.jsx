@@ -14,7 +14,8 @@ export default function MaritimeBoundariesManager({ onClose }) {
     addCountry, 
     toggleVisibility, 
     updateColor, 
-    removeCountry 
+    removeCountry,
+    refetch
   } = useMaritimeSettings();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,9 +45,18 @@ export default function MaritimeBoundariesManager({ onClose }) {
   };
 
   const addCountryFromSuggestion = async (country) => {
+    console.log('➕ Adding country:', country);
+    
     const result = await addCountry(country.code, country.name, newColor);
     
+    console.log('✅ Add result:', result);
+    
     if (result.success) {
+      // Forzar refetch para asegurar que se actualice
+      await refetch();
+      
+      console.log('🔄 Settings refreshed');
+      
       // Limpiar form
       setAddSearchTerm('');
       setShowSuggestions(false);
