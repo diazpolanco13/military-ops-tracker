@@ -40,8 +40,12 @@ military-ops-tracker/
 │   │   │   ├── EntityCluster.jsx           # Clusters para muchas entidades
 │   │   │   ├── TrajectoryLine.jsx          # Líneas de trayectoria animadas
 │   │   │   ├── ZoneOverlay.jsx             # Zonas de interés/restricción
-│   │   │   ├── MeasurementTool.jsx         # Herramienta de medición
 │   │   │   └── MapControls.jsx             # Controles personalizados
+│   │   ├── Radar/                          # ✅ IMPLEMENTADO
+│   │   │   ├── RadarOverlay.jsx            # ✅ Radar visual con sweep 360°
+│   │   │   └── RadarCrosshair.jsx          # ✅ Crosshair de referencia
+│   │   ├── Measurement/                    # ✅ IMPLEMENTADO
+│   │   │   └── MeasurementTools.jsx        # ✅ Herramientas de medición completas
 │   │   ├── Sidebar/
 │   │   │   ├── Sidebar.jsx
 │   │   │   ├── AddEntityForm.jsx
@@ -700,11 +704,13 @@ CREATE UNIQUE INDEX ON entity_stats(type, status);
   - Mostrar historial
 
 **Herramientas de Mapa**
-- Ruler (medir distancias)
-- Dibujar zonas personalizadas
-- Calcular áreas de influencia (círculos de radio)
-- Exportar vista actual a PNG
-- Compartir vista con URL
+- ✅ Ruler (medir distancias) - **IMPLEMENTADO** con Mapbox Draw + Turf.js
+- ✅ Círculos de alcance (10-6,000 km) - **IMPLEMENTADO** con clasificación militar
+- ✅ Cálculo de áreas (polígonos) - **IMPLEMENTADO** con perímetro
+- ✅ Radar visual de detección - **IMPLEMENTADO** con sweep 360°
+- Dibujar zonas personalizadas - Pendiente (Fase 8)
+- Exportar vista actual a PNG - Pendiente (Fase 14)
+- Compartir vista con URL - Pendiente (Futuro)
 
 **Iconos Dinámicos Avanzados**
 - SVG vectoriales (no emojis)
@@ -1161,6 +1167,9 @@ npm install date-fns
 
 # 11. Instalar exportación
 npm install jspdf xlsx
+
+# 12. Instalar herramientas de medición y análisis geoespacial
+npm install @mapbox/mapbox-gl-draw @turf/turf
 ```
 
 ### Fase 1: Setup de Base de Datos (usando MCP Supabase)
@@ -1990,16 +1999,16 @@ export default defineConfig({
 
 ---
 
-**Versión**: 3.0.0  
-**Última Actualización**: 20 Octubre 2025 (Noche)  
-**Stack**: React 19 + Vite + Tailwind 3.4.4 + Mapbox GL JS + Supabase (PostgreSQL + PostGIS + Realtime + Storage)  
-**Estado Actual**: MVP Completo + Sistema de Clustering + Grupos + Dashboard  
+**Versión**: 3.2.0  
+**Última Actualización**: 22 Octubre 2025  
+**Stack**: React 19 + Vite + Tailwind 3.4.4 + Mapbox GL JS + Supabase (PostgreSQL + PostGIS + Realtime + Storage) + @turf/turf + Mapbox Draw  
+**Estado Actual**: MVP Completo + Sistema de Clustering + Grupos + Dashboard + Radar + Herramientas de Medición  
 **Despliegue**: 41 entidades SOUTHCOM, 33 plantillas militares, 10,000 efectivos  
-**Prioridad**: ✅ MVP Completado → MVP+ (En Progreso) → Producción (Fases 11-17) → Futuro (Fases 18+)
+**Prioridad**: ✅ MVP Completado → ✅ MVP+ (Radar + Medición) → Producción (Fases 11-17) → Futuro (Fases 18+)
 
 ---
 
-## 🎉 ESTADO ACTUAL (20 Oct 2025)
+## 🎉 ESTADO ACTUAL (22 Oct 2025)
 
 ### ✅ IMPLEMENTADO Y FUNCIONAL:
 
@@ -2019,6 +2028,31 @@ export default defineConfig({
 - ✅ Diálogos de confirmación
 - ✅ Iconos especiales por tipo (Ship, Plane, Users)
 
+**🎯 SISTEMAS TÁCTICOS AVANZADOS (NUEVO - 22 Oct 2025):**
+- ✅ **Radar Visual en Tiempo Real**:
+  - Sweep 360° animado con CSS
+  - Detección automática de embarcaciones
+  - Radio dinámico basado en zoom del mapa
+  - Filtrado de entidades visibles en viewport
+  - Modo compacto y expandido
+  - Panel de estadísticas en tiempo real
+  - Crosshair centrado de referencia
+  - Clasificación por tipo de entidad
+  
+- ✅ **Herramientas de Medición Militar**:
+  - 📏 Medición de distancias (click-to-click, km precisos)
+  - 📐 Cálculo de áreas (polígonos con perímetro)
+  - ⭕ Círculos de alcance (10-6,000 km)
+  - Clasificación automática:
+    - 🎯 Corto alcance (< 500 km) - Misiles tácticos
+    - 🚀 Alcance medio (500-1,500 km) - Misiles crucero
+    - ⚡ Largo alcance (1,500-3,500 km) - Balísticos
+    - ☢️ Intercontinental (> 3,500 km) - ICBM
+  - Estilos militares verdes coherentes
+  - Cálculos con Turf.js (Haversine)
+  - Panel de resultados en tiempo real
+  - Limpiar todas las mediciones
+
 **Base de Datos:**
 - ✅ Tabla `entities` con PostGIS
 - ✅ Tabla `entity_templates` (33 plantillas)
@@ -2035,5 +2069,164 @@ export default defineConfig({
 - ✅ Conteo de personal militar (10,000 efectivos)
 - ✅ Cache de plantillas para performance
 - ✅ Optimización de imágenes (70% reducción)
+- ✅ Radar de detección militar profesional
+- ✅ Suite completa de medición geoespacial
+
+**Librerías Tácticas:**
+- ✅ `@mapbox/mapbox-gl-draw` - UI de dibujo profesional
+- ✅ `@turf/turf` - Cálculos geoespaciales avanzados
+- ✅ Estilos CSS militares personalizados
+
+---
+
+## 📡 DOCUMENTACIÓN TÉCNICA - SISTEMAS TÁCTICOS
+
+### Sistema de Radar Visual (Implementado 22 Oct 2025)
+
+**Componente Principal**: `RadarOverlay.jsx`
+
+**Características Técnicas**:
+- **Animación**: CSS puro (60fps, sin JavaScript pesado)
+- **Sweep**: Rotación 360° con gradiente cónico
+- **Detección**: Algoritmo de bearing + tolerancia de 15°
+- **Performance**: Usa `useEffect` optimizado, solo re-renderiza al cambiar datos
+- **Cálculos**:
+  ```javascript
+  // Fórmula de Haversine para distancias
+  const distance = getDistance(lat1, lon1, lat2, lon2);
+  
+  // Cálculo de bearing (rumbo)
+  const bearing = calculateBearing(from, to);
+  
+  // Radio desde zoom (proyección Web Mercator)
+  const radiusKm = calculateRadiusFromZoom(zoom, latitude);
+  ```
+
+**Estados**:
+- `radarAngle`: Ángulo actual del barrido (0-360°)
+- `detectedEntities`: Array de entidades en el haz
+- `scanSpeed`: Velocidad configurable (1-5 °/frame)
+- `isActive`: Estado activo/pausado
+- `visibleEntities`: Filtradas por viewport del mapa
+
+**Props**:
+- `map`: Instancia de Mapbox GL JS
+- `onDetection`: Callback cuando detecta entidades
+- `compact`: Modo compacto (true/false)
+
+---
+
+### Sistema de Medición Militar (Implementado 22 Oct 2025)
+
+**Componente Principal**: `MeasurementTools.jsx`
+
+**Arquitectura**:
+```
+MeasurementTools
+├── Mapbox Draw (UI de dibujo)
+├── Turf.js (cálculos geoespaciales)
+└── React State (gestión de mediciones)
+```
+
+**Herramientas Disponibles**:
+
+1. **Línea de Distancia**:
+   ```javascript
+   const line = turf.lineString(coordinates);
+   const length = turf.length(line, {units: 'kilometers'});
+   ```
+
+2. **Polígono de Área**:
+   ```javascript
+   const polygon = turf.polygon(coordinates);
+   const area = turf.area(polygon) / 1000000; // m² → km²
+   const perimeter = turf.length(turf.polygonToLine(polygon));
+   ```
+
+3. **Círculo de Alcance**:
+   ```javascript
+   const circle = turf.circle(
+     [lng, lat], 
+     radiusKm, 
+     {steps: 64, units: 'kilometers'}
+   );
+   ```
+
+**Clasificación de Alcances**:
+```javascript
+const classification = 
+  radius < 500 ? '🎯 Corto alcance' :
+  radius < 1500 ? '🚀 Alcance medio' :
+  radius < 3500 ? '⚡ Largo alcance' :
+  '☢️ Intercontinental';
+```
+
+**Estilos Personalizados**:
+```javascript
+const drawStyles = [
+  {
+    'id': 'gl-draw-line',
+    'type': 'line',
+    'paint': {
+      'line-color': '#22c55e',  // Verde militar
+      'line-width': 3,
+      'line-opacity': 0.8
+    }
+  },
+  // ... más estilos
+];
+```
+
+**Eventos Mapbox Draw**:
+- `draw.create`: Al finalizar dibujo → calcular mediciones
+- `draw.update`: Al editar geometría → recalcular
+- `draw.delete`: Al borrar → limpiar resultados
+
+**Integración con Mapbox**:
+```javascript
+const draw = new MapboxDraw({
+  displayControlsDefault: false,
+  styles: drawStyles,
+  controls: {}
+});
+
+map.addControl(draw, 'top-left');
+```
+
+---
+
+### Commits Importantes (22 Oct 2025)
+
+1. **`274620f`** - Merge feature/radar-visual: Sistema de radar visual completo
+2. **`fb67d2b`** - feat: Agregar crosshair centrado al radar
+3. **`109956f`** - chore: Eliminar console.log del radar
+4. **`024be17`** - feat: Implementar herramientas de medición militar completas
+5. **`a68fb99`** - feat: Aumentar rango de círculo de alcance a 6,000 km
+
+---
+
+### Métricas de Implementación
+
+**Líneas de Código Agregadas**:
+- RadarOverlay.jsx: 418 líneas
+- RadarCrosshair.jsx: 27 líneas
+- MeasurementTools.jsx: 420 líneas
+- **Total**: 865 líneas de código táctico
+
+**Dependencias Instaladas**:
+- `@mapbox/mapbox-gl-draw`: 149 packages
+- `@turf/turf`: Incluye múltiples módulos
+
+**Tiempo de Implementación**:
+- Radar: ~4 horas (diseño + lógica + integración)
+- Medición: ~3 horas (Mapbox Draw + Turf.js + UI)
+- **Total**: ~7 horas de desarrollo intenso
+
+**Cobertura de Casos de Uso**:
+- ✅ Detección de embarcaciones en tiempo real
+- ✅ Medición de distancias tácticas
+- ✅ Cálculo de áreas de operación
+- ✅ Planificación de alcance de misiles
+- ✅ Análisis geoespacial avanzado
 
 ---
