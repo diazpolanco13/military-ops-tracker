@@ -14,7 +14,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 export default function MeasurementTools({ map }) {
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
-  const [circleRadius, setCircleRadius] = useState(50); // km
+  const [circleRadius, setCircleRadius] = useState(100); // km
   const drawRef = useRef(null);
 
   // Inicializar Mapbox Draw
@@ -277,16 +277,26 @@ export default function MeasurementTools({ map }) {
             </button>
             
             {/* Control de radio */}
-            <div className="px-4 pb-3">
+            <div className="px-4 pb-3 space-y-2">
               <input
                 type="range"
                 min="10"
-                max="500"
-                step="10"
+                max="6000"
+                step="50"
                 value={circleRadius}
                 onChange={(e) => setCircleRadius(parseInt(e.target.value))}
                 className="w-full h-1 bg-cyan-500/20 rounded-lg appearance-none cursor-pointer accent-cyan-500"
               />
+              <div className="flex justify-between text-[10px] text-cyan-400/60 font-mono">
+                <span>10 km</span>
+                <span>6,000 km</span>
+              </div>
+              <div className="text-xs text-cyan-400/70 text-center">
+                {circleRadius < 500 ? '🎯 Corto alcance' : 
+                 circleRadius < 1500 ? '🚀 Alcance medio' : 
+                 circleRadius < 3500 ? '⚡ Largo alcance' : 
+                 '☢️ Intercontinental'}
+              </div>
             </div>
           </div>
 
