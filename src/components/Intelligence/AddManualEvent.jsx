@@ -12,6 +12,48 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
   const [customSummary, setCustomSummary] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [fetchingPreview, setFetchingPreview] = useState(false);
+
+  // Fetch preview cuando cambia la URL
+  const fetchUrlPreview = async (urlToFetch) => {
+    if (!urlToFetch || urlToFetch.length < 10) {
+      setPreviewImage(null);
+      return;
+    }
+
+    try {
+      setFetchingPreview(true);
+      
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/fetch-url-metadata`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({ url: urlToFetch })
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.metadata) {
+        setPreviewImage(result.metadata.image);
+        if (!customTitle && result.metadata.title) {
+          setCustomTitle(result.metadata.title);
+        }
+        if (!customSummary && result.metadata.description) {
+          setCustomSummary(result.metadata.description);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching preview:', err);
+    } finally {
+      setFetchingPreview(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,7 +144,8 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
         location_description: analysis.location_description,
         grok_analysis: {
           model: 'grok-2-1212',
-          analyzed_manually: true
+          analyzed_manually: true,
+          image_url: previewImage
         },
         confidence_score: analysis.confidence_score || 70,
         keywords: analysis.keywords || [],
@@ -130,7 +173,10 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
         source_author: 'Manual',
         source_credibility: 'unverified',
         mentioned_entities: [],
-        grok_analysis: { manually_created: true },
+        grok_analysis: { 
+          manually_created: true,
+          image_url: previewImage
+        },
         confidence_score: 50,
         keywords: [],
         sentiment: 'neutral',
@@ -176,20 +222,59 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
             <label className="block text-sm font-bold text-slate-300 mb-2">
               🔗 URL de la fuente (opcional)
             </label>
-            <div className="relative">
-              <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://twitter.com/... o https://defensenews.com/..."
-                className="w-full pl-11 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
+            <div className="flex space-x-2">
+              <div className="relative flex-1">
+                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://twitter.com/... o https://defensenews.com/..."
+                  className="w-full pl-11 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchUrlPreview(url)}
+                disabled={!url || fetchingPreview}
+                className="px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 rounded-lg text-white font-bold transition-colors flex items-center space-x-2"
+              >
+                {fetchingPreview ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    <LinkIcon className="w-4 h-4" />
+                    <span>Preview</span>
+                  </>
+                )}
+              </button>
             </div>
             <p className="text-slate-500 text-xs mt-1">
-              Si pegas una URL, Grok la analizará automáticamente
+              Click "Preview" para extraer imagen, título y descripción automáticamente
             </p>
           </div>
+
+          {/* Preview de imagen */}
+          {previewImage && (
+            <div className="rounded-lg overflow-hidden border-2 border-purple-500/50">
+              <img 
+                src={previewImage} 
+                alt="Preview" 
+                className="w-full h-auto max-h-64 object-cover"
+                onError={() => setPreviewImage(null)}
+              />
+              <div className="bg-slate-800/50 px-3 py-2 flex items-center justify-between">
+                <span className="text-green-400 text-xs font-bold">✅ Imagen detectada</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewImage(null)}
+                  className="text-red-400 hover:text-red-300 text-xs"
+                >
+                  Quitar
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Título manual (opcional) */}
           <div>
