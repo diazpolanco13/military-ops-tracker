@@ -2,6 +2,8 @@ import MapContainer from './components/Map/MapContainer';
 import EntityPalette from './components/Templates/EntityPalette';
 import InstantiateModal from './components/Templates/InstantiateModal';
 import TopNavigationBar from './components/Navigation/TopNavigationBar';
+import RadarOverlay from './components/Radar/RadarOverlay';
+import RadarCrosshair from './components/Radar/RadarCrosshair';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -13,6 +15,8 @@ function App() {
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
   const [mapInstance, setMapInstance] = useState(null); // Referencia al mapa para navbar
+  const [showRadar, setShowRadar] = useState(false); // Control del radar
+  const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -51,6 +55,12 @@ function App() {
     }
   };
 
+  // Handler para detecciones del radar
+  const handleRadarDetection = (detectedEntities) => {
+    // Aquí puedes agregar sonidos, notificaciones, etc.
+    console.log('🎯 Radar detectó:', detectedEntities.map(e => e.name));
+  };
+
   return (
     <LockProvider>
       <SelectionProvider>
@@ -60,6 +70,10 @@ function App() {
           onTogglePalette={() => setShowPalette(!showPalette)}
           paletteVisible={showPalette}
           map={mapInstance}
+          onToggleRadar={() => setShowRadar(!showRadar)}
+          radarVisible={showRadar}
+          onToggleRadarMode={() => setRadarCompact(!radarCompact)}
+          radarCompact={radarCompact}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
@@ -89,6 +103,18 @@ function App() {
             position={dropPosition}
             onClose={handleCloseModal}
             onConfirm={handleConfirmCreate}
+          />
+        )}
+
+        {/* Crosshair del centro del radar */}
+        {showRadar && <RadarCrosshair />}
+
+        {/* Radar Overlay */}
+        {showRadar && mapInstance && (
+          <RadarOverlay
+            map={mapInstance}
+            onDetection={handleRadarDetection}
+            compact={radarCompact}
           />
         )}
 
