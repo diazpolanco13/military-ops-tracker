@@ -121,9 +121,16 @@ export default function IntelligenceFeed({ onClose, map }) {
         onClick={onClose}
       ></div>
 
-      {/* Modal Central Grande Tipo X */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-[1200px] h-[90vh] bg-slate-900/98 border-2 border-purple-500/50 rounded-2xl shadow-2xl shadow-purple-500/30 z-50 flex flex-col overflow-hidden"
-           style={{ animation: 'scaleIn 0.2s ease-out' }}>
+      {/* Modal Central Grande Tipo X - Con margen para navbar */}
+      <div className="fixed w-[95vw] max-w-[1200px] bg-slate-900/98 border-2 border-purple-500/50 rounded-2xl shadow-2xl shadow-purple-500/30 z-50 flex flex-col overflow-hidden"
+           style={{ 
+             top: '50%',
+             left: '50%',
+             transform: 'translate(-50%, -50%)',
+             maxHeight: 'calc(100vh - 80px)',
+             marginTop: '8px',
+             animation: 'scaleIn 0.2s ease-out'
+           }}>
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-purple-500/30 bg-gradient-to-r from-purple-900/30 to-blue-900/30">
