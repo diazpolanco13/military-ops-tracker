@@ -23,7 +23,9 @@ import {
   Unlock,
   Users,
   Waves,
-  Palette
+  Palette,
+  Radar,
+  Activity
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -43,7 +45,15 @@ import ZonesPanel from './ZonesPanel';
  * Estilo IBM i2 Analyst's Notebook
  * Iconos horizontales con menús desplegables que se expanden hacia abajo
  */
-export default function TopNavigationBar({ onTogglePalette, paletteVisible, map }) {
+export default function TopNavigationBar({ 
+  onTogglePalette, 
+  paletteVisible, 
+  map, 
+  onToggleRadar, 
+  radarVisible = false, 
+  onToggleRadarMode = () => {}, 
+  radarCompact = true 
+}) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
   const [currentMapStyle, setCurrentMapStyle] = useState(() => {
@@ -224,6 +234,10 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
                     onClose={() => setActivePanel(null)} 
                     onShowHidden={() => setShowEntitiesModal('hidden')}
                     onShowArchived={() => setShowEntitiesModal('archived')}
+                    onToggleRadar={onToggleRadar}
+                    radarVisible={radarVisible}
+                    onToggleRadarMode={onToggleRadarMode}
+                    radarCompact={radarCompact}
                   />
                 ) : activePanel === 'zones' ? (
                   <ZonesPanel 
@@ -301,7 +315,15 @@ function NavButton({ icon, label, active, onClick, tooltip, hasSubmenu, badge })
 /**
  * Panel de gestión de visibilidad
  */
-function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
+function ViewPanel({ 
+  onClose, 
+  onShowHidden, 
+  onShowArchived, 
+  onToggleRadar, 
+  radarVisible = false, 
+  onToggleRadarMode = () => {}, 
+  radarCompact = true 
+}) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
   const { isLocked, toggleLock } = useLock();
@@ -335,6 +357,18 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
       return; // No cerrar el panel
     }
 
+    // Acción de toggle radar
+    if (action === 'toggle-radar') {
+      onToggleRadar();
+      return; // No cerrar el panel
+    }
+
+    // Acción de toggle modo radar
+    if (action === 'toggle-radar-mode') {
+      onToggleRadarMode();
+      return; // No cerrar el panel
+    }
+
     let actionFunction = null;
 
     switch (action) {
@@ -364,6 +398,26 @@ function ViewPanel({ onClose, onShowHidden, onShowArchived }) {
   };
 
   const VIEW_ACTIONS = [
+    {
+      id: 'toggle-radar',
+      title: radarVisible ? 'Ocultar Radar' : 'Mostrar Radar',
+      description: radarVisible ? 'Desactivar sistema de radar' : 'Radar de detección en tiempo real',
+      icon: Radar,
+      color: radarVisible ? 'bg-green-900/30' : 'bg-slate-700',
+      hoverColor: radarVisible ? 'hover:bg-green-900/50' : 'hover:bg-slate-600',
+      textColor: radarVisible ? 'text-green-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-radar-mode',
+      title: radarCompact ? 'Radar Completo' : 'Radar Compacto',
+      description: radarCompact ? 'Expandir panel de control' : 'Minimizar radar (recomendado)',
+      icon: Activity,
+      color: radarCompact ? 'bg-cyan-900/30' : 'bg-blue-900/30',
+      hoverColor: radarCompact ? 'hover:bg-cyan-900/50' : 'hover:bg-blue-900/50',
+      textColor: radarCompact ? 'text-cyan-400' : 'text-blue-400',
+      requiresSelection: false,
+    },
     {
       id: 'toggle-lock',
       title: isLocked ? 'Desbloquear Movimiento' : 'Bloquear Movimiento',
