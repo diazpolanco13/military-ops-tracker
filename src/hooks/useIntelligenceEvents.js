@@ -204,16 +204,31 @@ export function useIntelligenceEvents(filters = {}) {
    */
   const runMonitor = async () => {
     try {
-      const { data: projectUrl } = await supabase.rpc('get_project_url');
-      const edgeFunctionUrl = `${projectUrl}/functions/v1/intelligence-monitor`;
+      // Obtener URL del proyecto desde las variables de entorno
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl) {
+        throw new Error('VITE_SUPABASE_URL no configurada');
+      }
+
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/intelligence-monitor`;
+
+      console.log('🚀 Ejecutando monitor de inteligencia...');
 
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`
-        }
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({})
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
 
       const result = await response.json();
       
