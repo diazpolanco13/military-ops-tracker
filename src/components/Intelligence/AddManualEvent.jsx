@@ -261,15 +261,15 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
               </button>
             </div>
             {fetchingPreview && (
-              <p className="text-blue-400 text-xs mt-1 flex items-center space-x-1">
+              <div className="text-blue-400 text-xs mt-1 flex items-center space-x-1">
                 <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                 <span>Extrayendo metadata de la URL...</span>
-              </p>
+              </div>
             )}
             {!fetchingPreview && url && (
-              <p className="text-slate-500 text-xs mt-1">
-                {previewImage ? '✅ Imagen cargada' : 'Click "Preview" o espera 1 segundo para auto-preview'}
-              </p>
+              <div className="text-slate-500 text-xs mt-1">
+                {previewImage ? '✅ Imagen cargada' : 'Preview automático en 1 segundo o click "Preview"'}
+              </div>
             )}
           </div>
 
