@@ -58,7 +58,6 @@ function App() {
   // Handler para detecciones del radar
   const handleRadarDetection = (detectedEntities) => {
     // Aquí puedes agregar sonidos, notificaciones, etc.
-    console.log('🎯 Radar detectó:', detectedEntities.map(e => e.name));
   };
 
   return (
