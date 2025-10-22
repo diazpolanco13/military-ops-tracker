@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Plus, Link as LinkIcon, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -14,6 +14,17 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
   const [error, setError] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [fetchingPreview, setFetchingPreview] = useState(false);
+
+  // Auto-fetch preview cuando cambia la URL (con debounce)
+  useEffect(() => {
+    if (!url || url.length < 15) return;
+
+    const timer = setTimeout(() => {
+      fetchUrlPreview(url);
+    }, 1000); // 1 segundo de delay después de dejar de escribir
+
+    return () => clearTimeout(timer);
+  }, [url]);
 
   // Fetch preview cuando cambia la URL
   const fetchUrlPreview = async (urlToFetch) => {
@@ -249,9 +260,17 @@ export default function AddManualEvent({ onClose, onEventAdded }) {
                 )}
               </button>
             </div>
-            <p className="text-slate-500 text-xs mt-1">
-              Click "Preview" para extraer imagen, título y descripción automáticamente
-            </p>
+            {fetchingPreview && (
+              <p className="text-blue-400 text-xs mt-1 flex items-center space-x-1">
+                <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                <span>Extrayendo metadata de la URL...</span>
+              </p>
+            )}
+            {!fetchingPreview && url && (
+              <p className="text-slate-500 text-xs mt-1">
+                {previewImage ? '✅ Imagen cargada' : 'Click "Preview" o espera 1 segundo para auto-preview'}
+              </p>
+            )}
           </div>
 
           {/* Preview de imagen */}
