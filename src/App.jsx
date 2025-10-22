@@ -4,6 +4,7 @@ import InstantiateModal from './components/Templates/InstantiateModal';
 import TopNavigationBar from './components/Navigation/TopNavigationBar';
 import RadarOverlay from './components/Radar/RadarOverlay';
 import RadarCrosshair from './components/Radar/RadarCrosshair';
+import MeasurementTools from './components/Measurement/MeasurementTools';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -17,6 +18,7 @@ function App() {
   const [mapInstance, setMapInstance] = useState(null); // Referencia al mapa para navbar
   const [showRadar, setShowRadar] = useState(false); // Control del radar
   const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
+  const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -73,6 +75,8 @@ function App() {
           radarVisible={showRadar}
           onToggleRadarMode={() => setRadarCompact(!radarCompact)}
           radarCompact={radarCompact}
+          onToggleMeasurement={() => setShowMeasurementTools(!showMeasurementTools)}
+          measurementVisible={showMeasurementTools}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
@@ -115,6 +119,11 @@ function App() {
             onDetection={handleRadarDetection}
             compact={radarCompact}
           />
+        )}
+
+        {/* Herramientas de Medición */}
+        {showMeasurementTools && mapInstance && (
+          <MeasurementTools map={mapInstance} />
         )}
 
         {/* Indicador de creación */}

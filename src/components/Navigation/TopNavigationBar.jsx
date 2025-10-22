@@ -25,7 +25,8 @@ import {
   Waves,
   Palette,
   Radar,
-  Activity
+  Activity,
+  Ruler
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -52,7 +53,9 @@ export default function TopNavigationBar({
   onToggleRadar, 
   radarVisible = false, 
   onToggleRadarMode = () => {}, 
-  radarCompact = true 
+  radarCompact = true,
+  onToggleMeasurement = () => {},
+  measurementVisible = false
 }) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
@@ -238,6 +241,8 @@ export default function TopNavigationBar({
                     radarVisible={radarVisible}
                     onToggleRadarMode={onToggleRadarMode}
                     radarCompact={radarCompact}
+                    onToggleMeasurement={onToggleMeasurement}
+                    measurementVisible={measurementVisible}
                   />
                 ) : activePanel === 'zones' ? (
                   <ZonesPanel 
@@ -322,7 +327,9 @@ function ViewPanel({
   onToggleRadar, 
   radarVisible = false, 
   onToggleRadarMode = () => {}, 
-  radarCompact = true 
+  radarCompact = true,
+  onToggleMeasurement = () => {},
+  measurementVisible = false
 }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
@@ -369,6 +376,12 @@ function ViewPanel({
       return; // No cerrar el panel
     }
 
+    // Acción de toggle herramientas de medición
+    if (action === 'toggle-measurement') {
+      onToggleMeasurement();
+      return; // No cerrar el panel
+    }
+
     let actionFunction = null;
 
     switch (action) {
@@ -398,6 +411,16 @@ function ViewPanel({
   };
 
   const VIEW_ACTIONS = [
+    {
+      id: 'toggle-measurement',
+      title: measurementVisible ? 'Ocultar Medición' : 'Herramientas de Medición',
+      description: measurementVisible ? 'Cerrar herramientas' : 'Medir distancias, áreas y círculos',
+      icon: Ruler,
+      color: measurementVisible ? 'bg-cyan-900/30' : 'bg-slate-700',
+      hoverColor: measurementVisible ? 'hover:bg-cyan-900/50' : 'hover:bg-slate-600',
+      textColor: measurementVisible ? 'text-cyan-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
     {
       id: 'toggle-radar',
       title: radarVisible ? 'Ocultar Radar' : 'Mostrar Radar',
