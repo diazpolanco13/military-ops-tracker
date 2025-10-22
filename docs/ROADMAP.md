@@ -3,19 +3,129 @@
 > **Filosofía**: Sistema tipo IBM i2 Analyst's Notebook para operaciones militares  
 > Desarrollo iterativo con resultados visuales inmediatos
 
-**Última Actualización**: 20 de Octubre, 2025 (Noche)  
-**Versión**: 3.0 - Sistema de Clustering, Grupos y Dashboard Completo  
-**Estado**: Despliegue SOUTHCOM Completo - 61 Commits Épicos ✅
+**Última Actualización**: 22 de Octubre, 2025  
+**Versión**: 3.2 - Clustering + Grupos + Dashboard + Radar + Medición Militar  
+**Estado**: MVP+ Completo - Sistemas Tácticos Avanzados Implementados ✅
 
 ---
 
 ## 📋 Tabla de Contenidos
-- [🎉 NUEVO - Sesión Mega Épica 20 Oct 2025](#-sesión-mega-épica-20-oct-2025)
+- [🎯 NUEVO - Sistemas Tácticos Avanzados 22 Oct 2025](#-sistemas-tácticos-avanzados-22-oct-2025)
+- [🎉 Sesión Mega Épica 20 Oct 2025](#-sesión-mega-épica-20-oct-2025)
 - [✅ COMPLETADO - Sesión Épica](#-completado---sesión-épica-17-oct-2025)
 - [✅ COMPLETADO - Sistema de Gestión de Entidades](#-completado---sistema-de-gestión-de-entidades-18-oct-2025)
 - [🎯 PRÓXIMOS PASOS](#-próximos-pasos)
 - [🚀 FEATURES FUTURAS](#-features-futuras)
 - [📚 HISTORIAL DE ITERACIONES](#-historial-de-iteraciones-completadas)
+
+---
+
+## 🎯 SISTEMAS TÁCTICOS AVANZADOS (22 Oct 2025)
+
+### 🚀 **5 Commits - 865 Líneas de Código Táctico - 7 Horas de Desarrollo Intenso:**
+
+**1. Sistema de Radar Visual en Tiempo Real** ✅
+- ✅ Radar con sweep 360° animado en CSS (60fps)
+- ✅ Detección automática de embarcaciones en el haz
+- ✅ Radio dinámico basado en zoom del mapa (proyección Web Mercator)
+- ✅ Filtrado inteligente de entidades visibles en viewport
+- ✅ Modos: Compacto (esquina) y Expandido (panel completo)
+- ✅ Panel de estadísticas en tiempo real:
+  - Radio de vista actual (km calculado)
+  - Ángulo de barrido (0-360°)
+  - Entidades en pantalla vs Total activas
+  - Lista de contactos con distancia y bearing
+- ✅ Crosshair centrado de referencia (punto verde + cruz)
+- ✅ Grid circular con anillos concéntricos y líneas cardinales
+- ✅ Puntos coloreados por tipo de entidad
+- ✅ Efecto pulse en detecciones
+- ✅ Controles: velocidad barrido, activar/pausar
+- ✅ Integrado en menú "Ver" de TopNavigationBar
+
+**2. Herramientas de Medición Militar Completas** ✅
+- ✅ **Medición de Distancias** (📏):
+  - Click-to-click con cálculo Haversine
+  - Visualización en km con 2 decimales
+  - Líneas verdes militares con vértices editables
+  - Enter para finalizar, Esc para cancelar
+  
+- ✅ **Medición de Áreas** (📐):
+  - Dibujar polígonos personalizados
+  - Cálculo automático de área (km²) y perímetro (km)
+  - Polígonos rellenos translúcidos verdes
+  - Bordes con vértices ajustables
+  
+- ✅ **Círculos de Alcance Militar** (⭕):
+  - Rango configurable: **10 km a 6,000 km**
+  - Slider interactivo (pasos de 50 km)
+  - **Clasificación automática por alcance**:
+    - 🎯 Corto alcance (< 500 km) - Misiles tácticos
+    - 🚀 Alcance medio (500-1,500 km) - Misiles crucero
+    - ⚡ Largo alcance (1,500-3,500 km) - Balísticos
+    - ☢️ Intercontinental (> 3,500 km) - ICBM/SLBM
+  - Centrado automático en centro del mapa
+  - Cubre todo el espectro militar realista
+  
+- ✅ **Panel de Resultados en Tiempo Real**:
+  - Muestra todas las mediciones activas
+  - Scroll moderno y minimalista
+  - Colores diferenciados (verde/azul/cyan)
+  - Actualización automática al editar geometrías
+  
+- ✅ **Limpiar Todo**: Borrar todas las mediciones de una vez
+
+**3. Integración con Librerías Profesionales** ✅
+- ✅ `@mapbox/mapbox-gl-draw` (149 packages) - UI de dibujo nativa
+- ✅ `@turf/turf` - Cálculos geoespaciales avanzados:
+  - `turf.length()` - Distancias con Haversine
+  - `turf.area()` - Áreas de polígonos (m² → km²)
+  - `turf.circle()` - Generación de círculos perfectos
+  - `turf.polygonToLine()` - Cálculo de perímetros
+- ✅ Estilos militares personalizados coherentes con diseño
+
+**4. UI/UX Profesional** ✅
+- ✅ Panel flotante de medición (top-left)
+- ✅ Botones en menú "Ver" (primer ítem cyan para medición)
+- ✅ Ayuda contextual incluida (Enter, Esc, Delete, Click)
+- ✅ No bloquea interacción con mapa
+- ✅ Compatible con todos los navegadores modernos
+- ✅ Z-index optimizado (coexiste con radar y otros overlays)
+
+**Casos de Uso Militar Cubiertos:**
+- ✅ Detección en tiempo real de embarcaciones
+- ✅ Planificación de misiones
+- ✅ Cálculo de alcance de armas (tácticas hasta ICBM)
+- ✅ Definición de zonas de operación
+- ✅ Análisis de cobertura de radar
+- ✅ Estimación de áreas de patrulla
+- ✅ Medición de distancias tácticas
+- ✅ Análisis de terreno
+
+### 📊 **Métricas de Implementación:**
+- **Commits**: 5 tácticos
+  1. `274620f` - Merge feature/radar-visual
+  2. `fb67d2b` - Crosshair centrado
+  3. `109956f` - Limpiar console.log
+  4. `024be17` - Herramientas medición completas
+  5. `a68fb99` - Rango círculo 6,000 km
+  6. `74e78cb` - Documentación actualizada
+- **Líneas de código**: 865 líneas tácticas
+  - RadarOverlay.jsx: 418 líneas
+  - RadarCrosshair.jsx: 27 líneas
+  - MeasurementTools.jsx: 420 líneas
+- **Componentes nuevos**: 3 (RadarOverlay, RadarCrosshair, MeasurementTools)
+- **Archivos modificados**: 7 (App.jsx, TopNavigationBar, index.css, docs)
+- **Dependencias instaladas**: 149 packages (Mapbox Draw + Turf.js)
+- **Tiempo total**: ~7 horas de desarrollo intenso
+- **Estado**: 🟢 MVP+ COMPLETADO
+
+### 🎯 **Impacto:**
+- ✅ Nivel militar profesional alcanzado
+- ✅ Capacidades de análisis geoespacial avanzado
+- ✅ Detección táctica en tiempo real
+- ✅ Cobertura de todo el espectro de armamento (10-6,000 km)
+- ✅ UI/UX coherente y profesional
+- ✅ Performance optimizado (60fps en radar)
 
 ---
 
@@ -1345,6 +1455,10 @@ git merge iteracion-X-nombre
 - ✅ 6 estilos de mapa
 - ✅ Upload de imágenes a Supabase
 - ✅ Herencia de especificaciones técnicas
+- ✅ **Radar visual de detección** (sweep 360°, tiempo real)
+- ✅ **Medición de distancias** (Haversine, km precisos)
+- ✅ **Cálculo de áreas** (polígonos con perímetro)
+- ✅ **Círculos de alcance** (10-6,000 km, clasificación militar)
 
 **Listo para:**
 - ✅ Demostración a stakeholders
@@ -1354,12 +1468,18 @@ git merge iteracion-X-nombre
 
 ---
 
-**Fecha**: 20 de Octubre, 2025 (Noche)  
-**Versión**: 3.0  
+**Fecha**: 22 de Octubre, 2025  
+**Versión**: 3.2  
 **Branch**: main  
-**Commits**: 61 commits épicos  
-**Estado**: 🟢 PRODUCCIÓN READY - Despliegue SOUTHCOM Completo
+**Commits**: 67 commits totales (6 tácticos nuevos)  
+**Estado**: 🟢 MVP+ COMPLETADO - Sistemas Tácticos Implementados
+
+**Nuevas Capacidades:**
+- 🎯 Radar visual de detección en tiempo real
+- 📏 Herramientas de medición geoespacial completas
+- ⭕ Análisis de alcance militar (10-6,000 km)
+- 📐 Cálculo de áreas y distancias con Turf.js
 
 **Repositorio**: https://github.com/diazpolanco13/military-ops-tracker  
-**Issue Tracking**: Issue #16 (Parpadeo en drag & drop con clustering)
+**Issue Tracking**: Issue #16 (Parpadeo en drag & drop con clustering) - RESUELTO
 
