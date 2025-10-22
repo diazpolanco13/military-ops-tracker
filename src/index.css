@@ -76,30 +76,54 @@
   animation: slideOutToLeft 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
-/* Scrollbar personalizado estilo profesional */
+/* 🎨 Scrollbar casi invisible - Ultra minimalista (Vertical) */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 4px; /* Muy delgado */
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
-  border-radius: 4px;
+  background: transparent; /* Invisible por defecto */
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
+  background: rgba(100, 116, 139, 0.15); /* Casi invisible */
   border-radius: 4px;
-  transition: background 0.2s;
+  transition: background 0.3s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(148, 163, 184, 0.4); /* Aparece solo al hover */
 }
 
-/* Firefox */
+/* Firefox - versión minimalista */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.5) rgba(15, 23, 42, 0.5);
+  scrollbar-color: rgba(100, 116, 139, 0.2) transparent;
+}
+
+/* 🎨 Scrollbar HORIZONTAL casi invisible (para navbar) */
+.custom-scrollbar-horizontal::-webkit-scrollbar {
+  height: 3px; /* Aún más delgado para horizontal */
+}
+
+.custom-scrollbar-horizontal::-webkit-scrollbar-track {
+  background: transparent; /* Invisible */
+}
+
+.custom-scrollbar-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.1); /* Súper tenue */
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.custom-scrollbar-horizontal::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.3); /* Aparece al hover */
+}
+
+/* Firefox - horizontal minimalista */
+.custom-scrollbar-horizontal {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.15) transparent;
 }
 
 
@@ -250,26 +274,6 @@ body {
   display: none;
 }
 
-/* 🎨 Scrollbar personalizado para sidebars */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.3);
-  border-radius: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
-  border-radius: 4px;
-  transition: background 0.3s ease;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
-}
-
 /* 🎭 Animaciones para paneles laterales */
 @keyframes slideIn {
   from {
@@ -299,4 +303,49 @@ body {
 
 .animate-slideDown {
   animation: slideDown 0.3s ease-out forwards;
+}
+
+/* 🎴 Animaciones para EntityQuickCard (Card Futurista) */
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 🎨 Animación para Toast (desde arriba) */
+@keyframes slideInFromTop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slideInFromRight {
+  animation: slideInFromRight 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
+.animate-slideInFromTop {
+  animation: slideInFromTop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeInOverlay 0.2s ease-out forwards;
 }

@@ -85,7 +85,7 @@ export default function TopNavigationBar({ onTogglePalette, paletteVisible, map 
   return (
     <>
       {/* 🎨 BARRA SUPERIOR FIJA - RESPONSIVE */}
-      <div className="fixed top-0 left-0 right-0 h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center px-2 sm:px-4 gap-1 sm:gap-2 shadow-2xl z-50 overflow-x-auto">
+      <div className="fixed top-0 left-0 right-0 h-14 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700 flex items-center px-2 sm:px-4 gap-1 sm:gap-2 shadow-2xl z-50 overflow-x-auto custom-scrollbar-horizontal">
         
         {/* 🏢 Logo / Inicio */}
         <div className="flex items-center gap-1 sm:gap-2 pr-2 sm:pr-4 border-r border-slate-700 flex-shrink-0">

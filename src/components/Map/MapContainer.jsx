@@ -16,6 +16,8 @@ import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesCon
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
 import DeploymentStats from '../Dashboard/DeploymentStats';
+import EntityQuickCard from '../Cards/EntityQuickCard';
+import EntityDetailedModal from '../Cards/EntityDetailedModal';
 import { useSelection } from '../../stores/SelectionContext';
 import { supabase } from '../../lib/supabase';
 
@@ -38,6 +40,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   });
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
+  
+  // 🎴 Estado para vista de entidad: 'sidebar' o 'card'
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
+  });
+  const [showDetailedModal, setShowDetailedModal] = useState(false);
 
   // 🌊 Obtener configuración de límites marítimos desde BD
   const { showBoundaries } = useMaritimeBoundariesContext();
@@ -116,6 +124,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       }
       if (e.detail.clusterRadius !== undefined) {
         setClusterRadius(e.detail.clusterRadius);
+      }
+      if (e.detail.entityViewMode !== undefined) {
+        setViewMode(e.detail.entityViewMode);
       }
     };
 
@@ -471,12 +482,30 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Sidebar de detalles de entidad individual */}
-      <EntityDetailsSidebar
-        entity={selectedEntity}
-        onClose={() => setSelectedEntity(null)}
-        isOpen={!!selectedEntity && !selectedGroup}
-      />
+      {/* Vista de entidad: Sidebar o Card según configuración */}
+      {viewMode === 'sidebar' ? (
+        <EntityDetailsSidebar
+          entity={selectedEntity}
+          onClose={() => setSelectedEntity(null)}
+          isOpen={!!selectedEntity && !selectedGroup}
+        />
+      ) : (
+        selectedEntity && !selectedGroup && (
+          <EntityQuickCard
+            entity={selectedEntity}
+            onClose={() => setSelectedEntity(null)}
+            onOpenDetails={() => setShowDetailedModal(true)}
+          />
+        )
+      )}
+
+      {/* Modal de detalles completos (solo con card) */}
+      {viewMode === 'card' && showDetailedModal && selectedEntity && (
+        <EntityDetailedModal
+          entity={selectedEntity}
+          onClose={() => setShowDetailedModal(false)}
+        />
+      )}
 
       {/* Sidebar de detalles de grupo */}
       <GroupDetailsSidebar

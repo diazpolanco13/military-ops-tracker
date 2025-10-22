@@ -185,18 +185,21 @@ async function uploadVideoFile(file, entityId) {
     if (!isTemplate) {
       const { error: updateError } = await supabase
         .from('entities')
-        .update({ image_url: videoUrl })
+        .update({ video_url: videoUrl }) // ← CORREGIDO: video_url en vez de image_url
         .eq('id', entityId);
       
       if (updateError) {
         console.error('⚠️ Error al actualizar entidad con video:', updateError);
+      } else {
+        console.log('✅ Entidad actualizada con video_url');
       }
     }
     
     return {
       full: videoUrl,
       thumbnail: videoUrl, // Para videos, usar mismo URL
-      imageUrl: videoUrl,
+      videoUrl: videoUrl, // ← AÑADIDO: devolver videoUrl
+      imageUrl: videoUrl, // Mantener compatibilidad
       thumbnailUrl: videoUrl,
     };
     

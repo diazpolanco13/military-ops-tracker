@@ -1,4 +1,4 @@
-import { X, Settings, Layers, Eye, Zap, Tag } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 /**
@@ -36,6 +36,11 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('showLabelClass') === 'true'; // Default: false
   });
 
+  // 🎴 NUEVO: Modo de vista de entidad (card vs sidebar)
+  const [entityViewMode, setEntityViewMode] = useState(() => {
+    return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
@@ -45,6 +50,7 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('showLabelName', showLabelName);
     localStorage.setItem('showLabelType', showLabelType);
     localStorage.setItem('showLabelClass', showLabelClass);
+    localStorage.setItem('entityViewMode', entityViewMode);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
@@ -55,10 +61,11 @@ export default function SettingsPanel({ onClose }) {
         useImages,
         showLabelName,
         showLabelType,
-        showLabelClass
+        showLabelClass,
+        entityViewMode
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(8);
@@ -68,6 +75,7 @@ export default function SettingsPanel({ onClose }) {
     setShowLabelName(true);
     setShowLabelType(true);
     setShowLabelClass(false);
+    setEntityViewMode('card');
   };
 
   return (
@@ -202,6 +210,61 @@ export default function SettingsPanel({ onClose }) {
               <p className="text-xs text-slate-400 mt-2">
                 ℹ️ Tamaño de los iconos de barcos/aviones en el mapa.
               </p>
+            </div>
+          </div>
+
+          {/* 🎴 NUEVA SECCIÓN: Modo de Vista de Entidad */}
+          <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+            <h3 className="text-sm font-semibold text-cyan-400 mb-4 flex items-center gap-2">
+              <Monitor className="w-4 h-4" />
+              MODO DE VISTA DE ENTIDAD
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Elige cómo mostrar los detalles cuando haces clic en una entidad del mapa.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Opción: Card Futurista */}
+              <button
+                onClick={() => setEntityViewMode('card')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  entityViewMode === 'card'
+                    ? 'border-cyan-500 bg-cyan-500/20'
+                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">🎴</div>
+                  <div className="text-sm font-semibold text-white mb-1">Card Futurista</div>
+                  <div className="text-xs text-slate-400">
+                    Flotante, centrada, estilo juego
+                  </div>
+                  {entityViewMode === 'card' && (
+                    <div className="mt-2 text-xs font-bold text-cyan-400">✓ ACTIVO</div>
+                  )}
+                </div>
+              </button>
+
+              {/* Opción: Sidebar Clásico */}
+              <button
+                onClick={() => setEntityViewMode('sidebar')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  entityViewMode === 'sidebar'
+                    ? 'border-cyan-500 bg-cyan-500/20'
+                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-3xl mb-2">📊</div>
+                  <div className="text-sm font-semibold text-white mb-1">Sidebar Clásico</div>
+                  <div className="text-xs text-slate-400">
+                    Panel lateral, más espacio
+                  </div>
+                  {entityViewMode === 'sidebar' && (
+                    <div className="mt-2 text-xs font-bold text-cyan-400">✓ ACTIVO</div>
+                  )}
+                </div>
+              </button>
             </div>
           </div>
 

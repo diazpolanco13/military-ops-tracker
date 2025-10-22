@@ -49,6 +49,21 @@ export default function TemplateAdminPanel({ onClose }) {
       armamento: '',
       icon_color: '#3b82f6',
       image_url: '',
+      // 🆕 NUEVOS CAMPOS - Capacidades Militares
+      weapon_type: '',
+      fire_range_km: '',
+      radar_range_km: '',
+      has_surface_to_surface: false,
+      has_surface_to_air: false,
+      has_torpedoes: false,
+      has_cruise_missiles: false,
+      defensive_systems: '',
+      // 🆕 NUEVOS CAMPOS - Información Histórica
+      ship_type_description: '',
+      laid_down_date: '',
+      launched_date: '',
+      commissioned_date: '',
+      homeport: '',
     };
   }
 
@@ -570,20 +585,142 @@ export default function TemplateAdminPanel({ onClose }) {
                   </div>
                 </div>
 
-                {/* Armamento */}
+                {/* Armamento Detallado */}
                 <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
-                  <h3 className="text-lg font-semibold text-white mb-4">Armamento y Capacidades</h3>
+                  <h3 className="text-lg font-semibold text-white mb-4">Armamento Detallado</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Armamento Completo
+                      </label>
+                      <textarea
+                        value={formData.armamento}
+                        onChange={(e) => setFormData({...formData, armamento: e.target.value})}
+                        placeholder="Lista completa de armamento..."
+                        rows={3}
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        🆕 Armamento Principal (Resumen)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.weapon_type}
+                        onChange={(e) => setFormData({...formData, weapon_type: e.target.value})}
+                        placeholder="Tomahawk BGM-109, SM-2/3, Harpoon"
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        🆕 Sistemas Defensivos
+                      </label>
+                      <textarea
+                        value={formData.defensive_systems}
+                        onChange={(e) => setFormData({...formData, defensive_systems: e.target.value})}
+                        placeholder="Phalanx CIWS, SRBOC, AN/SLQ-32..."
+                        rows={2}
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🆕 NUEVA SECCIÓN: Capacidades Militares */}
+                <div className="bg-gradient-to-br from-red-950/30 to-slate-800 rounded-lg p-6 border border-red-900/50">
+                  <h3 className="text-lg font-semibold text-red-400 mb-4">🎯 Capacidades Militares</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Alcance de Fuego (km)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.fire_range_km}
+                        onChange={(e) => setFormData({...formData, fire_range_km: e.target.value})}
+                        placeholder="2500"
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-red-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Alcance de Radar (km)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.radar_range_km}
+                        onChange={(e) => setFormData({...formData, radar_range_km: e.target.value})}
+                        placeholder="320"
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Checkboxes de Capacidades */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.has_surface_to_surface}
+                        onChange={(e) => setFormData({...formData, has_surface_to_surface: e.target.checked})}
+                        className="w-5 h-5 accent-red-500"
+                      />
+                      <span className="text-sm text-slate-200">🎯 Ataque Mar-Mar</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.has_surface_to_air}
+                        onChange={(e) => setFormData({...formData, has_surface_to_air: e.target.checked})}
+                        className="w-5 h-5 accent-blue-500"
+                      />
+                      <span className="text-sm text-slate-200">🛡️ Defensa Antiaérea</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.has_torpedoes}
+                        onChange={(e) => setFormData({...formData, has_torpedoes: e.target.checked})}
+                        className="w-5 h-5 accent-cyan-500"
+                      />
+                      <span className="text-sm text-slate-200">🐟 Torpedos</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.has_cruise_missiles}
+                        onChange={(e) => setFormData({...formData, has_cruise_missiles: e.target.checked})}
+                        className="w-5 h-5 accent-purple-500"
+                      />
+                      <span className="text-sm text-slate-200">🚀 Misiles de Crucero</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 🆕 NUEVA SECCIÓN: Descripción del Tipo */}
+                <div className="bg-gradient-to-br from-cyan-950/30 to-slate-800 rounded-lg p-6 border border-cyan-900/50">
+                  <h3 className="text-lg font-semibold text-cyan-400 mb-4">📋 Descripción del Tipo</h3>
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Armamento
+                      Descripción de la Plataforma
                     </label>
                     <textarea
-                      value={formData.armamento}
-                      onChange={(e) => setFormData({...formData, armamento: e.target.value})}
-                      placeholder="Lista completa de armamento..."
-                      rows={4}
-                      className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                      value={formData.ship_type_description}
+                      onChange={(e) => setFormData({...formData, ship_type_description: e.target.value})}
+                      placeholder="Destructor lanzamisiles guiados clase Arleigh Burke equipado con sistema Aegis..."
+                      rows={3}
+                      className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-cyan-500"
                     />
                   </div>
                 </div>
