@@ -200,6 +200,50 @@ export function useIntelligenceEvents(filters = {}) {
   };
 
   /**
+   * Ejecutar monitor RSS de noticias
+   */
+  const runRSSMonitor = async () => {
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl) {
+        throw new Error('VITE_SUPABASE_URL no configurada');
+      }
+
+      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/rss-news-monitor`;
+
+      console.log('📰 Ejecutando monitor RSS de noticias...');
+
+      const response = await fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseAnonKey}`
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.success) {
+        await fetchEvents();
+        return { success: true, stats: result.stats };
+      } else {
+        throw new Error(result.error || 'Error ejecutando monitor RSS');
+      }
+    } catch (err) {
+      console.error('Error running RSS monitor:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
+  /**
    * Ejecutar monitor manualmente
    */
   const runMonitor = async () => {
@@ -255,7 +299,8 @@ export function useIntelligenceEvents(filters = {}) {
     archiveEvent,
     markAsActioned,
     addNotes,
-    runMonitor
+    runMonitor,
+    runRSSMonitor
   };
 }
 

@@ -30,6 +30,18 @@
   background-color: rgba(34, 197, 94, 0.6);
 }
 
+/* Animación para modal de intelligence feed */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 /* Animaciones para marcadores de entidades */
 @keyframes fadeInScale {
   0% {

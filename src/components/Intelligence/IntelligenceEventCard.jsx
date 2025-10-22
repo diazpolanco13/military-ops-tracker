@@ -1,10 +1,11 @@
-import { Check, X, MapPin, ExternalLink, AlertTriangle, Shield, Clock, User } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Check, X, MapPin, ExternalLink, AlertTriangle, Shield, Clock, User, Image as ImageIcon } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useState } from 'react';
 
 /**
- * 📰 Card de Evento de Inteligencia Individual
- * Muestra información detallada de un evento detectado por Grok
+ * 📰 Card de Evento de Inteligencia Tipo X/Twitter
+ * Card visual grande con soporte para imágenes de noticias
  */
 export default function IntelligenceEventCard({ 
   event, 
@@ -14,6 +15,7 @@ export default function IntelligenceEventCard({
   onAction,
   compact = false 
 }) {
+  const [imageError, setImageError] = useState(false);
   // Colores según credibilidad
   const credibilityColors = {
     official: { bg: 'bg-green-900/20', border: 'border-green-500', text: 'text-green-400', icon: Shield },
@@ -49,12 +51,19 @@ export default function IntelligenceEventCard({
     locale: es 
   });
 
+  // Extraer URL de imagen si existe en el contenido o grok_analysis
+  const imageUrl = event.grok_analysis?.image_url || null;
+
+  // Formatear fecha completa
+  const eventDate = format(new Date(event.event_date), "d 'de' MMMM, yyyy 'a las' HH:mm", { locale: es });
+
   return (
     <div className={`
       ${priorityColors[event.priority] || priorityColors.medium}
-      bg-slate-800/50 rounded-lg border border-slate-700/50 
-      hover:border-purple-500/50 transition-all duration-200
-      ${compact ? 'p-3' : 'p-4'}
+      bg-slate-800/70 rounded-xl border border-slate-700/50 
+      hover:border-purple-500/50 hover:shadow-xl hover:shadow-purple-500/10 
+      transition-all duration-200 overflow-hidden
+      ${compact ? 'p-3' : 'p-5'}
     `}>
       
       {/* Header */}
@@ -65,9 +74,14 @@ export default function IntelligenceEventCard({
             {event.title}
           </h4>
 
+          {/* Fecha completa del evento */}
+          <div className="text-slate-400 text-xs mb-2">
+            📅 {eventDate}
+          </div>
+
           {/* Meta información */}
           <div className="flex items-center flex-wrap gap-2 text-xs">
-            {/* Timestamp */}
+            {/* Tiempo relativo */}
             <div className="flex items-center space-x-1 text-slate-400">
               <Clock className="w-3 h-3" />
               <span>{timeAgo}</span>
@@ -106,6 +120,18 @@ export default function IntelligenceEventCard({
       <p className="text-slate-300 text-sm mb-3 leading-relaxed">
         {event.summary}
       </p>
+
+      {/* Imagen de la noticia (si existe) - Tipo X */}
+      {imageUrl && !imageError && (
+        <div className="mb-3 rounded-xl overflow-hidden border border-slate-700/50">
+          <img
+            src={imageUrl}
+            alt={event.title}
+            onError={() => setImageError(true)}
+            className="w-full h-auto object-cover max-h-96"
+          />
+        </div>
+      )}
 
       {/* Entidades mencionadas */}
       {event.mentioned_entities && event.mentioned_entities.length > 0 && (
