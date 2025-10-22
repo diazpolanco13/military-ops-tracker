@@ -5,6 +5,8 @@ import TopNavigationBar from './components/Navigation/TopNavigationBar';
 import RadarOverlay from './components/Radar/RadarOverlay';
 import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
+import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
+import IntelligenceFeed from './components/Intelligence/IntelligenceFeed';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -19,6 +21,7 @@ function App() {
   const [showRadar, setShowRadar] = useState(false); // Control del radar
   const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
+  const [showIntelligenceFeed, setShowIntelligenceFeed] = useState(false); // Control del Intelligence Feed
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -77,6 +80,8 @@ function App() {
           radarCompact={radarCompact}
           onToggleMeasurement={() => setShowMeasurementTools(!showMeasurementTools)}
           measurementVisible={showMeasurementTools}
+          onToggleIntelligence={() => setShowIntelligenceFeed(!showIntelligenceFeed)}
+          intelligenceVisible={showIntelligenceFeed}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
@@ -125,6 +130,17 @@ function App() {
         {showMeasurementTools && mapInstance && (
           <MeasurementTools map={mapInstance} />
         )}
+
+        {/* Intelligence Feed (Drawer derecho) */}
+        {showIntelligenceFeed && (
+          <IntelligenceFeed 
+            onClose={() => setShowIntelligenceFeed(false)}
+            map={mapInstance}
+          />
+        )}
+
+        {/* Chatbot de Inteligencia (Bottom-right) */}
+        <IntelligenceChatbot />
 
         {/* Indicador de creación */}
         {creating && (

@@ -26,7 +26,8 @@ import {
   Palette,
   Radar,
   Activity,
-  Ruler
+  Ruler,
+  TrendingUp
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -35,6 +36,7 @@ import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
+import { useUnreadIntelligenceCount } from '../../hooks/useIntelligenceEvents';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import GroupManagementPanel from '../Groups/GroupManagementPanel';
@@ -55,7 +57,9 @@ export default function TopNavigationBar({
   onToggleRadarMode = () => {}, 
   radarCompact = true,
   onToggleMeasurement = () => {},
-  measurementVisible = false
+  measurementVisible = false,
+  onToggleIntelligence = () => {},
+  intelligenceVisible = false
 }) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
@@ -68,6 +72,7 @@ export default function TopNavigationBar({
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
+  const intelUnreadCount = useUnreadIntelligenceCount();
 
   // 🌊 Escuchar evento para abrir panel de límites marítimos
   useEffect(() => {
@@ -157,6 +162,16 @@ export default function TopNavigationBar({
           active={activePanel === 'zones'}
           onClick={() => togglePanel('zones')}
           tooltip="Zonas de Interés"
+        />
+
+        {/* 📡 Intelligence */}
+        <NavButton
+          icon={<TrendingUp className="w-5 h-5" />}
+          label="Intel"
+          active={intelligenceVisible}
+          onClick={onToggleIntelligence}
+          tooltip="Intelligence Feed (Grok AI)"
+          badge={intelUnreadCount > 0 ? intelUnreadCount : null}
         />
 
         {/* 👥 Grupos */}
