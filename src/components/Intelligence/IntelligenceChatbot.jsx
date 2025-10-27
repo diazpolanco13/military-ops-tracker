@@ -13,6 +13,7 @@ export default function IntelligenceChatbot() {
   const [inputMessage, setInputMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null); // 🆕 Ref para auto-resize del textarea
   
   const {
     messages,
@@ -28,6 +29,14 @@ export default function IntelligenceChatbot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // 🆕 Auto-resize del textarea según el contenido
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [inputMessage]);
 
   // Manejar envío de mensaje
   const handleSend = async () => {
@@ -51,15 +60,15 @@ export default function IntelligenceChatbot() {
   const quickQuestions = [
     {
       text: '¿Qué hay de nuevo?',
-      query: '¿Hay alguna actividad militar nueva en las últimas horas en el Caribe?'
+      query: 'Revisa los eventos del Intelligence Feed y dime qué ha pasado en las últimas horas en el Caribe'
     },
     {
-      text: 'Estado del despliegue',
-      query: 'Dame un resumen del estado actual de mis 41 unidades desplegadas'
+      text: 'Eventos urgentes',
+      query: '¿Hay eventos urgentes o pendientes que deba revisar ahora mismo?'
     },
     {
-      text: 'Analizar eventos',
-      query: 'Analiza los eventos de inteligencia más recientes y dime si hay algo urgente'
+      text: 'Resumen de hoy',
+      query: 'Dame un resumen de toda la actividad militar detectada hoy según los eventos del Intelligence Feed'
     }
   ];
 
@@ -68,48 +77,62 @@ export default function IntelligenceChatbot() {
   // ========================================================================
   if (!isExpanded) {
     return (
-      <button
-        onClick={() => setIsExpanded(true)}
-        className="fixed bottom-4 right-4 w-16 h-16 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full shadow-2xl shadow-purple-500/50 flex items-center justify-center hover:scale-110 transition-transform z-50 group"
-        title="Grok Intelligence Assistant"
-      >
-        <Bot className="w-8 h-8 text-white animate-pulse" />
-        
-        {/* Badge de eventos sin leer */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="relative w-16 h-16 bg-gradient-to-br from-red-600 to-orange-600 rounded-full shadow-2xl shadow-red-500/50 flex items-center justify-center hover:scale-110 transition-transform group overflow-hidden border-2 border-red-500/50"
+          title="SAE - IA Assistant"
+        >
+          <img 
+            src="/eva-avatar.jpg" 
+            alt="EVA - SAE IA" 
+            className="w-full h-full object-cover"
+          />
+
+          {/* Pulso animado */}
+          <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping"></div>
+        </button>
+
+        {/* Badge de eventos sin leer - FUERA del botón */}
         {unreadCount > 0 && (
-          <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center border-2 border-slate-900 animate-bounce">
+          <div className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center border-2 border-slate-900 animate-bounce shadow-lg">
             <span className="text-white text-xs font-bold">{unreadCount}</span>
           </div>
         )}
-
-        {/* Pulso animado */}
-        <div className="absolute inset-0 rounded-full bg-purple-500/30 animate-ping"></div>
-      </button>
+      </div>
     );
   }
 
   // ========================================================================
-  // ESTADO EXPANDIDO - Chat completo
+  // ESTADO EXPANDIDO - Chat completo (responsive)
   // ========================================================================
   return (
-    <div className={`fixed right-4 z-50 transition-all duration-300 ${
-      isMinimized ? 'bottom-4' : 'bottom-4'
+    <div className={`fixed z-50 transition-all duration-300 ${
+      isMinimized 
+        ? 'bottom-4 right-4' 
+        : 'bottom-0 right-0 md:right-4 md:bottom-0 left-0 md:left-auto'
     }`}>
-      <div className={`bg-slate-900/95 border-2 border-purple-500/50 rounded-2xl backdrop-blur-xl shadow-2xl shadow-purple-500/20 transition-all ${
-        isMinimized ? 'w-80 h-16' : 'w-96 h-[600px]'
+      <div className={`bg-slate-900/95 border-2 border-red-500/30 backdrop-blur-xl shadow-2xl shadow-red-500/20 transition-all ${
+        isMinimized 
+          ? 'w-80 h-16 rounded-2xl' 
+          : 'w-full md:w-[450px] h-screen md:h-[600px] md:rounded-t-2xl md:border-b-0'
       }`}>
         
         {/* Header */}
-        <div className="px-4 py-3 border-b border-purple-500/30 flex items-center justify-between bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-t-2xl">
-          <div className="flex items-center space-x-2">
-            <div className="relative">
-              <Bot className="w-5 h-5 text-purple-400" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-slate-900"></div>
+        <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-red-500/20 flex items-center justify-between bg-gradient-to-r from-slate-800 to-slate-900 md:rounded-t-2xl">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="relative w-8 md:w-10 h-8 md:h-10 rounded-full overflow-hidden border-2 border-red-500/50 bg-gradient-to-br from-red-600 to-orange-600">
+              <img 
+                src="/eva-avatar.jpg" 
+                alt="EVA - SAE IA" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 w-2 md:w-2.5 h-2 md:h-2.5 bg-green-500 rounded-full border-2 border-slate-900"></div>
             </div>
             <div>
-              <h3 className="text-purple-300 font-bold text-sm">Grok Intelligence</h3>
+              <h3 className="text-red-300 font-bold text-xs md:text-sm">SAE - IA</h3>
               {!isMinimized && (
-                <p className="text-purple-400/60 text-xs">Analista AI • En línea</p>
+                <p className="text-slate-400 text-[10px] md:text-xs">Analista de Inteligencia • En línea</p>
               )}
             </div>
           </div>
@@ -125,13 +148,13 @@ export default function IntelligenceChatbot() {
             {/* Minimizar/Maximizar */}
             <button
               onClick={() => setIsMinimized(!isMinimized)}
-              className="p-1.5 hover:bg-purple-500/20 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
               title={isMinimized ? 'Maximizar' : 'Minimizar'}
             >
               {isMinimized ? (
-                <Maximize2 className="w-4 h-4 text-purple-400" />
+                <Maximize2 className="w-4 h-4 text-slate-400" />
               ) : (
-                <Minimize2 className="w-4 h-4 text-purple-400" />
+                <Minimize2 className="w-4 h-4 text-slate-400" />
               )}
             </button>
 
@@ -139,10 +162,10 @@ export default function IntelligenceChatbot() {
             {!isMinimized && (
               <button
                 onClick={clearChat}
-                className="p-1.5 hover:bg-purple-500/20 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
                 title="Nueva conversación"
               >
-                <Trash2 className="w-4 h-4 text-purple-400" />
+                <Trash2 className="w-4 h-4 text-slate-400" />
               </button>
             )}
 
@@ -152,44 +175,75 @@ export default function IntelligenceChatbot() {
               className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
               title="Cerrar"
             >
-              <X className="w-4 h-4 text-purple-400" />
+              <X className="w-4 h-4 text-red-400" />
             </button>
           </div>
         </div>
 
         {/* Contenido del chat - Solo visible cuando no está minimizado */}
         {!isMinimized && (
-          <>
+          <div className="flex flex-col h-[calc(100vh-64px)] md:h-[536px]">
             {/* Mensajes */}
-            <div className="h-[440px] overflow-y-auto p-4 space-y-3 modern-scrollbar">
+            <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 modern-scrollbar">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[85%] ${
+                  <div className={`max-w-[90%] md:max-w-[85%] ${
                     msg.role === 'user'
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white'
                       : msg.isError
                         ? 'bg-red-900/30 border border-red-500/50 text-red-300'
-                        : 'bg-slate-800 text-slate-200'
-                  } rounded-lg px-4 py-2.5 shadow-lg`}>
+                        : 'bg-slate-800 text-slate-200 border border-slate-700/50'
+                  } rounded-lg px-3 md:px-4 py-2 md:py-2.5 shadow-lg`}>
                     {/* Icono para assistant */}
                     {msg.role === 'assistant' && (
-                      <div className="flex items-start space-x-2 mb-1">
-                        <Bot className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-purple-400 text-xs font-bold">Grok</span>
+                      <div className="flex items-start space-x-2 mb-2">
+                        <div className="w-6 h-6 rounded-full overflow-hidden border border-red-500/50 bg-gradient-to-br from-red-600 to-orange-600 flex-shrink-0">
+                          <img 
+                            src="/eva-avatar.jpg" 
+                            alt="EVA - SAE IA" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <span className="text-red-400 text-xs font-bold">SAE - IA</span>
                       </div>
                     )}
                     
-                    {/* Contenido del mensaje */}
-                    <div className="text-sm whitespace-pre-wrap leading-relaxed">
-                      {msg.content}
+                    {/* Contenido del mensaje con links clickeables */}
+                    <div className="text-sm leading-relaxed space-y-1">
+                      {msg.content.split('\n').map((line, i) => {
+                        // Detectar si la línea contiene una URL
+                        const urlRegex = /(https?:\/\/[^\s]+)/g;
+                        const parts = line.split(urlRegex);
+                        
+                        return (
+                          <div key={i} className="break-words">
+                            {parts.map((part, j) => {
+                              if (part.match(urlRegex)) {
+                                return (
+                                  <a
+                                    key={j}
+                                    href={part}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-1 text-blue-400 hover:text-blue-300 underline font-semibold"
+                                  >
+                                    <span>🔗 Ver fuente</span>
+                                  </a>
+                                );
+                              }
+                              return <span key={j}>{part}</span>;
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Timestamp */}
                     <div className={`text-xs mt-1.5 ${
-                      msg.role === 'user' ? 'text-purple-200' : 'text-slate-500'
+                      msg.role === 'user' ? 'text-orange-200' : 'text-slate-500'
                     }`}>
                       {new Date(msg.timestamp).toLocaleTimeString('es', {
                         hour: '2-digit',
@@ -203,16 +257,43 @@ export default function IntelligenceChatbot() {
               {/* Indicador de carga */}
               {loading && (
                 <div className="flex justify-start">
-                  <div className="bg-slate-800 rounded-lg px-4 py-3 shadow-lg">
+                  <div className="bg-slate-800 border border-slate-700/50 rounded-lg px-4 py-3 shadow-lg">
                     <div className="flex items-center space-x-2">
-                      <Bot className="w-4 h-4 text-purple-400" />
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      <div className="w-5 h-5 rounded-full overflow-hidden border border-red-500/50 flex-shrink-0">
+                        <img 
+                          src="/eva-avatar.jpg" 
+                          alt="EVA - SAE IA" 
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                      <span className="text-slate-400 text-xs">Grok está pensando...</span>
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 bg-red-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-slate-400 text-xs">SAE - IA está pensando...</span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Preguntas rápidas - Dentro del área de mensajes cuando no hay conversación */}
+              {messages.length <= 1 && (
+                <div className="mt-4">
+                  <div className="text-red-400/70 text-xs font-bold mb-2 md:mb-3">💡 Preguntas rápidas:</div>
+                  <div className="flex flex-col gap-2">
+                    {quickQuestions.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setInputMessage(q.query);
+                          setTimeout(() => handleSend(), 100);
+                        }}
+                        className="px-3 md:px-4 py-2 md:py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-xs md:text-sm text-red-300 transition-colors text-left"
+                      >
+                        {q.text}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -220,46 +301,27 @@ export default function IntelligenceChatbot() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Preguntas rápidas - Solo si es el primer mensaje */}
-            {messages.length <= 1 && (
-              <div className="px-4 pb-2 border-t border-purple-500/20">
-                <div className="text-purple-400/70 text-xs font-bold mb-2 mt-2">💡 Preguntas rápidas:</div>
-                <div className="flex flex-wrap gap-2">
-                  {quickQuestions.map((q, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setInputMessage(q.query);
-                        setTimeout(() => handleSend(), 100);
-                      }}
-                      className="px-3 py-1.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-full text-xs text-purple-300 transition-colors"
-                    >
-                      {q.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Input */}
-            <div className="p-3 border-t border-purple-500/30 bg-slate-800/50">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
+            {/* Input - Fijo en la parte inferior con botón integrado */}
+            <div className="flex-shrink-0 p-2 md:p-3 border-t border-red-500/20 bg-slate-800/50">
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Pregúntale a Grok..."
+                  placeholder="Pregúntale a SAE - IA..."
                   disabled={loading}
-                  className="flex-1 bg-slate-900 border border-purple-500/30 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm disabled:opacity-50"
+                  rows={1}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 md:pl-4 py-2 md:py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 text-xs md:text-sm disabled:opacity-50 resize-none overflow-y-auto max-h-24 md:max-h-32 modern-scrollbar"
+                  style={{ minHeight: '40px', paddingRight: '52px' }}
                 />
                 <button
                   onClick={handleSend}
                   disabled={loading || !inputMessage.trim()}
-                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center justify-center shadow-lg"
                   title="Enviar (Enter)"
                 >
-                  <Send className="w-5 h-5 text-white" />
+                  <Send className="w-4 h-4 text-white" />
                 </button>
               </div>
 
@@ -270,7 +332,7 @@ export default function IntelligenceChatbot() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
