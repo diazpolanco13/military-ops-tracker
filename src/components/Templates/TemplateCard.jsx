@@ -1,25 +1,17 @@
-import { Ship, Plane, Users, Shield, Star, Info } from 'lucide-react';
+import { Star, Info } from 'lucide-react';
 import { useState } from 'react';
+import { getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
 
 /**
  * Tarjeta de plantilla arrastrable tipo IBM Analyst's Notebook
  * Muestra información resumida y permite arrastrar al mapa
+ * Usa iconos profesionales de IBM i2
  */
 export default function TemplateCard({ template, onDragStart, onClick, isFavorite, onToggleFavorite, onShowDetails }) {
   const [isDragging, setIsDragging] = useState(false);
 
-  // Iconos por tipo de entidad
-  const ENTITY_ICONS = {
-    destructor: Ship,
-    fragata: Ship,
-    portaaviones: Ship,
-    submarino: Ship,
-    avion: Plane,
-    tropas: Users,
-    tanque: Shield,
-  };
-
-  const Icon = ENTITY_ICONS[template.entity_type] || Ship;
+  // Obtener icono i2 según el código de plantilla o tipo de entidad
+  const iconPath = getTemplateIcon(template.code) || getEntityIcon(template.entity_type);
 
   const handleDragStart = (e) => {
     setIsDragging(true);
@@ -102,16 +94,27 @@ export default function TemplateCard({ template, onDragStart, onClick, isFavorit
 
       {/* Contenido principal */}
       <div className="p-3 space-y-2">
-        {/* Icono y nombre */}
+        {/* Icono i2 y nombre */}
         <div className="flex items-start space-x-2">
           <div
             className="flex-shrink-0 p-2 rounded-lg"
             style={{ backgroundColor: `${template.icon_color}20` }}
           >
-            <Icon
-              size={24}
-              style={{ color: template.icon_color }}
-            />
+            {iconPath ? (
+              <img 
+                src={iconPath} 
+                alt={template.display_name}
+                className="w-8 h-8 object-contain"
+                style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}
+              />
+            ) : (
+              <div 
+                className="w-8 h-8 rounded flex items-center justify-center text-lg font-bold"
+                style={{ color: template.icon_color }}
+              >
+                {template.display_name.charAt(0)}
+              </div>
+            )}
           </div>
           
           <div className="flex-1 min-w-0">

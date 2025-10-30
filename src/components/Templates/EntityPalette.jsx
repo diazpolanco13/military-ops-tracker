@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Settings } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Settings, Grid3x3, List } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
+import { getCategoryIcon } from '../../config/i2Icons';
 import TemplateCard from './TemplateCard';
+import TemplateGridItem from './TemplateGridItem';
 import TemplateAdminPanel from './TemplateAdminPanel';
 import TemplateDetailsModal from './TemplateDetailsModal';
 
@@ -15,6 +17,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // all, favorites, recent
+  const [viewMode, setViewMode] = useState('list'); // 'list' o 'grid'
   const [expandedCategories, setExpandedCategories] = useState({}); // TODO colapsado por defecto
   const [expandedTypes, setExpandedTypes] = useState({}); // TODO colapsado por defecto
   const [favorites, setFavorites] = useState([]);
@@ -97,21 +100,62 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     return templates;
   };
 
-  // Nombres legibles para categorías y tipos
+  // Nombres legibles para categorías y tipos - Estilo IBM i2
   const CATEGORY_NAMES = {
-    militar: '🎖️ Militar',
-    civil: '🏢 Civil',
-    comercial: '🏭 Comercial',
+    'Militar': { icon: '🎖️', name: 'Militar', color: '#ef4444' },
+    'Civil': { icon: '🏢', name: 'Civil', color: '#3b82f6' },
+    'Comercial': { icon: '🏭', name: 'Comercial', color: '#10b981' },
   };
 
   const TYPE_NAMES = {
-    destructor: '🚢 Destructores',
-    fragata: '⚓ Fragatas',
-    portaaviones: '🛳️ Portaaviones',
-    submarino: '🔱 Submarinos',
-    avion: '✈️ Aviones',
-    tropas: '👤 Personal',
-    tanque: '🛡️ Vehículos',
+    destructor: { icon: '🚢', name: 'Destructores', emoji: '⚓' },
+    fragata: { icon: '⚓', name: 'Fragatas', emoji: '⛵' },
+    portaaviones: { icon: '🛳️', name: 'Portaaviones', emoji: '🚢' },
+    submarino: { icon: '🔱', name: 'Submarinos', emoji: '🐟' },
+    avion: { icon: '✈️', name: 'Aviones', emoji: '🛩️' },
+    tropas: { icon: '👤', name: 'Personal', emoji: '👥' },
+    tanque: { icon: '🛡️', name: 'Vehículos', emoji: '🚜' },
+  };
+
+  // Organización tipo IBM i2: por categoria de entidad
+  const ENTITY_ORGANIZATION = {
+    'Buques de Guerra': {
+      icon: '🚢',
+      types: ['destructor', 'fragata', 'portaaviones', 'submarino'],
+      color: '#ef4444'
+    },
+    'Aeronaves': {
+      icon: '✈️',
+      types: ['avion'],
+      color: '#3b82f6',
+      subgroups: {
+        'Cazas': ['caza-general'],
+        'Helicópteros': ['helicoptero-ataque-general', 'helicoptero-transporte-general'],
+        'Drones': ['drone-general'],
+        'Otros': ['bombardero-general', 'transporte-general', 'patrulla-maritima-general']
+      }
+    },
+    'Vehículos Militares': {
+      icon: '🚙',
+      types: ['vehiculo', 'tanque'],
+      color: '#6b7280',
+      subgroups: {
+        'Blindados': ['vehiculo-apc-general'],
+        'Tanques': ['vehiculo-tanque-general'],
+        'Artillería': ['vehiculo-mbrl-general'],
+        'Ligeros': ['vehiculo-patrulla-general', 'vehiculo-utilitario-general']
+      }
+    },
+    'Personal y Tropas': {
+      icon: '👥',
+      types: ['tropas'],
+      color: '#10b981'
+    },
+    'Fuerzas Irregulares': {
+      icon: '⚠️',
+      types: ['insurgente'],
+      color: '#f59e0b'
+    }
   };
 
   // NO bloquear con loading - mostrar la UI vacía mientras carga
@@ -146,39 +190,71 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mt-3">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
-              ${activeTab === 'all' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-          >
-            <FolderOpen size={14} />
-            <span>Todas</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('favorites')}
-            className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
-              ${activeTab === 'favorites' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-          >
-            <Star size={14} />
-            <span>Favoritas</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('recent')}
-            className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
-              ${activeTab === 'recent' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-          >
-            <Clock size={14} />
-            <span>Usadas</span>
-          </button>
+        <div className="space-y-2 mt-3">
+          {/* Tabs de filtros */}
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                ${activeTab === 'all' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+            >
+              <FolderOpen size={14} />
+              <span>Todas</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('favorites')}
+              className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                ${activeTab === 'favorites' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+            >
+              <Star size={14} />
+              <span>Favoritas</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('recent')}
+              className={`flex-1 flex items-center justify-center space-x-1 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                ${activeTab === 'recent' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+            >
+              <Clock size={14} />
+              <span>Usadas</span>
+            </button>
+          </div>
+
+          {/* Toggle Vista Lista/Grid */}
+          <div className="flex items-center justify-between bg-slate-700/50 rounded p-1">
+            <span className="text-xs text-slate-400 px-2">Vista:</span>
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === 'list' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-600'
+                }`}
+                title="Vista de lista"
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded transition-colors ${
+                  viewMode === 'grid' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-400 hover:text-white hover:bg-slate-600'
+                }`}
+                title="Vista de cuadrícula"
+              >
+                <Grid3x3 size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -202,101 +278,181 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
         {/* Contenido normal */}
         {!loading && (
           <>
-        {/* Resultados de búsqueda */}
+        {/* Resultados de búsqueda - Vista dinámica */}
         {searchTerm && (
-          <div className="space-y-2">
-            <p className="text-xs text-slate-400 mb-2">
+          <div>
+            <p className="text-xs text-slate-400 mb-3">
               {searchResults.length} resultado{searchResults.length !== 1 ? 's' : ''} para "{searchTerm}"
             </p>
-            {searchResults.map(template => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                onDragStart={onDragTemplate}
-                onClick={onSelectTemplate}
-                isFavorite={favorites.includes(template.id)}
-                onToggleFavorite={toggleFavorite}
-                onShowDetails={handleShowDetails}
-              />
-            ))}
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-3 gap-2' 
+              : 'space-y-2'
+            }>
+              {searchResults.map(template => (
+                viewMode === 'grid' ? (
+                  <TemplateGridItem
+                    key={template.id}
+                    template={template}
+                    onDragStart={onDragTemplate}
+                    onClick={onSelectTemplate}
+                    isFavorite={favorites.includes(template.id)}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                ) : (
+                  <TemplateCard
+                    key={template.id}
+                    template={template}
+                    onDragStart={onDragTemplate}
+                    onClick={onSelectTemplate}
+                    isFavorite={favorites.includes(template.id)}
+                    onToggleFavorite={toggleFavorite}
+                    onShowDetails={handleShowDetails}
+                  />
+                )
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Vista de jerarquía (cuando no hay búsqueda) */}
-        {!searchTerm && Object.keys(hierarchy).map(category => (
-          <div key={category} className="border border-slate-700 rounded-lg overflow-hidden">
-            {/* Header de categoría */}
+        {/* Vista de jerarquía tipo IBM i2 (cuando no hay búsqueda) */}
+        {!searchTerm && Object.entries(ENTITY_ORGANIZATION).map(([groupName, groupData]) => {
+          const groupTemplates = templates.filter(t => 
+            groupData.types.includes(t.entity_type) ||
+            (groupData.subgroups && Object.values(groupData.subgroups).flat().includes(t.code))
+          );
+          
+          if (groupTemplates.length === 0) return null;
+          
+          return (
+          <div key={groupName} className="border border-slate-700 rounded-lg overflow-hidden shadow-lg">
+            {/* Header de grupo - Estilo IBM i2 con iconos profesionales */}
             <button
-              onClick={() => toggleCategory(category)}
-              className="w-full flex items-center justify-between p-3 bg-slate-800 hover:bg-slate-750 transition-colors"
+              onClick={() => toggleCategory(groupName)}
+              className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-slate-800 to-slate-750 hover:from-slate-750 hover:to-slate-700 transition-all duration-200"
             >
-              <div className="flex items-center space-x-2">
-                {expandedCategories[category] ? (
-                  <ChevronDown size={16} className="text-slate-400" />
+              <div className="flex items-center space-x-3">
+                {expandedCategories[groupName] ? (
+                  <ChevronDown size={18} className="text-slate-300" />
                 ) : (
-                  <ChevronRight size={16} className="text-slate-400" />
+                  <ChevronRight size={18} className="text-slate-300" />
                 )}
-                <span className="text-sm font-semibold text-white">
-                  {CATEGORY_NAMES[category] || category}
-                </span>
+                {/* Icono i2 profesional */}
+                {getCategoryIcon(groupName) ? (
+                  <img 
+                    src={getCategoryIcon(groupName)} 
+                    alt={groupName}
+                    className="w-10 h-10 object-contain"
+                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
+                  />
+                ) : (
+                  <span className="text-3xl">{groupData.icon}</span>
+                )}
+                <div>
+                  <span className="text-sm font-bold text-white">
+                    {groupName}
+                  </span>
+                  <div className="text-xs text-slate-400">
+                    {groupTemplates.length} plantilla{groupTemplates.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
               </div>
-              <span className="text-xs text-slate-400">
-                {Object.values(hierarchy[category]).reduce((acc, types) => acc + types.length, 0)} plantillas
-              </span>
+              <div 
+                className="w-2 h-8 rounded-full"
+                style={{ backgroundColor: groupData.color }}
+              />
             </button>
 
-            {/* Tipos dentro de la categoría */}
-            {expandedCategories[category] && (
-              <div className="bg-slate-850 p-2 space-y-2">
-                {Object.keys(hierarchy[category]).map(type => {
-                  const typeKey = `${category}-${type}`;
-                  const templatesInType = hierarchy[category][type];
-
-                  return (
-                    <div key={typeKey} className="space-y-2">
-                      {/* Header de tipo */}
-                      <button
-                        onClick={() => toggleType(category, type)}
-                        className="w-full flex items-center justify-between p-2 bg-slate-800 hover:bg-slate-700 rounded transition-colors"
-                      >
-                        <div className="flex items-center space-x-2">
-                          {expandedTypes[typeKey] ? (
-                            <ChevronDown size={14} className="text-slate-400" />
-                          ) : (
-                            <ChevronRight size={14} className="text-slate-400" />
-                          )}
-                          <span className="text-xs font-medium text-slate-200">
-                            {TYPE_NAMES[type] || type}
+            {/* Plantillas del grupo - Estilo IBM i2 */}
+            {expandedCategories[groupName] && (
+              <div className="bg-slate-900/50 p-3 space-y-2">
+                {/* Mostrar plantillas organizadas por subgrupo si existen */}
+                {groupData.subgroups ? (
+                  Object.entries(groupData.subgroups).map(([subgroupName, codes]) => {
+                    const subgroupTemplates = groupTemplates.filter(t => codes.includes(t.code));
+                    if (subgroupTemplates.length === 0) return null;
+                    
+                    return (
+                      <div key={subgroupName} className="space-y-2">
+                        {/* Subgrupo header */}
+                        <div className="flex items-center space-x-2 px-2 py-1 bg-slate-800/50 rounded">
+                          <div 
+                            className="w-1.5 h-4 rounded"
+                            style={{ backgroundColor: groupData.color }}
+                          />
+                          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                            {subgroupName}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            ({subgroupTemplates.length})
                           </span>
                         </div>
-                        <span className="text-xs text-slate-500">
-                          {templatesInType.length}
-                        </span>
-                      </button>
-
-                      {/* Plantillas del tipo */}
-                      {expandedTypes[typeKey] && (
-                        <div className="space-y-2 pl-2">
-                          {templatesInType.map(template => (
-                            <TemplateCard
-                              key={template.id}
-                              template={template}
-                              onDragStart={onDragTemplate}
-                              onClick={onSelectTemplate}
-                              isFavorite={favorites.includes(template.id)}
-                              onToggleFavorite={toggleFavorite}
-                              onShowDetails={handleShowDetails}
-                            />
+                        
+                        {/* Plantillas del subgrupo - Vista dinámica */}
+                        <div className={viewMode === 'grid' 
+                          ? 'grid grid-cols-3 gap-2 pl-3' 
+                          : 'space-y-2 pl-3'
+                        }>
+                          {subgroupTemplates.map(template => (
+                            viewMode === 'grid' ? (
+                              <TemplateGridItem
+                                key={template.id}
+                                template={template}
+                                onDragStart={onDragTemplate}
+                                onClick={onSelectTemplate}
+                                isFavorite={favorites.includes(template.id)}
+                                onToggleFavorite={toggleFavorite}
+                              />
+                            ) : (
+                              <TemplateCard
+                                key={template.id}
+                                template={template}
+                                onDragStart={onDragTemplate}
+                                onClick={onSelectTemplate}
+                                isFavorite={favorites.includes(template.id)}
+                                onToggleFavorite={toggleFavorite}
+                                onShowDetails={handleShowDetails}
+                              />
+                            )
                           ))}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    );
+                  })
+                ) : (
+                  /* Sin subgrupos, mostrar todas las plantillas - Vista dinámica */
+                  <div className={viewMode === 'grid' 
+                    ? 'grid grid-cols-3 gap-2' 
+                    : 'space-y-2'
+                  }>
+                    {groupTemplates.map(template => (
+                      viewMode === 'grid' ? (
+                        <TemplateGridItem
+                          key={template.id}
+                          template={template}
+                          onDragStart={onDragTemplate}
+                          onClick={onSelectTemplate}
+                          isFavorite={favorites.includes(template.id)}
+                          onToggleFavorite={toggleFavorite}
+                        />
+                      ) : (
+                        <TemplateCard
+                          key={template.id}
+                          template={template}
+                          onDragStart={onDragTemplate}
+                          onClick={onSelectTemplate}
+                          isFavorite={favorites.includes(template.id)}
+                          onToggleFavorite={toggleFavorite}
+                          onShowDetails={handleShowDetails}
+                        />
+                      )
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
         </>
         )}
       </div>

@@ -1,35 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
-import { Ship, Anchor, Plane, Users } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
+import { getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
 
 /**
  * 🎯 Componente de marcador de entidad militar
- * Renderiza iconos personalizados en el mapa
+ * Renderiza iconos personalizados en el mapa con iconos i2 profesionales
  * 
  * ESTRATEGIA:
- * - Usa image_thumbnail_url como icono si existe
- * - Si no, usa icono por defecto según tipo
+ * - Usa iconos i2 profesionales (IBM Analyst's Notebook)
+ * - Prioridad: template icon > entity type icon
  * - Click abre sidebar con detalles
  * - Sin popup redundante (info completa en sidebar)
  */
 
-// Función para obtener el icono según el tipo
-function getEntityIcon(type) {
-  switch (type) {
-    case 'destructor':
-      return Ship;
-    case 'fragata':
-      return Anchor;
-    case 'avion':
-      return Plane;
-    case 'tropas':
-      return Users;
-    default:
-      return Ship;
+// Función para obtener la ruta del icono i2 según el tipo y template
+function getEntityIconPath(entity, template) {
+  // Prioridad 1: Icono específico del template
+  if (template?.code) {
+    const templateIcon = getTemplateIcon(template.code);
+    if (templateIcon) return templateIcon;
   }
+  
+  // Prioridad 2: Icono genérico del tipo de entidad
+  const entityIcon = getEntityIcon(entity.type);
+  if (entityIcon) return entityIcon;
+  
+  // Fallback: Icono genérico de vehículo
+  return '/Icons/i2/Military Base.png';
 }
 
 // Función para obtener el color según el tipo
@@ -240,22 +240,37 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
         </div>
       );
     } else {
-      // Icono por defecto si no hay imagen
-      const Icon = getEntityIcon(entity.type);
+      // Usar iconos i2 profesionales
+      const iconPath = getEntityIconPath(entity, template);
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
-          {/* Icono con badge de efectivos para tropas */}
+          {/* Icono i2 con badge de efectivos para tropas */}
           <div style={{ position: 'relative' }}>
             <div
-              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110"
+              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
               style={{ 
                 borderColor: color,
                 width: `${size}px`,
                 height: `${size}px`,
               }}
             >
-              <Icon size={size * 0.6} color={color} strokeWidth={2.5} />
+              {iconPath ? (
+                <img 
+                  src={iconPath} 
+                  alt={entity.name}
+                  className="w-full h-full object-contain p-1"
+                  style={{ 
+                    filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
+                    maxWidth: `${size * 0.75}px`,
+                    maxHeight: `${size * 0.75}px`
+                  }}
+                />
+              ) : (
+                <div className="text-white font-bold" style={{ fontSize: `${size * 0.4}px` }}>
+                  {entity.name?.charAt(0) || '?'}
+                </div>
+              )}
             </div>
             
             {/* Badge con número de efectivos (solo para tropas) - posicionado a la derecha */}
