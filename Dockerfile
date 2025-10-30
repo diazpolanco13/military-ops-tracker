@@ -36,8 +36,9 @@ ENV NODE_ENV=$NODE_ENV
 # Copiar archivos de dependencias
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install --legacy-peer-deps
+# Instalar dependencias (incluyendo devDependencies porque Vite es necesario para el build)
+# NODE_ENV no debe ser 'production' durante el build para que se instalen devDependencies
+RUN NODE_ENV=development npm install --legacy-peer-deps
 
 # Copiar código fuente
 COPY . .
