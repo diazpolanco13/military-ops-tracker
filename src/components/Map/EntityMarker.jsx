@@ -37,12 +37,22 @@ function getEntityColor(type) {
   switch (type) {
     case 'destructor':
       return '#ef4444'; // Rojo
+    case 'portaaviones':
+      return '#dc2626'; // Rojo oscuro (más grande = más peligroso)
+    case 'submarino':
+      return '#1e40af'; // Azul oscuro (stealth)
     case 'fragata':
       return '#3b82f6'; // Azul
     case 'avion':
       return '#6b7280'; // Gris
     case 'tropas':
       return '#22c55e'; // Verde
+    case 'vehiculo':
+      return '#78716c'; // Gris cálido
+    case 'tanque':
+      return '#57534e'; // Gris oscuro
+    case 'insurgente':
+      return '#f59e0b'; // Naranja (alerta)
     default:
       return '#10b981'; // Verde
   }
@@ -53,16 +63,26 @@ function getEntitySize(type) {
   // Obtener tamaño base de la configuración (default: 48)
   const baseSize = parseInt(localStorage.getItem('iconSize') || '48');
   
-  // Ajustar proporcionalmente según el tipo
+  // Ajustar proporcionalmente según el tipo (basado en tamaño real/importancia)
   switch (type) {
+    case 'portaaviones':
+      return baseSize * 1.5; // ~72px - El buque más grande
     case 'destructor':
-      return baseSize * 1.33; // ~64px con base 48
+      return baseSize * 1.33; // ~64px
     case 'fragata':
-      return baseSize * 1.17; // ~56px con base 48
+      return baseSize * 1.17; // ~56px
+    case 'submarino':
+      return baseSize * 1.25; // ~60px
+    case 'tanque':
+      return baseSize * 1.17; // ~56px
+    case 'vehiculo':
+      return baseSize * 0.92; // ~44px - Vehículos más pequeños
     case 'avion':
-      return baseSize; // 48px con base 48
+      return baseSize; // 48px
     case 'tropas':
-      return baseSize * 1.17; // Mismo que fragatas
+      return baseSize * 1.08; // ~52px
+    case 'insurgente':
+      return baseSize * 0.92; // ~44px
     default:
       return baseSize;
   }
@@ -81,11 +101,14 @@ function getEntityLabel(entity) {
 function getEntityType(entity) {
   const typeLabels = {
     'destructor': 'Destructor',
+    'portaaviones': 'Portaaviones',
     'fragata': 'Fragata',
+    'submarino': 'Submarino',
     'avion': 'Aeronave',
     'tropas': 'Tropas',
     'tanque': 'Tanque',
-    'submarino': 'Submarino',
+    'vehiculo': 'Vehículo',
+    'insurgente': 'Insurgente',
   };
   
   return typeLabels[entity.type] || entity.type;
