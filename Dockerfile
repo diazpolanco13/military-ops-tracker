@@ -51,8 +51,18 @@ RUN npm run build
 # ==================================
 FROM nginx:alpine
 
+# Instalar envsubst (viene con gettext)
+RUN apk add --no-cache gettext
+
 # Copiar archivos compilados desde builder
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copiar template de configuración de entorno
+COPY env-config.js /usr/share/nginx/html/env-config.js.template
+
+# Copiar script de entrypoint
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Copiar configuración de nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
@@ -60,10 +70,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Exponer puerto 80
 EXPOSE 80
 
-# Health check - usando 127.0.0.1 en lugar de localhost para evitar problemas IPv6
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/ || exit 1
 
-# Comando de inicio
-CMD ["nginx", "-g", "daemon off;"]
+# Usar entrypoint personalizado
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
