@@ -60,32 +60,10 @@ function getEntityColor(type) {
 
 // Función para obtener el tamaño según el tipo y configuración
 function getEntitySize(type) {
-  // Obtener tamaño base de la configuración (default: 48)
+  // Obtener tamaño de la configuración del usuario (default: 48)
+  // TODOS los iconos usan el mismo tamaño controlado por el menú
   const baseSize = parseInt(localStorage.getItem('iconSize') || '48');
-  
-  // Ajustar proporcionalmente según el tipo (basado en tamaño real/importancia)
-  switch (type) {
-    case 'portaaviones':
-      return baseSize * 1.5; // ~72px - El buque más grande
-    case 'destructor':
-      return baseSize * 1.33; // ~64px
-    case 'fragata':
-      return baseSize * 1.17; // ~56px
-    case 'submarino':
-      return baseSize * 1.25; // ~60px
-    case 'tanque':
-      return baseSize * 1.17; // ~56px
-    case 'vehiculo':
-      return baseSize * 0.92; // ~44px - Vehículos más pequeños
-    case 'avion':
-      return baseSize; // 48px
-    case 'tropas':
-      return baseSize * 1.08; // ~52px
-    case 'insurgente':
-      return baseSize * 0.92; // ~44px
-    default:
-      return baseSize;
-  }
+  return baseSize;
 }
 
 // Función para obtener el texto de la etiqueta

@@ -20,10 +20,19 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' o 'grid'
   const [expandedCategories, setExpandedCategories] = useState({}); // TODO colapsado por defecto
   const [expandedTypes, setExpandedTypes] = useState({}); // TODO colapsado por defecto
-  const [favorites, setFavorites] = useState([]);
+  const [favorites, setFavorites] = useState(() => {
+    // ✅ Cargar favoritos desde localStorage
+    const saved = localStorage.getItem('templateFavorites');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [topTemplates, setTopTemplates] = useState([]);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [selectedTemplateForDetails, setSelectedTemplateForDetails] = useState(null);
+
+  // Guardar favoritos en localStorage cuando cambien
+  useEffect(() => {
+    localStorage.setItem('templateFavorites', JSON.stringify(favorites));
+  }, [favorites]);
 
   // Cargar plantillas más usadas
   useEffect(() => {
@@ -278,6 +287,33 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
         {/* Contenido normal */}
         {!loading && (
           <>
+        {/* Mensaje cuando no hay favoritas/usadas */}
+        {!searchTerm && getFilteredTemplates().length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-4">
+              {activeTab === 'favorites' ? (
+                <Star size={32} className="text-slate-600" />
+              ) : (
+                <Clock size={32} className="text-slate-600" />
+              )}
+            </div>
+            <h3 className="text-slate-400 font-semibold mb-2">
+              {activeTab === 'favorites' ? 'Sin favoritas' : 'Sin plantillas usadas'}
+            </h3>
+            <p className="text-slate-500 text-sm max-w-xs">
+              {activeTab === 'favorites' 
+                ? 'Marca plantillas como favoritas haciendo clic en la estrella ⭐' 
+                : 'Las plantillas que uses aparecerán aquí ordenadas por frecuencia'}
+            </p>
+            <button
+              onClick={() => setActiveTab('all')}
+              className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+            >
+              Ver todas las plantillas
+            </button>
+          </div>
+        )}
+
         {/* Resultados de búsqueda - Vista dinámica */}
         {searchTerm && (
           <div>
@@ -316,7 +352,9 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
 
         {/* Vista de jerarquía tipo IBM i2 (cuando no hay búsqueda) */}
         {!searchTerm && Object.entries(ENTITY_ORGANIZATION).map(([groupName, groupData]) => {
-          const groupTemplates = templates.filter(t => 
+          // ✅ Usar plantillas filtradas por tab (Todas/Favoritas/Usadas)
+          const filteredTemplates = getFilteredTemplates();
+          const groupTemplates = filteredTemplates.filter(t => 
             groupData.types.includes(t.entity_type) ||
             (groupData.subgroups && Object.values(groupData.subgroups).flat().includes(t.code))
           );

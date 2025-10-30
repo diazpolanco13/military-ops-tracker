@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search, Settings, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Copy, Save, Ship, Plane, Users, Shield, Search, Settings, Upload, Image as ImageIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
+import { getCategoryIcon, getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
 import ImageUploader from '../ImageUploader';
 
 /**
@@ -22,6 +23,13 @@ export default function TemplateAdminPanel({ onClose }) {
   const [formData, setFormData] = useState(getEmptyForm());
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [uploadingForTemplate, setUploadingForTemplate] = useState(null); // ID temporal para upload
+  const [expandedCategories, setExpandedCategories] = useState({
+    'Buques de Guerra': true,
+    'Aeronaves': true,
+    'Vehículos Militares': true,
+    'Personal y Tropas': true,
+    'Fuerzas Irregulares': true,
+  });
 
   // Formulario vacío por defecto
   function getEmptyForm() {
@@ -162,6 +170,54 @@ export default function TemplateAdminPanel({ onClose }) {
     t.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Organización jerárquica (igual que EntityPalette)
+  const ENTITY_ORGANIZATION = {
+    'Buques de Guerra': {
+      icon: '🚢',
+      types: ['destructor', 'fragata', 'portaaviones', 'submarino'],
+      color: '#ef4444'
+    },
+    'Aeronaves': {
+      icon: '✈️',
+      types: ['avion'],
+      color: '#3b82f6',
+      subgroups: {
+        'Cazas': ['caza-general'],
+        'Helicópteros': ['helicoptero-ataque-general', 'helicoptero-transporte-general'],
+        'Drones': ['drone-general'],
+        'Otros': ['bombardero-general', 'transporte-general', 'patrulla-maritima-general']
+      }
+    },
+    'Vehículos Militares': {
+      icon: '🚙',
+      types: ['vehiculo', 'tanque'],
+      color: '#6b7280',
+      subgroups: {
+        'Blindados': ['vehiculo-apc-general'],
+        'Tanques': ['vehiculo-tanque-general'],
+        'Artillería': ['vehiculo-mbrl-general'],
+        'Ligeros': ['vehiculo-patrulla-general', 'vehiculo-utilitario-general']
+      }
+    },
+    'Personal y Tropas': {
+      icon: '👥',
+      types: ['tropas'],
+      color: '#10b981'
+    },
+    'Fuerzas Irregulares': {
+      icon: '⚠️',
+      types: ['insurgente'],
+      color: '#f59e0b'
+    }
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
   const ENTITY_ICONS = {
     destructor: Ship,
     fragata: Ship,
@@ -172,17 +228,94 @@ export default function TemplateAdminPanel({ onClose }) {
     tanque: Shield,
   };
 
+  // Componente interno para renderizar cada plantilla
+  const TemplateCard = ({ template, onEdit, onClone, onDelete }) => {
+    const iconPath = getTemplateIcon(template.code) || getEntityIcon(template.entity_type);
+    
+    return (
+      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 hover:border-blue-500 transition-all group">
+        {/* Header con icono i2 */}
+        <div className="flex items-start gap-2 mb-2">
+          <div
+            className="p-1.5 rounded-lg flex-shrink-0"
+            style={{ backgroundColor: `${template.icon_color}20` }}
+          >
+            {iconPath ? (
+              <img 
+                src={iconPath} 
+                alt={template.display_name}
+                className="w-5 h-5 object-contain"
+                style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}
+              />
+            ) : (
+              <div className="w-5 h-5 flex items-center justify-center text-white font-bold text-xs">
+                {template.display_name.charAt(0)}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-white truncate text-xs">
+              {template.display_name}
+            </h3>
+            <p className="text-[10px] text-slate-400 truncate">
+              {template.code}
+            </p>
+          </div>
+        </div>
+
+        {/* Stats compactos */}
+        <div className="flex items-center justify-between text-[10px] mb-2 text-slate-400">
+          <span>
+            <span className="text-slate-500">Tipo:</span>{' '}
+            <span className="text-white">{template.entity_type}</span>
+          </span>
+          <span>
+            <span className="text-slate-500">Usos:</span>{' '}
+            <span className="text-white">{template.usage_count || 0}</span>
+          </span>
+        </div>
+
+        {/* Acciones compactas */}
+        <div className="flex gap-1.5 pt-2 border-t border-slate-700">
+          <button
+            onClick={() => onEdit(template)}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-[10px] transition-colors"
+            title="Editar"
+          >
+            <Edit2 size={11} />
+            <span className="hidden lg:inline">Edit</span>
+          </button>
+          <button
+            onClick={() => onClone(template)}
+            className="flex-1 flex items-center justify-center gap-1 px-2 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-[10px] transition-colors"
+            title="Clonar"
+          >
+            <Copy size={11} />
+            <span className="hidden lg:inline">Clon</span>
+          </button>
+          <button
+            onClick={() => onDelete(template)}
+            className="flex items-center justify-center px-2 py-1 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded text-[10px] transition-colors"
+            title="Eliminar"
+          >
+            <Trash2 size={11} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-6xl max-h-[95vh] flex flex-col">
+    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" style={{ paddingTop: '80px' }}>
+      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-7xl h-[calc(100vh-100px)] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800 flex justify-between items-center">
+        <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800 flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-              <Settings className="w-6 h-6" />
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <Settings className="w-5 h-5" />
               Administración de Plantillas
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-xs text-slate-400 mt-0.5">
               {mode === 'list' && `${templates.length} plantillas disponibles`}
               {mode === 'create' && 'Crear nueva plantilla'}
               {mode === 'edit' && `Editando: ${selectedTemplate?.display_name}`}
@@ -190,9 +323,9 @@ export default function TemplateAdminPanel({ onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
@@ -202,107 +335,111 @@ export default function TemplateAdminPanel({ onClose }) {
           {mode === 'list' && (
             <div className="flex-1 flex flex-col">
               {/* Toolbar */}
-              <div className="p-4 border-b border-slate-700 bg-slate-800/50 flex gap-3">
+              <div className="px-3 py-2 border-b border-slate-700 bg-slate-800/50 flex gap-2">
                 {/* Búsqueda */}
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                  <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
                   <input
                     type="text"
                     placeholder="Buscar plantillas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-900 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
                 {/* Botón crear */}
                 <button
                   onClick={() => setMode('create')}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm whitespace-nowrap"
                 >
-                  <Plus size={18} />
-                  <span>Nueva Plantilla</span>
+                  <Plus size={16} />
+                  <span>Nueva</span>
                 </button>
               </div>
 
-              {/* Lista */}
-              <div className="flex-1 overflow-y-auto p-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTemplates.map(template => {
-                    const Icon = ENTITY_ICONS[template.entity_type] || Ship;
+              {/* Lista organizada por categorías */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* Si hay búsqueda, mostrar resultados planos */}
+                {searchTerm ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {filteredTemplates.map(template => (
+                      <TemplateCard
+                        key={template.id}
+                        template={template}
+                        onEdit={handleEdit}
+                        onClone={handleClone}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  /* Vista organizada por categorías */
+                  Object.entries(ENTITY_ORGANIZATION).map(([groupName, groupData]) => {
+                    const groupTemplates = templates.filter(t => 
+                      groupData.types.includes(t.entity_type) ||
+                      (groupData.subgroups && Object.values(groupData.subgroups).flat().includes(t.code))
+                    );
+                    
+                    if (groupTemplates.length === 0) return null;
+                    
+                    const categoryIconPath = getCategoryIcon(groupName);
+                    const isExpanded = expandedCategories[groupName];
                     
                     return (
-                      <div
-                        key={template.id}
-                        className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:border-blue-500 transition-all group"
-                      >
-                        {/* Header con icono */}
-                        <div className="flex items-start gap-3 mb-3">
-                          <div
-                            className="p-2 rounded-lg"
-                            style={{ backgroundColor: `${template.icon_color}20` }}
-                          >
-                            <Icon size={24} style={{ color: template.icon_color }} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-white truncate">
-                              {template.display_name}
-                            </h3>
-                            <p className="text-xs text-slate-400 truncate">
-                              {template.code}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Stats */}
-                        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                          <div className="text-slate-400">
-                            <span className="text-slate-500">Categoría:</span>{' '}
-                            <span className="text-white">{template.category}</span>
-                          </div>
-                          <div className="text-slate-400">
-                            <span className="text-slate-500">Tipo:</span>{' '}
-                            <span className="text-white">{template.entity_type}</span>
-                          </div>
-                          <div className="text-slate-400">
-                            <span className="text-slate-500">Usos:</span>{' '}
-                            <span className="text-white">{template.usage_count}</span>
-                          </div>
-                          {template.country_origin && (
-                            <div className="text-slate-400">
-                              <span className="text-slate-500">País:</span>{' '}
-                              <span className="text-white">{template.country_origin}</span>
+                      <div key={groupName} className="border border-slate-700 rounded-lg overflow-hidden">
+                        {/* Header de categoría */}
+                        <button
+                          onClick={() => toggleCategory(groupName)}
+                          className="w-full px-3 py-2 bg-slate-800/50 hover:bg-slate-800 transition-colors flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-2">
+                            {categoryIconPath ? (
+                              <img 
+                                src={categoryIconPath} 
+                                alt={groupName}
+                                className="w-6 h-6 object-contain"
+                                style={{ filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.6))' }}
+                              />
+                            ) : (
+                              <span className="text-xl">{groupData.icon}</span>
+                            )}
+                            <div className="text-left">
+                              <h3 className="text-sm font-semibold text-white">
+                                {groupName}
+                              </h3>
+                              <p className="text-[10px] text-slate-400">
+                                {groupTemplates.length} plantilla{groupTemplates.length !== 1 ? 's' : ''}
+                              </p>
                             </div>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronDown className="text-slate-400 group-hover:text-white transition-colors" size={18} />
+                          ) : (
+                            <ChevronRight className="text-slate-400 group-hover:text-white transition-colors" size={18} />
                           )}
-                        </div>
+                        </button>
 
-                        {/* Acciones */}
-                        <div className="flex gap-2 pt-3 border-t border-slate-700">
-                          <button
-                            onClick={() => handleEdit(template)}
-                            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition-colors"
-                          >
-                            <Edit2 size={12} />
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleClone(template)}
-                            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition-colors"
-                          >
-                            <Copy size={12} />
-                            Clonar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(template)}
-                            className="flex items-center justify-center gap-1 px-3 py-1.5 bg-red-900/30 hover:bg-red-900/50 text-red-400 rounded text-xs transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
+                        {/* Contenido de la categoría */}
+                        {isExpanded && (
+                          <div className="p-3 bg-slate-900/30">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                              {groupTemplates.map(template => (
+                                <TemplateCard
+                                  key={template.id}
+                                  template={template}
+                                  onEdit={handleEdit}
+                                  onClone={handleClone}
+                                  onDelete={handleDelete}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
-                  })}
-                </div>
+                  })
+                )}
               </div>
             </div>
           )}
