@@ -1,0 +1,56 @@
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Build
+dist
+.vite
+*.local
+
+# Git
+.git
+.gitignore
+
+# Logs
+logs
+*.log
+pm2-*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+!README.md
+docs
+images
+
+# Scripts
+scripts
+*.sh
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+test.html
+photo_*.jpg
+despliegue*.txt
+

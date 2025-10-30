@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+pm2-*.log
 
 # Dependencies
 node_modules
@@ -28,8 +29,32 @@ dist-ssr
 .env
 .env.local
 .env.production
+.env.*.local
 env.local
 
 # Temp files
 .vite-temp
 *.tsbuildinfo
+
+# PM2
+.pm2
+ecosystem.config.cjs
+
+# Build
+dist/
+build/
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Personal files
+photo_*.jpg
+despliegue*.txt
+
+# Supabase local
+.supabase/
