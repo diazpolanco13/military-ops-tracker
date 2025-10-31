@@ -43,6 +43,7 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
     crew_count: null,
     range_km: null,
     max_speed_knots: null,
+    quantity: 1, // Cantidad de unidades agrupadas
     // Multimedia
     icon_url: '', // PNG para icono del mapa
     image_url: '', // Imagen completa
@@ -79,6 +80,7 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
         crew_count: entity.crew_count || null,
         range_km: entity.range_km || null,
         max_speed_knots: entity.max_speed_knots || null,
+        quantity: entity.quantity || 1,
         icon_url: entity.icon_url || '',
         image_url: entity.image_url || '',
         video_url: entity.video_url || '',
@@ -229,6 +231,24 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                     <option value="en_vuelo">En Vuelo</option>
                     <option value="vigilancia">Vigilancia</option>
                   </select>
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Cantidad de Unidades
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.quantity}
+                      onChange={(e) => handleChange('quantity', parseInt(e.target.value) || 1)}
+                      className="w-32 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    />
+                    <span className="text-xs text-slate-400">
+                      💡 Agrupa múltiples unidades del mismo tipo en un solo marcador (ej: 3 helicópteros)
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

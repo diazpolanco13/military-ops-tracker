@@ -320,6 +320,33 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
             )}
           </div>
 
+          {/* Cantidad de Unidades - Si quantity > 1 */}
+          {entity.quantity && entity.quantity > 1 && (
+            <div className="bg-gradient-to-br from-cyan-950/30 to-slate-800/30 rounded-lg p-4 border border-cyan-900/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-2xl">📦</div>
+                  <div>
+                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wide">
+                      Grupo de Unidades
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Este marcador representa múltiples unidades
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-cyan-300">
+                    {entity.quantity}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {entity.type === 'tropas' ? 'grupos' : 'unidades'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Especificaciones Técnicas */}
           {(getValue('displacement_tons') || getValue('length_meters') || getValue('crew_count')) && (
             <div className="bg-gradient-to-br from-blue-950/30 to-slate-800/30 rounded-lg p-4 border border-blue-900/30">

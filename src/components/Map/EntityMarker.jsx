@@ -274,14 +274,20 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
               )}
             </div>
             
-            {/* Badge con número de efectivos (solo para tropas) - posicionado a la derecha */}
-            {entity.type === 'tropas' && entity.crew_count && (
+            {/* Badge con cantidad - posicionado a la derecha */}
+            {((entity.type === 'tropas' && entity.crew_count) || (entity.quantity && entity.quantity > 1)) && (
               <div
                 className="absolute top-0 -right-2 translate-x-full bg-green-600 text-white rounded-full px-2 py-1 text-xs font-bold border-2 border-slate-900 shadow-lg whitespace-nowrap"
+                style={{
+                  backgroundColor: getEntityColor(entity.type)
+                }}
               >
-                {entity.crew_count >= 1000 
-                  ? `${(entity.crew_count / 1000).toFixed(1)}k`
-                  : entity.crew_count}
+                {entity.type === 'tropas' && entity.crew_count
+                  ? (entity.crew_count >= 1000 
+                      ? `${(entity.crew_count / 1000).toFixed(1)}k`
+                      : entity.crew_count)
+                  : entity.quantity
+                }
               </div>
             )}
           </div>
