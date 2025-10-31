@@ -159,9 +159,9 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
 
   return (
     <>
-      {/* Card flotante en esquina superior derecha - MÁS COMPACTA */}
+      {/* Card flotante en esquina superior izquierda - MÁS COMPACTA */}
       <div
-        className="fixed top-20 right-4 z-50 animate-slideInFromRight flex flex-col"
+        className="fixed top-20 left-4 z-50 animate-slideInFromLeft flex flex-col"
         style={{ width: '340px', maxHeight: 'calc(100vh - 100px)' }}
       >
         <div

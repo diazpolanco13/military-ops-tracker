@@ -171,23 +171,40 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
-          {/* Icono/Imagen */}
-          <div
-            className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
-            style={{ 
-              borderColor: color,
-              width: `${size}px`,
-              height: `${size}px`,
-            }}
-          >
-            <img 
-              src={imageUrl}
-              alt={entity.name}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.style.display = 'none';
+          {/* Icono/Imagen con badge */}
+          <div style={{ position: 'relative' }}>
+            <div
+              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
+              style={{ 
+                borderColor: color,
+                width: `${size}px`,
+                height: `${size}px`,
               }}
-            />
+            >
+              <img 
+                src={imageUrl}
+                alt={entity.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            </div>
+            
+            {/* Badge con cantidad - posicionado a la derecha */}
+            {entity.quantity > 1 && (
+              <div
+                className="absolute top-0 -right-2 translate-x-full text-white rounded-full px-2 py-1 text-xs font-bold border-2 border-slate-900 shadow-lg whitespace-nowrap"
+                style={{
+                  backgroundColor: getEntityColor(entity.type)
+                }}
+              >
+                {entity.quantity >= 1000 
+                  ? `${(entity.quantity / 1000).toFixed(1)}k`
+                  : entity.quantity
+                }
+              </div>
+            )}
           </div>
           
           {/* Contenedor de etiquetas (nombre + tipo + clase) */}
@@ -275,17 +292,15 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
             </div>
             
             {/* Badge con cantidad - posicionado a la derecha */}
-            {((entity.type === 'tropas' && entity.crew_count) || (entity.quantity && entity.quantity > 1)) && (
+            {entity.quantity > 1 && (
               <div
-                className="absolute top-0 -right-2 translate-x-full bg-green-600 text-white rounded-full px-2 py-1 text-xs font-bold border-2 border-slate-900 shadow-lg whitespace-nowrap"
+                className="absolute top-0 -right-2 translate-x-full text-white rounded-full px-2 py-1 text-xs font-bold border-2 border-slate-900 shadow-lg whitespace-nowrap"
                 style={{
                   backgroundColor: getEntityColor(entity.type)
                 }}
               >
-                {entity.type === 'tropas' && entity.crew_count
-                  ? (entity.crew_count >= 1000 
-                      ? `${(entity.crew_count / 1000).toFixed(1)}k`
-                      : entity.crew_count)
+                {entity.quantity >= 1000 
+                  ? `${(entity.quantity / 1000).toFixed(1)}k`
                   : entity.quantity
                 }
               </div>
@@ -416,7 +431,7 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
         markerRef.current.remove();
       }
     };
-  }, [map, iconSize, useImages, template, showLabelName, showLabelType, showLabelClass]); // Recrear cuando cambia configuración
+  }, [map, iconSize, useImages, template, showLabelName, showLabelType, showLabelClass, entity.quantity, entity.name, entity.type]); // Recrear cuando cambia configuración o datos clave
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {

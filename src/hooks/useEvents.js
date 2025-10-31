@@ -48,10 +48,17 @@ export function useEvents() {
   // Crear evento
   const createEvent = async (_, eventData) => {
     try {
+      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
+      let eventDate = eventData.event_date;
+      if (eventDate && eventDate.length === 16) {
+        eventDate = eventDate + ':00'; // Agregar segundos
+      }
+      
       const { data, error } = await supabase
         .from('events')
         .insert([{
           ...eventData,
+          event_date: eventDate,
           created_at: new Date().toISOString()
         }])
         .select()
@@ -73,10 +80,17 @@ export function useEvents() {
       // Limpiar datos: solo campos actualizables
       const { id: _, created_at, created_by, ...cleanData } = eventData;
       
+      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
+      let eventDate = cleanData.event_date;
+      if (eventDate && eventDate.length === 16) {
+        eventDate = eventDate + ':00'; // Agregar segundos
+      }
+      
       const { data, error } = await supabase
         .from('events')
         .update({
           ...cleanData,
+          event_date: eventDate,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)

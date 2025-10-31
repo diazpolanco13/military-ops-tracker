@@ -139,11 +139,11 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
   if (!entity) {
     return (
       <div
-        className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-l border-slate-700 transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{ 
-          right: 0,
+          left: 0,
           top: '56px', // Después de TopNavbar
           height: 'calc(100vh - 56px)',
           zIndex: 60 
@@ -183,11 +183,11 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
 
   return (
     <div
-      className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-l border-slate-700 transition-transform duration-300 ease-in-out ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
+      className={`fixed w-[380px] bg-slate-900 shadow-2xl flex flex-col border-r border-slate-700 transition-transform duration-300 ease-in-out ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
       style={{ 
-        right: 0,
+        left: 0,
         top: '56px', // Después de TopNavbar
         height: 'calc(100vh - 56px)',
         zIndex: 60 

@@ -1,6 +1,5 @@
 import { Ship, Plane, Users, Anchor, Target, Activity } from 'lucide-react';
 import { useEntities } from '../../hooks/useEntities';
-import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useState, useEffect } from 'react';
 
 /**
@@ -9,7 +8,6 @@ import { useState, useEffect } from 'react';
  */
 export default function DeploymentStats() {
   const { entities } = useEntities();
-  const { groups } = useEntityGroups();
   const [stats, setStats] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -37,15 +35,13 @@ export default function DeploymentStats() {
 
     const totalUnits = activeEntities.length;
     const totalPersonnel = Object.values(byType).reduce((sum, t) => sum + t.personnel, 0);
-    const totalGroups = groups.filter(g => g.is_visible).length;
 
     setStats({
       byType,
       totalUnits,
-      totalPersonnel,
-      totalGroups
+      totalPersonnel
     });
-  }, [entities, groups]);
+  }, [entities]);
 
   if (!stats) return null;
 
@@ -83,7 +79,7 @@ export default function DeploymentStats() {
           </div>
 
           {/* Estadísticas Generales */}
-          <div className="p-4 grid grid-cols-3 gap-3 border-b border-slate-800">
+          <div className="p-4 grid grid-cols-2 gap-3 border-b border-slate-800">
             <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-900/30 text-center">
               <div className="text-2xl font-bold text-white">{stats.totalUnits}</div>
               <div className="text-xs text-blue-400 font-semibold">UNIDADES</div>
@@ -91,10 +87,6 @@ export default function DeploymentStats() {
             <div className="bg-green-900/20 rounded-lg p-3 border border-green-900/30 text-center">
               <div className="text-2xl font-bold text-white">{stats.totalPersonnel.toLocaleString()}</div>
               <div className="text-xs text-green-400 font-semibold">EFECTIVOS</div>
-            </div>
-            <div className="bg-purple-900/20 rounded-lg p-3 border border-purple-900/30 text-center">
-              <div className="text-2xl font-bold text-white">{stats.totalGroups}</div>
-              <div className="text-xs text-purple-400 font-semibold">GRUPOS</div>
             </div>
           </div>
 

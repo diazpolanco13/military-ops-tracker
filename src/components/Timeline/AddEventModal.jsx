@@ -9,10 +9,20 @@ import { SOURCE_RELIABILITY, INFO_CREDIBILITY, PRIORITY_LEVELS } from '../../con
  * Modal para agregar/editar eventos
  */
 export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
+  // Función para obtener fecha local en formato YYYY-MM-DDTHH:MM sin conversión UTC
+  const getLocalDateTimeString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    event_date: new Date().toISOString().slice(0, 16),
+    event_date: getLocalDateTimeString(),
     type: 'evento',
     location: '',
     link_url: '',
@@ -37,9 +47,20 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
 
   useEffect(() => {
     if (event) {
+      // Extraer fecha/hora sin conversión de zona horaria
+      let eventDateFormatted = event.event_date;
+      if (eventDateFormatted) {
+        // Si viene con 'Z' o '+00:00', quitarlo para tratarlo como local
+        eventDateFormatted = eventDateFormatted.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+        // Asegurar formato YYYY-MM-DDTHH:MM
+        if (eventDateFormatted.length > 16) {
+          eventDateFormatted = eventDateFormatted.slice(0, 16);
+        }
+      }
+      
       setFormData({
         ...event,
-        event_date: new Date(event.event_date).toISOString().slice(0, 16),
+        event_date: eventDateFormatted,
         tags: event.tags || []
       });
       // Cargar entidades asociadas

@@ -420,6 +420,10 @@ body {
   }
 }
 
+.animate-slideInFromLeft {
+  animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+
 .animate-slideInFromRight {
   animation: slideInFromRight 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
 }

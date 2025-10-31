@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   Layers, 
   Map as MapIcon, 
-  Ship, 
   MapPin, 
   Search, 
-  Filter,
   Settings,
   Anchor,
   ChevronDown,
@@ -21,7 +19,6 @@ import {
   ArchiveRestore,
   Lock,
   Unlock,
-  Users,
   Waves,
   Palette,
   Radar,
@@ -40,7 +37,6 @@ import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesCon
 import { useUnreadIntelligenceCount } from '../../hooks/useIntelligenceEvents';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
-import GroupManagementPanel from '../Groups/GroupManagementPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
 import ZonesPanel from './ZonesPanel';
 
@@ -71,7 +67,6 @@ export default function TopNavigationBar({
   });
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
-  const [showGroupsPanel, setShowGroupsPanel] = useState(false);
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
@@ -146,16 +141,6 @@ export default function TopNavigationBar({
           badge={hiddenCount > 0 ? hiddenCount : null}
         />
 
-        {/* 🚢 Tipos */}
-        <NavButton
-          icon={<Ship className="w-5 h-5" />}
-          label="Tipos"
-          active={activePanel === 'types'}
-          onClick={() => togglePanel('types')}
-          tooltip="Filtrar por Tipo"
-          hasSubmenu
-        />
-
         {/* 📍 Ubicaciones */}
         <NavButton
           icon={<MapPin className="w-5 h-5" />}
@@ -184,15 +169,6 @@ export default function TopNavigationBar({
           tooltip="Timeline de Eventos"
         />
 
-        {/* 👥 Grupos */}
-        <NavButton
-          icon={<Users className="w-5 h-5" />}
-          label="Grupos"
-          active={showGroupsPanel}
-          onClick={() => setShowGroupsPanel(true)}
-          tooltip="Gestión de Grupos"
-        />
-
         {/* Separador - Oculto en móvil */}
         <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
@@ -203,15 +179,6 @@ export default function TopNavigationBar({
           active={activePanel === 'search'}
           onClick={() => togglePanel('search')}
           tooltip="Búsqueda Avanzada"
-        />
-
-        {/* 🎛️ Filtros */}
-        <NavButton
-          icon={<Filter className="w-5 h-5" />}
-          label="Filtros"
-          active={activePanel === 'filters'}
-          onClick={() => togglePanel('filters')}
-          tooltip="Filtros y Capas"
         />
 
         {/* Spacer - Empuja configuración a la derecha */}
@@ -296,11 +263,6 @@ export default function TopNavigationBar({
       {/* Panel de Configuración */}
       {showSettingsPanel && (
         <SettingsPanel onClose={() => setShowSettingsPanel(false)} />
-      )}
-
-      {/* Panel de Gestión de Grupos */}
-      {showGroupsPanel && (
-        <GroupManagementPanel onClose={() => setShowGroupsPanel(false)} />
       )}
 
       {/* Gestor de Límites Marítimos */}

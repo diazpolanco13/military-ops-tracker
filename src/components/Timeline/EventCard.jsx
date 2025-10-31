@@ -65,10 +65,12 @@ export default function EventCard({ event, onEdit, onDelete, isLast }) {
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    // Tratar la fecha como local sin conversión de zona horaria
+    // Extraer hora y minuto directamente del string sin crear Date
+    const date = dateString.includes('T') 
+      ? dateString.split('T')[1]?.slice(0, 5) 
+      : dateString.slice(11, 16);
+    return date || '00:00';
   };
 
   return (

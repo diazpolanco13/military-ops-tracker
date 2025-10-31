@@ -4,17 +4,14 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
 import { Lock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
-import GroupMarker from './GroupMarker';
 import MaritimeBoundariesLayer from './MaritimeBoundariesLayer';
 import { useEntities } from '../../hooks/useEntities';
-import { useEntityGroups } from '../../hooks/useEntityGroups';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useMaritimeBoundaries } from '../../hooks/useMaritimeBoundaries';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
-import GroupDetailsSidebar from '../Sidebar/GroupDetailsSidebar';
 import DeploymentStats from '../Dashboard/DeploymentStats';
 import EntityQuickCard from '../Cards/EntityQuickCard';
 import EntityDetailedModal from '../Cards/EntityDetailedModal';
@@ -29,7 +26,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
   const [dragPreview, setDragPreview] = useState(null); // Para mostrar preview al arrastrar
   const [currentZoom, setCurrentZoom] = useState(6);
   const [clusterZoomThreshold, setClusterZoomThreshold] = useState(() => {
@@ -70,9 +66,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // 🌊 Hook para obtener límites marítimos (solo cuando cambien los códigos)
   const { boundaries } = useMaritimeBoundaries(visibleCountryCodes, showBoundaries);
 
-  // 📡 Obtener entidades y grupos desde Supabase
+  // 📡 Obtener entidades desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
-  const { groups, loading: loadingGroups, deleteGroup, fetchGroups } = useEntityGroups();
   const [templatesCache, setTemplatesCache] = useState({});
 
   // Cachear plantillas para evitar recargas constantes
@@ -151,36 +146,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     } catch (err) {
       console.error('❌ Error al mover entidad:', err);
       alert('Error al actualizar posición. Por favor, intenta de nuevo.');
-    }
-  };
-
-  // Handler para cuando se arrastra un grupo completo
-  const handleGroupMove = async (group, deltaLat, deltaLng) => {
-    try {
-      // Mover todas las entidades del grupo manteniendo formación
-      const movePromises = group.members.map(async (member) => {
-        const entity = member.entity;
-        if (!entity) return;
-
-        const newPosition = {
-          latitude: parseFloat(entity.latitude) + deltaLat,
-          longitude: parseFloat(entity.longitude) + deltaLng
-        };
-
-        return updatePosition(entity.id, newPosition);
-      });
-
-      await Promise.all(movePromises);
-
-      // Refetch en background con delay para evitar re-render brusco
-      setTimeout(() => {
-        refetch();
-        fetchGroups(); // También refrescar grupos para actualizar centro
-      }, 200);
-      
-    } catch (err) {
-      console.error('❌ Error al mover grupo:', err);
-      alert('Error al mover el grupo. Por favor, intenta de nuevo.');
     }
   };
 
@@ -487,10 +452,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         <EntityDetailsSidebar
           entity={selectedEntity}
           onClose={() => setSelectedEntity(null)}
-          isOpen={!!selectedEntity && !selectedGroup}
+          isOpen={!!selectedEntity}
         />
       ) : (
-        selectedEntity && !selectedGroup && (
+        selectedEntity && (
           <EntityQuickCard
             entity={selectedEntity}
             onClose={() => setSelectedEntity(null)}
@@ -506,22 +471,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           onClose={() => setShowDetailedModal(false)}
         />
       )}
-
-      {/* Sidebar de detalles de grupo */}
-      <GroupDetailsSidebar
-        group={selectedGroup}
-        onClose={() => setSelectedGroup(null)}
-        onSelectMember={(entity) => {
-          setSelectedEntity(entity);
-          setSelectedGroup(null);
-        }}
-        onDissolveGroup={async (groupId) => {
-          await deleteGroup(groupId);
-          await fetchGroups();
-          setSelectedGroup(null);
-        }}
-        isOpen={!!selectedGroup}
-      />
 
       {/* Contenedor del mapa - Empieza después de navbar */}
       <div
@@ -549,34 +498,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Selector de estilos de mapa - MOVIDO A TopNavigationBar */}
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
-      {/* Marcadores de Grupos (siempre visibles cuando zoom >= umbral) */}
-      {mapLoaded && !loadingGroups && currentZoom >= clusterZoomThreshold && groups
-        .filter(g => g.is_visible && g.count > 0)
-        .map((group) => (
-          <GroupMarker
-            key={group.id}
-            group={group}
-            map={map.current}
-            onGroupClick={(g) => {
-              setSelectedGroup(g);
-              setSelectedEntity(null); // Cerrar sidebar de entidad si está abierto
-            }}
-            onGroupMove={handleGroupMove}
-          />
-        ))
-      }
-
-      {/* Sistema Híbrido: Marcadores individuales cuando zoom >= umbral */}
-      {/* Solo mostrar entidades que NO estén en ningún grupo */}
-      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && (() => {
-        // IDs de entidades que están en grupos
-        const groupedEntityIds = new Set(
-          groups.flatMap(g => g.members?.map(m => m.entity?.id) || [])
-        );
-        
-        // Filtrar entidades no agrupadas
-        return entities
-          .filter(e => e.is_visible !== false && !groupedEntityIds.has(e.id))
+      {/* Marcadores de Entidades (cuando zoom >= umbral) */}
+      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && 
+        entities
+          .filter(e => e.is_visible !== false)
           .map((entity) => (
             <EntityMarker 
               key={entity.id} 
@@ -586,8 +511,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
               onPositionChange={handlePositionChange}
               onEntityClick={() => setSelectedEntity(entity)}
             />
-          ));
-      })()
+          ))
       }
 
       {/* Indicador de carga */}
