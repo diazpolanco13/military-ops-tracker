@@ -179,7 +179,8 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
 
   // Obtener video/imagen (priorizar entidad, luego plantilla)
   const videoUrl = entity.video_url || template?.video_url || template?.image_url?.match(/\.(webm|mp4)$/i) ? template?.image_url : null;
-  const imageUrl = entity.image_thumbnail_url || entity.image_url || template?.image_url;
+  // Priorizar image_url (alta calidad) sobre thumbnail para el sidebar
+  const imageUrl = entity.image_url || template?.image_url || entity.image_thumbnail_url;
 
   return (
     <div

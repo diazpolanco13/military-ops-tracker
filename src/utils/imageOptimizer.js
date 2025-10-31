@@ -119,31 +119,29 @@ export async function createThumbnail(file, size = 200) {
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0);
         } else {
-          // Para imágenes grandes, crear miniatura cuadrada centrada
-          canvas.width = targetSize;
-          canvas.height = targetSize;
+          // Para imágenes grandes, crear miniatura manteniendo aspect ratio
+          const aspectRatio = img.width / img.height;
+          let thumbnailWidth, thumbnailHeight;
+          
+          if (aspectRatio > 1) {
+            // Imagen horizontal (como submarinos)
+            thumbnailWidth = targetSize;
+            thumbnailHeight = targetSize / aspectRatio;
+          } else {
+            // Imagen vertical
+            thumbnailHeight = targetSize;
+            thumbnailWidth = targetSize * aspectRatio;
+          }
+          
+          canvas.width = thumbnailWidth;
+          canvas.height = thumbnailHeight;
           
           const ctx = canvas.getContext('2d');
-          
-          // Calcular recorte para centrar la imagen
-          const sourceSize = Math.min(img.width, img.height);
-          const sourceX = (img.width - sourceSize) / 2;
-          const sourceY = (img.height - sourceSize) / 2;
-          
-          // Dibujar imagen centrada y recortada
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(
-            img,
-            sourceX,
-            sourceY,
-            sourceSize,
-            sourceSize,
-            0,
-            0,
-            targetSize,
-            targetSize
-          );
+          
+          // Dibujar imagen completa sin recortar
+          ctx.drawImage(img, 0, 0, thumbnailWidth, thumbnailHeight);
         }
         
         // Detectar formato para mantener transparencia

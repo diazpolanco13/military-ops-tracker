@@ -557,6 +557,8 @@ export default function TemplateAdminPanel({ onClose }) {
                         <option value="portaaviones">🛳️ Portaaviones</option>
                         <option value="submarino">🔱 Submarino</option>
                         <option value="avion">✈️ Avión</option>
+                        <option value="helicoptero">🚁 Helicóptero</option>
+                        <option value="drone">🛸 Drone</option>
                         <option value="tropas">👤 Personal</option>
                         <option value="tanque">🛡️ Vehículo</option>
                       </select>

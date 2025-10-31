@@ -131,7 +131,8 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
 
   // Obtener video/imagen (priorizar entidad, luego plantilla)
   const videoUrl = entity.video_url || template?.video_url || (template?.image_url?.match(/\.(webm|mp4)$/i) ? template?.image_url : null);
-  const imageUrl = entity.image_url || entity.image_thumbnail_url || template?.image_url || template?.icon_url;
+  // Priorizar image_url (alta calidad) sobre thumbnail para el card
+  const imageUrl = entity.image_url || template?.image_url || entity.image_thumbnail_url || template?.icon_url;
 
   // Imágenes disponibles (para carrusel) - SOLO si no hay video
   const images = [];
@@ -204,10 +205,10 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
           {/* Contenido scrolleable */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
           
-          {/* Ilustración/Imagen/Video - ADAPTADO para formato vertical 9:16 */}
-          <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 overflow-hidden" style={{ height: '180px' }}>
+          {/* Ilustración/Imagen/Video - Adaptado para imágenes horizontales */}
+          <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center" style={{ width: '100%', aspectRatio: '16/9' }}>
             {videoUrl ? (
-              // Video de fondo (prioridad sobre imagen) - ADAPTADO para 9:16
+              // Video de fondo (prioridad sobre imagen)
               <div className="relative z-10 h-full w-full bg-black flex items-center justify-center">
                 <video
                   src={videoUrl}
@@ -215,8 +216,7 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
                   loop
                   muted
                   playsInline
-                  className="h-full w-auto object-contain"
-                  style={{ maxWidth: '100%' }}
+                  className="w-full h-full object-contain"
                 />
                 {/* Overlay sutil para mejor contraste */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
@@ -226,7 +226,7 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
                 <img
                   src={images[currentImageIndex]}
                   alt={entity.name}
-                  className="w-full h-full object-contain p-2"
+                  className="w-full h-full object-contain p-3"
                 />
                 {/* Controles del carrusel */}
                 {images.length > 1 && (

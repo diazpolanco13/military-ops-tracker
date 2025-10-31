@@ -41,6 +41,11 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
   });
 
+  // 🎯 NUEVO: Mostrar/ocultar círculo de entidades
+  const [showEntityCircle, setShowEntityCircle] = useState(() => {
+    return localStorage.getItem('showEntityCircle') !== 'false'; // Default: true
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
@@ -51,6 +56,7 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('showLabelType', showLabelType);
     localStorage.setItem('showLabelClass', showLabelClass);
     localStorage.setItem('entityViewMode', entityViewMode);
+    localStorage.setItem('showEntityCircle', showEntityCircle);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
@@ -62,10 +68,11 @@ export default function SettingsPanel({ onClose }) {
         showLabelName,
         showLabelType,
         showLabelClass,
-        entityViewMode
+        entityViewMode,
+        showEntityCircle
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(8);
@@ -76,6 +83,7 @@ export default function SettingsPanel({ onClose }) {
     setShowLabelType(true);
     setShowLabelClass(false);
     setEntityViewMode('card');
+    setShowEntityCircle(true);
   };
 
   return (
@@ -185,6 +193,30 @@ export default function SettingsPanel({ onClose }) {
                 {useImages 
                   ? '✅ Mostrando imágenes de plantillas cuando estén disponibles'
                   : '❌ Mostrando solo iconos (más rápido)'}
+              </p>
+            </div>
+
+            {/* Toggle Mostrar Círculo */}
+            <div className="mb-4 pb-4 border-b border-slate-700">
+              <label className="flex items-center justify-between mb-2">
+                <span className="text-sm text-slate-300">Mostrar círculo de entidades:</span>
+                <button
+                  onClick={() => setShowEntityCircle(!showEntityCircle)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    showEntityCircle ? 'bg-green-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                      showEntityCircle ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </label>
+              <p className="text-xs text-slate-400">
+                {showEntityCircle 
+                  ? '✅ Mostrando círculo de borde en las entidades'
+                  : '❌ Solo icono sin círculo (vista minimalista)'}
               </p>
             </div>
 

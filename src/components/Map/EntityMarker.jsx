@@ -45,6 +45,10 @@ function getEntityColor(type) {
       return '#3b82f6'; // Azul
     case 'avion':
       return '#6b7280'; // Gris
+    case 'helicoptero':
+      return '#8b5cf6'; // Púrpura
+    case 'drone':
+      return '#06b6d4'; // Cyan
     case 'tropas':
       return '#22c55e'; // Verde
     case 'vehiculo':
@@ -112,6 +116,9 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
   const [showLabelType, setShowLabelType] = useState(() => localStorage.getItem('showLabelType') !== 'false');
   const [showLabelClass, setShowLabelClass] = useState(() => localStorage.getItem('showLabelClass') === 'true');
   
+  // 🎯 NUEVO: Configuración de círculo
+  const [showEntityCircle, setShowEntityCircle] = useState(() => localStorage.getItem('showEntityCircle') !== 'false');
+  
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
   
@@ -134,6 +141,9 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
       }
       if (e.detail.showLabelClass !== undefined) {
         setShowLabelClass(e.detail.showLabelClass);
+      }
+      if (e.detail.showEntityCircle !== undefined) {
+        setShowEntityCircle(e.detail.showEntityCircle);
       }
     };
 
@@ -174,17 +184,20 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
           {/* Icono/Imagen con badge */}
           <div style={{ position: 'relative' }}>
             <div
-              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
+              className={`entity-marker-icon flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 overflow-hidden ${showEntityCircle ? 'bg-military-bg-secondary/90 backdrop-blur-sm border-2' : 'border-0'}`}
               style={{ 
-                borderColor: color,
-                width: `${size}px`,
-                height: `${size}px`,
+                borderColor: showEntityCircle ? color : 'transparent',
+                width: showEntityCircle ? `${size}px` : `${size * 1.3}px`,
+                height: showEntityCircle ? `${size}px` : `${size * 1.3}px`,
               }}
             >
               <img 
                 src={imageUrl}
                 alt={entity.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
+                style={{
+                  padding: showEntityCircle ? '2px' : '0px'
+                }}
                 onError={(e) => {
                   e.target.style.display = 'none';
                 }}
@@ -266,22 +279,21 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
           {/* Icono i2 con badge de efectivos para tropas */}
           <div style={{ position: 'relative' }}>
             <div
-              className="entity-marker-icon flex items-center justify-center bg-military-bg-secondary/90 backdrop-blur-sm rounded-full border-2 shadow-lg transition-all hover:scale-110 overflow-hidden"
+              className={`entity-marker-icon flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110 overflow-hidden ${showEntityCircle ? 'bg-military-bg-secondary/90 backdrop-blur-sm border-2' : 'border-0'}`}
               style={{ 
-                borderColor: color,
-                width: `${size}px`,
-                height: `${size}px`,
+                borderColor: showEntityCircle ? color : 'transparent',
+                width: showEntityCircle ? `${size}px` : `${size * 1.3}px`,
+                height: showEntityCircle ? `${size}px` : `${size * 1.3}px`,
               }}
             >
               {iconPath ? (
                 <img 
                   src={iconPath} 
                   alt={entity.name}
-                  className="w-full h-full object-contain p-1"
+                  className="w-full h-full object-contain"
                   style={{ 
                     filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))',
-                    maxWidth: `${size * 0.75}px`,
-                    maxHeight: `${size * 0.75}px`
+                    padding: showEntityCircle ? '2px' : '0px'
                   }}
                 />
               ) : (
@@ -431,7 +443,7 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
         markerRef.current.remove();
       }
     };
-  }, [map, iconSize, useImages, template, showLabelName, showLabelType, showLabelClass, entity.quantity, entity.name, entity.type]); // Recrear cuando cambia configuración o datos clave
+  }, [map, iconSize, useImages, template, showLabelName, showLabelType, showLabelClass, showEntityCircle, entity.quantity, entity.name, entity.type]); // Recrear cuando cambia configuración o datos clave
 
   // 🔄 ACTUALIZAR POSICIÓN (cuando cambia desde Realtime)
   useEffect(() => {
@@ -488,8 +500,11 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
     if (selected) {
       // Estilos de selección
       if (iconElement) {
-        iconElement.style.borderColor = '#fbbf24'; // Amarillo
-        iconElement.style.borderWidth = '4px';
+        // Solo aplicar borde si showEntityCircle está activado
+        if (showEntityCircle) {
+          iconElement.style.borderColor = '#fbbf24'; // Amarillo
+          iconElement.style.borderWidth = '4px';
+        }
         iconElement.style.boxShadow = '0 0 20px rgba(251, 191, 36, 0.6), 0 0 40px rgba(251, 191, 36, 0.3)';
         iconElement.style.transform = 'scale(1.15)';
       }
@@ -497,13 +512,16 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
       // Estilos normales
       if (iconElement) {
         const color = getEntityColor(entity.type);
-        iconElement.style.borderColor = color;
-        iconElement.style.borderWidth = '2px';
+        // Solo aplicar borde si showEntityCircle está activado
+        if (showEntityCircle) {
+          iconElement.style.borderColor = color;
+          iconElement.style.borderWidth = '2px';
+        }
         iconElement.style.boxShadow = '';
         iconElement.style.transform = 'scale(1)';
       }
     }
-  }, [selected, entity.type]);
+  }, [selected, entity.type, showEntityCircle]);
 
   return null; // Este componente no renderiza nada en React, solo en Mapbox
 }
