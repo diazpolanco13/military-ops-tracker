@@ -7,6 +7,7 @@ import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
 import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
 import IntelligenceFeed from './components/Intelligence/IntelligenceFeed';
+import EventTimeline from './components/Timeline/EventTimeline';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -22,6 +23,7 @@ function App() {
   const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
   const [showIntelligenceFeed, setShowIntelligenceFeed] = useState(false); // Control del Intelligence Feed
+  const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -82,6 +84,8 @@ function App() {
           measurementVisible={showMeasurementTools}
           onToggleIntelligence={() => setShowIntelligenceFeed(!showIntelligenceFeed)}
           intelligenceVisible={showIntelligenceFeed}
+          onToggleTimeline={() => setShowEventTimeline(!showEventTimeline)}
+          timelineVisible={showEventTimeline}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
@@ -136,6 +140,14 @@ function App() {
           <IntelligenceFeed 
             onClose={() => setShowIntelligenceFeed(false)}
             map={mapInstance}
+          />
+        )}
+
+        {/* Timeline de Eventos - Sidebar derecho */}
+        {showEventTimeline && (
+          <EventTimeline 
+            isOpen={showEventTimeline}
+            onClose={() => setShowEventTimeline(false)}
           />
         )}
 

@@ -27,7 +27,8 @@ import {
   Radar,
   Activity,
   Ruler,
-  TrendingUp
+  TrendingUp,
+  Clock
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -59,7 +60,9 @@ export default function TopNavigationBar({
   onToggleMeasurement = () => {},
   measurementVisible = false,
   onToggleIntelligence = () => {},
-  intelligenceVisible = false
+  intelligenceVisible = false,
+  onToggleTimeline = () => {},
+  timelineVisible = false
 }) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
@@ -107,9 +110,7 @@ export default function TopNavigationBar({
         
         {/* 🏢 Logo / Inicio */}
         <div className="flex items-center gap-1 sm:gap-2 pr-2 sm:pr-4 border-r border-slate-700 flex-shrink-0">
-          <Anchor className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-400" />
-          <span className="text-white font-bold text-xs sm:text-sm hidden sm:block">Military Ops</span>
-          <span className="text-white font-bold text-xs sm:hidden">MO</span>
+          <span className="text-white font-bold text-xs sm:text-sm hidden sm:block">SAE - MONITOR</span>
         </div>
 
         {/* Separador - Oculto en móvil */}
@@ -172,6 +173,15 @@ export default function TopNavigationBar({
           onClick={onToggleIntelligence}
           tooltip="Intelligence Feed (Grok AI)"
           badge={intelUnreadCount > 0 ? intelUnreadCount : null}
+        />
+
+        {/* Timeline de Eventos */}
+        <NavButton
+          icon={<Clock className="w-5 h-5" />}
+          label="Timeline"
+          active={timelineVisible}
+          onClick={onToggleTimeline}
+          tooltip="Timeline de Eventos"
         />
 
         {/* 👥 Grupos */}
