@@ -355,7 +355,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       clusterRadius: clusterRadius // Radio configurable
     });
 
-    // Layer para clusters (círculos grandes con gradiente)
+    // Layer para clusters (círculos grandes sin borde blanco)
     map.current.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -380,9 +380,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           10,
           35  // 10+ entidades
         ],
-        'circle-stroke-width': 3,
-        'circle-stroke-color': '#ffffff',
-        'circle-opacity': 0.9
+        'circle-opacity': 0.95
+        // ❌ Sin borde blanco para diseño limpio
       }
     });
 
