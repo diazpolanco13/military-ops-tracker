@@ -355,7 +355,53 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       clusterRadius: clusterRadius // Radio configurable
     });
 
-    // Layer para clusters (círculos grandes sin borde blanco)
+    // 💓 Layer de latido exterior (pulse effect)
+    const pulseLayerId = `${clusterLayerId}-pulse`;
+    map.current.addLayer({
+      id: pulseLayerId,
+      type: 'circle',
+      source: sourceId,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          'rgba(59, 130, 246, 0)', // Azul transparente
+          5,
+          'rgba(245, 158, 11, 0)', // Naranja transparente
+          10,
+          'rgba(239, 68, 68, 0)',  // Rojo transparente
+          20,
+          'rgba(220, 38, 38, 0)'   // Rojo oscuro transparente
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          25, // Mismo tamaño base
+          5,
+          30,
+          10,
+          35,
+          20,
+          42
+        ],
+        'circle-stroke-width': 2,
+        'circle-stroke-color': [
+          'step',
+          ['get', 'point_count'],
+          '#3b82f6',
+          5,
+          '#f59e0b',
+          10,
+          '#ef4444',
+          20,
+          '#dc2626'
+        ],
+        'circle-stroke-opacity': 0.6
+      }
+    });
+
+    // 🎨 Layer principal de clusters (semi-transparente)
     map.current.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -369,7 +415,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           5,
           '#f59e0b', // Naranja: 5-9 entidades
           10,
-          '#ef4444'  // Rojo: 10+ entidades
+          '#ef4444', // Rojo: 10-19 entidades
+          20,
+          '#dc2626'  // Rojo oscuro: 20+ entidades
         ],
         'circle-radius': [
           'step',
@@ -378,14 +426,69 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           5,
           30, // 5-9 entidades
           10,
-          35  // 10+ entidades
+          35, // 10-19 entidades
+          20,
+          42  // 20+ entidades
         ],
-        'circle-opacity': 0.95
-        // ❌ Sin borde blanco para diseño limpio
+        'circle-opacity': 0.85 // Semi-transparente
       }
     });
 
-    // Layer para el número de entidades en el cluster
+    // 💓 Animación de latido
+    let pulseRadius = 0;
+    let pulseOpacity = 0.6;
+    let growing = true;
+    let animationId = null;
+
+    const animatePulse = () => {
+      if (!map.current || !map.current.getLayer(pulseLayerId)) {
+        if (animationId) cancelAnimationFrame(animationId);
+        return;
+      }
+
+      // Animación suave
+      if (growing) {
+        pulseRadius += 0.25;
+        pulseOpacity -= 0.008;
+        if (pulseRadius >= 10) {
+          growing = false;
+        }
+      } else {
+        pulseRadius -= 0.25;
+        pulseOpacity += 0.008;
+        if (pulseRadius <= 0) {
+          growing = true;
+          pulseOpacity = 0.6;
+        }
+      }
+
+      try {
+        map.current.setPaintProperty(pulseLayerId, 'circle-radius', [
+          'step',
+          ['get', 'point_count'],
+          25 + pulseRadius,
+          5,
+          30 + pulseRadius,
+          10,
+          35 + pulseRadius,
+          20,
+          42 + pulseRadius
+        ]);
+
+        map.current.setPaintProperty(pulseLayerId, 'circle-stroke-opacity', pulseOpacity);
+      } catch (err) {
+        // Layer removido, detener animación
+        if (animationId) cancelAnimationFrame(animationId);
+        return;
+      }
+
+      animationId = requestAnimationFrame(animatePulse);
+    };
+
+    // Iniciar animación
+    animatePulse();
+
+    // 🔢 Layer para el número de entidades en el cluster (mejorado)
     map.current.addLayer({
       id: clusterCountLayerId,
       type: 'symbol',
@@ -394,10 +497,23 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       layout: {
         'text-field': '{point_count_abbreviated}',
         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-        'text-size': 16
+        'text-size': [
+          'step',
+          ['get', 'point_count'],
+          16, // Tamaño base
+          5,
+          18, // Más grande para 5+
+          10,
+          20, // Más grande para 10+
+          20,
+          22  // Extra grande para 20+
+        ]
       },
       paint: {
-        'text-color': '#ffffff'
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.7)',
+        'text-halo-width': 2,
+        'text-halo-blur': 1
       }
     });
 
@@ -483,11 +599,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     map.current.on('zoom', handleZoomChange);
     handleZoomChange(); // Ejecutar inmediatamente
 
-    // Cleanup
+    // Cleanup (importante limpiar todas las capas)
     return () => {
       if (map.current) {
-        if (map.current.getLayer(clusterLayerId)) map.current.removeLayer(clusterLayerId);
         if (map.current.getLayer(clusterCountLayerId)) map.current.removeLayer(clusterCountLayerId);
+        if (map.current.getLayer(clusterLayerId)) map.current.removeLayer(clusterLayerId);
+        if (map.current.getLayer(pulseLayerId)) map.current.removeLayer(pulseLayerId);
         if (map.current.getLayer(unclusteredLayerId)) map.current.removeLayer(unclusteredLayerId);
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
       }
