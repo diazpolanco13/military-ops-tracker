@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
-import { Lock, Unlock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
 import MaritimeBoundariesLayer from './MaritimeBoundariesLayer';
 import { useEntities } from '../../hooks/useEntities';
@@ -609,22 +608,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           📍 {dragPreview.lat.toFixed(4)}°, {dragPreview.lng.toFixed(4)}°
         </div>
       )}
-
-      {/* Indicador de bloqueo - Candado esquina superior izquierda */}
-      <div 
-        className="absolute top-16 left-4 z-50 transition-all duration-300"
-        title={isLocked ? "Movimiento bloqueado - Click en Ver > Bloquear/Desbloquear para cambiar" : "Movimiento desbloqueado"}
-      >
-        {isLocked ? (
-          <div className="p-2.5 bg-orange-600/90 backdrop-blur-sm rounded-lg shadow-lg border-2 border-orange-500/50 animate-pulse">
-            <Lock className="w-5 h-5 text-white" />
-          </div>
-        ) : (
-          <div className="p-2.5 bg-green-600/90 backdrop-blur-sm rounded-lg shadow-lg border-2 border-green-500/50">
-            <Unlock className="w-5 h-5 text-white" />
-          </div>
-        )}
-      </div>
 
       {/* Dashboard de estadísticas (reemplaza contador simple) */}
       {mapLoaded && !loading && <DeploymentStats />}
