@@ -47,6 +47,8 @@ export default function TemplateAdminPanel({ onClose }) {
       beam_meters: '',
       max_speed_knots: '',
       crew_count: '',
+      embarked_personnel: '',
+      embarked_aircraft: '',
       range_km: '',
       air_wing: '',
       propulsion: '',
@@ -643,7 +645,37 @@ export default function TemplateAdminPanel({ onClose }) {
                         value={formData.crew_count}
                         onChange={(e) => setFormData({...formData, crew_count: e.target.value})}
                         className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="2600"
                       />
+                      <p className="text-xs text-slate-400 mt-1">Solo personal que opera la plataforma</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1">
+                        👥 Personal Embarcado
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.embarked_personnel}
+                        onChange={(e) => setFormData({...formData, embarked_personnel: e.target.value})}
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="1939"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Marines, tropas, personal del ala aérea</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center gap-1">
+                        ✈️ Aeronaves Embarcadas
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.embarked_aircraft}
+                        onChange={(e) => setFormData({...formData, embarked_aircraft: e.target.value})}
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                        placeholder="75"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Cantidad de aviones y helicópteros</p>
                     </div>
 
                     <div>

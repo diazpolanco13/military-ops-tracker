@@ -35,6 +35,8 @@ export default function TemplateDetailsModal({ template, onClose, onUseTemplate 
     template.beam_meters && { label: 'Manga', value: `${template.beam_meters} m` },
     template.max_speed_knots && { label: 'Velocidad Máx', value: `${template.max_speed_knots} kn` },
     template.crew_count && { label: 'Tripulación', value: `${template.crew_count.toLocaleString()} personas` },
+    template.embarked_personnel && { label: '👥 Personal Embarcado', value: `${template.embarked_personnel.toLocaleString()} personas` },
+    template.embarked_aircraft && { label: '✈️ Aeronaves', value: `${template.embarked_aircraft} unidades` },
     template.range_km && { label: 'Alcance', value: `${template.range_km.toLocaleString()} km` },
     template.thrust_hp && { label: 'Empuje', value: `${template.thrust_hp.toLocaleString()} HP` },
   ].filter(Boolean);
