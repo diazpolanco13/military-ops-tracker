@@ -1,7 +1,9 @@
-import { X, Waves, Search, Plus, Trash2, Eye, EyeOff, Check } from 'lucide-react';
+import { X, Waves, Search, Plus, Trash2, Eye, EyeOff, Check, Globe } from 'lucide-react';
 import { useState } from 'react';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { searchCountries } from '../../data/worldCountries';
+import DisputedTerritoriesPanel from './DisputedTerritoriesPanel';
+import { loadVenezuelaWithEsequibo, loadCaribbeanFromGADM } from '../../utils/loadGADMBoundaries';
 
 /**
  * 🌊 Gestor Dinámico de Límites Marítimos
@@ -22,6 +24,8 @@ export default function MaritimeBoundariesManager({ onClose }) {
   const [addSearchTerm, setAddSearchTerm] = useState(''); // Búsqueda para agregar
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [newColor, setNewColor] = useState('#3b82f6');
+  const [loadingTerrestrial, setLoadingTerrestrial] = useState(false);
+  const [terrestrialStatus, setTerrestrialStatus] = useState(null);
   
   // Buscar países en la lista mundial
   const suggestions = searchCountries(addSearchTerm, 8);
@@ -68,6 +72,35 @@ export default function MaritimeBoundariesManager({ onClose }) {
 
   const visibleCount = settings.filter(s => s.is_visible).length;
 
+  // Función para cargar Venezuela con Esequibo desde GADM
+  const handleLoadTerrestrial = async () => {
+    setLoadingTerrestrial(true);
+    setTerrestrialStatus('🇻🇪 Descargando Venezuela desde GADM (incluye Guayana Esequiba)...');
+    
+    try {
+      const result = await loadVenezuelaWithEsequibo();
+      
+      if (result.success) {
+        setTerrestrialStatus(`✅ Venezuela cargada correctamente con Guayana Esequiba incluida`);
+        
+        // También disparar evento para refrescar mapa
+        window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+          detail: { action: 'terrestrialLoaded' }
+        }));
+      } else {
+        setTerrestrialStatus(`❌ Error: ${result.error}`);
+      }
+      
+      setTimeout(() => {
+        setTerrestrialStatus(null);
+      }, 5000);
+    } catch (err) {
+      setTerrestrialStatus(`❌ Error: ${err.message}`);
+    } finally {
+      setLoadingTerrestrial(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
       <div className="relative w-full max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg shadow-xl flex flex-col">
@@ -81,6 +114,7 @@ export default function MaritimeBoundariesManager({ onClose }) {
               <p className="text-xs text-slate-400">{visibleCount} de {settings.length} países visibles</p>
             </div>
           </div>
+
           <button 
             onClick={onClose}
             className="text-slate-400 hover:text-white transition-colors"
@@ -265,6 +299,15 @@ export default function MaritimeBoundariesManager({ onClose }) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Panel de Territorios Disputados */}
+        <div className="p-4 border-t border-slate-700">
+          <DisputedTerritoriesPanel 
+            onLoadTerrestrial={handleLoadTerrestrial}
+            loadingTerrestrial={loadingTerrestrial}
+            terrestrialStatus={terrestrialStatus}
+          />
         </div>
 
         {/* Footer con info */}

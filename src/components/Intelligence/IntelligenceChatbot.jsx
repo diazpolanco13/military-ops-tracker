@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Trash2, Minimize2, Maximize2 } from 'lucide-react';
 import { useGrokChat } from '../../hooks/useGrokChat';
-import { useUnreadIntelligenceCount } from '../../hooks/useIntelligenceEvents';
 
 /**
  * 🤖 Chatbot de Inteligencia con Grok
@@ -13,7 +12,7 @@ export default function IntelligenceChatbot() {
   const [inputMessage, setInputMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null); // 🆕 Ref para auto-resize del textarea
+  const textareaRef = useRef(null); // Ref para auto-resize del textarea
   
   const {
     messages,
@@ -22,8 +21,6 @@ export default function IntelligenceChatbot() {
     sendMessage,
     clearChat
   } = useGrokChat();
-
-  const unreadCount = useUnreadIntelligenceCount();
 
   // Auto-scroll al final cuando hay mensajes nuevos
   useEffect(() => {
@@ -59,16 +56,16 @@ export default function IntelligenceChatbot() {
   // Preguntas rápidas sugeridas
   const quickQuestions = [
     {
-      text: '¿Qué hay de nuevo?',
-      query: 'Revisa los eventos del Intelligence Feed y dime qué ha pasado en las últimas horas en el Caribe'
+      text: 'Analizar región Caribe',
+      query: 'Dame un análisis estratégico de la situación militar actual en el Caribe'
     },
     {
-      text: 'Eventos urgentes',
-      query: '¿Hay eventos urgentes o pendientes que deba revisar ahora mismo?'
+      text: 'Fuerzas navales US',
+      query: 'Cuéntame sobre las principales fuerzas navales de EE.UU. en el Caribe'
     },
     {
-      text: 'Resumen de hoy',
-      query: 'Dame un resumen de toda la actividad militar detectada hoy según los eventos del Intelligence Feed'
+      text: 'Tácticas de patrullaje',
+      query: '¿Cuáles son las mejores tácticas de patrullaje marítimo para el Mar Caribe?'
     }
   ];
 
@@ -92,13 +89,6 @@ export default function IntelligenceChatbot() {
           {/* Pulso animado */}
           <div className="absolute inset-0 rounded-full bg-red-500/30 animate-ping"></div>
         </button>
-
-        {/* Badge de eventos sin leer - FUERA del botón */}
-        {unreadCount > 0 && (
-          <div className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 rounded-full flex items-center justify-center border-2 border-slate-900 animate-bounce shadow-lg">
-            <span className="text-white text-xs font-bold">{unreadCount}</span>
-          </div>
-        )}
       </div>
     );
   }
@@ -138,13 +128,6 @@ export default function IntelligenceChatbot() {
           </div>
 
           <div className="flex items-center space-x-1">
-            {/* Badge de eventos */}
-            {unreadCount > 0 && (
-              <div className="px-2 py-1 bg-red-500/20 rounded-full border border-red-500/50">
-                <span className="text-red-400 text-xs font-bold">{unreadCount}</span>
-              </div>
-            )}
-
             {/* Minimizar/Maximizar */}
             <button
               onClick={() => setIsMinimized(!isMinimized)}

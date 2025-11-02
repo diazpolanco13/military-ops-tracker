@@ -19,51 +19,12 @@ const generateUUID = () => {
 /**
  * 🤖 Hook para conversaciones con Grok AI
  * Chat conversacional sobre inteligencia militar
- * 🆕 Ahora con acceso a eventos del Intelligence Feed
  */
 export function useGrokChat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const sessionIdRef = useRef(generateUUID());
-  const [intelligenceEvents, setIntelligenceEvents] = useState([]); // 🆕 Eventos del feed
-
-  // 🆕 Cargar eventos del Intelligence Feed
-  useEffect(() => {
-    const loadIntelligenceEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('intelligence_events')
-          .select('*')
-          .order('detected_at', { ascending: false })
-          .limit(50); // Últimos 50 eventos
-
-        if (error) throw error;
-        setIntelligenceEvents(data || []);
-        console.log(`📡 Grok cargó ${data?.length || 0} eventos del Intelligence Feed`);
-      } catch (err) {
-        console.error('Error cargando eventos para Grok:', err);
-      }
-    };
-
-    loadIntelligenceEvents();
-
-    // Suscripción en tiempo real a nuevos eventos
-    const subscription = supabase
-      .channel('grok_intelligence_events')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'intelligence_events'
-      }, () => {
-        loadIntelligenceEvents(); // Recargar cuando hay cambios
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   // Mensaje de bienvenida inicial
   useEffect(() => {
@@ -71,7 +32,7 @@ export function useGrokChat() {
       {
         id: generateUUID(),
         role: 'assistant',
-        content: '👋 Hola, soy Eva, tu analista de inteligencia. Pregúntame sobre:\n\n• Actividad militar reciente en el Caribe\n• Estado de tus entidades desplegadas\n• Análisis de eventos detectados\n• Búsqueda de información específica\n\n¿En qué puedo ayudarte?',
+        content: '👋 Hola, soy Eva, tu analista de inteligencia. Pregúntame sobre:\n\n• Análisis estratégico de operaciones en el Caribe\n• Estado de tus entidades desplegadas\n• Consultas sobre tácticas militares\n• Información sobre fuerzas navales y aéreas\n\n¿En qué puedo ayudarte?',
         timestamp: new Date().toISOString()
       }
     ]);
@@ -95,68 +56,32 @@ export function useGrokChat() {
 
       setMessages(prev => [...prev, userMsg]);
 
-      // 🆕 Preparar resumen de eventos del Intelligence Feed con emojis en lugar de texto en inglés
-      const priorityEmojis = {
-        urgent: '🔴',
-        high: '🟠',
-        medium: '🟡',
-        low: '🟢'
-      };
-      
-      const recentEventsContext = intelligenceEvents.slice(0, 20).map((event, idx) => {
-        const date = new Date(event.detected_at).toLocaleDateString('es');
-        const priorityIcon = priorityEmojis[event.priority] || '🟡';
-        return `${idx + 1}. ${priorityIcon} ${event.title}
-   - Fuente: ${event.source_author || 'Desconocida'}
-   - Fecha: ${date}
-   - Estado: ${event.status}
-   ${event.source_url ? `   - Link: ${event.source_url}` : ''}
-   ${event.summary ? `   - Resumen: ${event.summary.substring(0, 150)}...` : ''}`;
-      }).join('\n\n');
-
-      const eventsStats = {
-        total: intelligenceEvents.length,
-        pending: intelligenceEvents.filter(e => e.status === 'pending').length,
-        urgent: intelligenceEvents.filter(e => e.priority === 'urgent').length,
-        twitter: intelligenceEvents.filter(e => e.source_type === 'twitter').length
-      };
-
       // Preparar contexto para Grok
       const systemContext = `Eres SAE - IA, un analista de inteligencia militar experto.
 
 CONTEXTO DEL SISTEMA:
 - Aplicación: Military Ops Tracker para región del Caribe
-- Usuario está monitoreando: 41 entidades militares (destructores, aviones, tropas)
+- Usuario está monitoreando entidades militares (destructores, aviones, tropas, vehículos)
 - Región: 10°N-25°N, 60°W-90°W (Caribe)
-- Capacidades: Radar visual, medición de distancias, análisis geoespacial
-
-📊 INTELLIGENCE FEED (últimos 50 eventos):
-- Total eventos: ${eventsStats.total}
-- Pendientes: ${eventsStats.pending}
-- Urgentes: ${eventsStats.urgent}
-- De X/Twitter: ${eventsStats.twitter}
-
-${recentEventsContext ? `🔍 EVENTOS RECIENTES DETECTADOS (Top 20):\n${recentEventsContext}` : ''}
+- Capacidades: Radar visual, medición de distancias, análisis geoespacial, timeline de eventos
 
 ${context.entities ? `ENTIDADES EN MAPA:\n${context.entities}` : ''}
 
 INSTRUCCIONES CRÍTICAS:
 - Responde en español de forma conversacional pero profesional
-- USA LA INFORMACIÓN DEL INTELLIGENCE FEED para responder preguntas sobre actividad reciente
-- Si te preguntan sobre eventos recientes, busca en la lista de eventos
+- Proporciona análisis estratégicos y tácticos
+- Ayuda al usuario con consultas sobre operaciones militares en el Caribe
 
 FORMATO DE RESPUESTAS:
-- USA EMOJIS para prioridades: 🔴 Urgente, 🟠 Alta, 🟡 Media, 🟢 Baja
 - NUNCA uses markdown (**, __, ##, etc.) - NO FUNCIONA
 - Para énfasis usa MAYÚSCULAS o emojis
 - AGREGA DOBLE SALTO DE LÍNEA entre cada punto numerado (1. evento\n\n2. evento)
-- Menciona números concretos (ej: "Hay 3 eventos urgentes sin revisar")
+- Usa emojis militares relevantes: 🚢 ✈️ 🎯 📡 ⚠️ 🗺️
 
 FORMATO DE LINKS:
-- Cuando menciones un evento con link, escribe SOLO el link completo en una línea separada
-- NO agregues texto extra al link (NO escribas "Ver fuente", solo el link)
-- Ejemplo correcto: "Evento sobre Colombia\nhttps://x.com/USNavy/status/123"
-- Ejemplo INCORRECTO: "Ver fuente: https://..." (esto crea doble icono)
+- Cuando menciones un link, escribe SOLO el link completo en una línea separada
+- NO agregues texto extra al link
+- Ejemplo correcto: "Información sobre Colombia\nhttps://ejemplo.com"
 
 ESTILO:
 - Usa emojis militares: 🚢 ✈️ 🎯 📡 ⚠️

@@ -86,7 +86,9 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
     if (!map || !boundaries || !boundaries.features || boundaries.features.length === 0) {
       // Remover capas si no hay boundaries
       console.log('⚠️ No boundaries to display, removing layers');
-      removeLayer();
+      if (map) {
+        removeLayer();
+      }
       return;
     }
 
@@ -200,8 +202,10 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
 
     // Cleanup: remover layers y event listeners
     return () => {
-      map.off('style.load', handleStyleLoad);
-      removeLayer();
+      if (map) {
+        map.off('style.load', handleStyleLoad);
+        removeLayer();
+      }
     };
   }, [map, boundaries, colorMap]);
 

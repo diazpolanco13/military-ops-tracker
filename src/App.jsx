@@ -6,13 +6,16 @@ import RadarOverlay from './components/Radar/RadarOverlay';
 import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
 import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
-import IntelligenceFeed from './components/Intelligence/IntelligenceFeed';
 import EventTimeline from './components/Timeline/EventTimeline';
+import SearchBar from './components/Search/SearchBar';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
+// Importar utils para exponer en window
+import './utils/loadGADMBoundaries';
+import './utils/loadTerrestrialBoundaries';
 
 function App() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -22,8 +25,8 @@ function App() {
   const [showRadar, setShowRadar] = useState(false); // Control del radar
   const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
-  const [showIntelligenceFeed, setShowIntelligenceFeed] = useState(false); // Control del Intelligence Feed
   const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
+  const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -82,10 +85,10 @@ function App() {
           radarCompact={radarCompact}
           onToggleMeasurement={() => setShowMeasurementTools(!showMeasurementTools)}
           measurementVisible={showMeasurementTools}
-          onToggleIntelligence={() => setShowIntelligenceFeed(!showIntelligenceFeed)}
-          intelligenceVisible={showIntelligenceFeed}
           onToggleTimeline={() => setShowEventTimeline(!showEventTimeline)}
           timelineVisible={showEventTimeline}
+          onToggleSearch={() => setShowSearch(!showSearch)}
+          searchVisible={showSearch}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}
@@ -135,13 +138,8 @@ function App() {
           <MeasurementTools map={mapInstance} />
         )}
 
-        {/* Intelligence Feed (Drawer derecho) */}
-        {showIntelligenceFeed && (
-          <IntelligenceFeed 
-            onClose={() => setShowIntelligenceFeed(false)}
-            map={mapInstance}
-          />
-        )}
+        {/* Barra de Búsqueda - Siempre visible (controlable desde Ver) */}
+        <SearchBar map={mapInstance} isVisible={showSearch} />
 
         {/* Timeline de Eventos - Sidebar derecho */}
         {showEventTimeline && (

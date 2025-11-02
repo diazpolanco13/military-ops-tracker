@@ -34,7 +34,6 @@ import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
-import { useUnreadIntelligenceCount } from '../../hooks/useIntelligenceEvents';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
@@ -55,10 +54,10 @@ export default function TopNavigationBar({
   radarCompact = true,
   onToggleMeasurement = () => {},
   measurementVisible = false,
-  onToggleIntelligence = () => {},
-  intelligenceVisible = false,
   onToggleTimeline = () => {},
-  timelineVisible = false
+  timelineVisible = false,
+  onToggleSearch = () => {},
+  searchVisible = true
 }) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
@@ -70,7 +69,6 @@ export default function TopNavigationBar({
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
-  const intelUnreadCount = useUnreadIntelligenceCount();
 
   // 🌊 Escuchar evento para abrir panel de límites marítimos
   useEffect(() => {
@@ -150,16 +148,6 @@ export default function TopNavigationBar({
           tooltip="Zonas de Interés"
         />
 
-        {/* 📡 Intelligence */}
-        <NavButton
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Intel"
-          active={intelligenceVisible}
-          onClick={onToggleIntelligence}
-          tooltip="Intelligence Feed (Grok AI)"
-          badge={intelUnreadCount > 0 ? intelUnreadCount : null}
-        />
-
         {/* Timeline de Eventos */}
         <NavButton
           icon={<Clock className="w-5 h-5" />}
@@ -171,15 +159,6 @@ export default function TopNavigationBar({
 
         {/* Separador - Oculto en móvil */}
         <div className="h-8 w-px bg-slate-700 hidden md:block" />
-
-        {/* 🔍 Búsqueda */}
-        <NavButton
-          icon={<Search className="w-5 h-5" />}
-          label="Buscar"
-          active={activePanel === 'search'}
-          onClick={() => togglePanel('search')}
-          tooltip="Búsqueda Avanzada"
-        />
 
         {/* Spacer - Empuja configuración a la derecha */}
         <div className="flex-1"></div>
@@ -235,6 +214,8 @@ export default function TopNavigationBar({
                     radarCompact={radarCompact}
                     onToggleMeasurement={onToggleMeasurement}
                     measurementVisible={measurementVisible}
+                    onToggleSearch={onToggleSearch}
+                    searchVisible={searchVisible}
                   />
                 ) : activePanel === 'zones' ? (
                   <ZonesPanel 
@@ -316,7 +297,9 @@ function ViewPanel({
   onToggleRadarMode = () => {}, 
   radarCompact = true,
   onToggleMeasurement = () => {},
-  measurementVisible = false
+  measurementVisible = false,
+  onToggleSearch = () => {},
+  searchVisible = true
 }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
@@ -348,6 +331,12 @@ function ViewPanel({
     // Acción de bloqueo/desbloqueo
     if (action === 'toggle-lock') {
       toggleLock();
+      return; // No cerrar el panel
+    }
+
+    // Acción de toggle de búsqueda
+    if (action === 'toggle-search') {
+      onToggleSearch();
       return; // No cerrar el panel
     }
 
@@ -436,6 +425,16 @@ function ViewPanel({
       color: isLocked ? 'bg-orange-900/30' : 'bg-green-900/30',
       hoverColor: isLocked ? 'hover:bg-orange-900/50' : 'hover:bg-green-900/50',
       textColor: isLocked ? 'text-orange-400' : 'text-green-400',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-search',
+      title: searchVisible ? 'Ocultar Búsqueda' : 'Mostrar Búsqueda',
+      description: searchVisible ? 'Ocultar barra de búsqueda' : 'Mostrar barra de búsqueda de entidades',
+      icon: Search,
+      color: searchVisible ? 'bg-blue-900/30' : 'bg-slate-700',
+      hoverColor: searchVisible ? 'hover:bg-blue-900/50' : 'hover:bg-slate-600',
+      textColor: searchVisible ? 'text-blue-400' : 'text-slate-300',
       requiresSelection: false,
     },
     {

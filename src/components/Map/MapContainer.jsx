@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
-import { Lock } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 import EntityMarker from './EntityMarker';
 import MaritimeBoundariesLayer from './MaritimeBoundariesLayer';
 import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
-import { useMaritimeBoundaries } from '../../hooks/useMaritimeBoundaries';
+import { useMaritimeBoundariesCached } from '../../hooks/useMaritimeBoundariesCached';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
@@ -45,15 +45,33 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   // 🌊 Obtener configuración de límites marítimos desde BD
   const { showBoundaries } = useMaritimeBoundariesContext();
-  const { settings, loading: loadingMaritime } = useMaritimeSettings();
+  const { settings, loading: loadingMaritime, updateTrigger, refetch: refetchSettings } = useMaritimeSettings();
+
+  // Escuchar cambios en maritime settings para refrescar
+  useEffect(() => {
+    const handleSettingsChange = (e) => {
+      console.log('🔔 Maritime settings changed event:', e.detail);
+      refetchSettings(); // Forzar refetch
+    };
+
+    window.addEventListener('maritimeSettingsChanged', handleSettingsChange);
+    return () => window.removeEventListener('maritimeSettingsChanged', handleSettingsChange);
+  }, [refetchSettings]);
   
-  // 🎯 Memorizar códigos de países visibles (solo recalcular cuando cambien settings)
+  // 🎯 Memorizar códigos de países visibles (recalcular cuando cambien settings o updateTrigger)
   const visibleCountryCodes = useMemo(() => {
     if (!settings || loadingMaritime) return [];
-    return settings.filter(s => s.is_visible).map(s => s.country_code);
-  }, [settings, loadingMaritime]);
+    const codes = settings.filter(s => s.is_visible).map(s => s.country_code);
+    console.log('🗺️ Países visibles solicitados:', {
+      total: codes.length,
+      codes: codes,
+      updateTrigger: updateTrigger,
+      allSettings: settings.map(s => ({ code: s.country_code, name: s.country_name, visible: s.is_visible }))
+    });
+    return codes;
+  }, [settings, loadingMaritime, updateTrigger]);
   
-  // 🎨 Memorizar mapa de colores (solo recalcular cuando cambien settings)
+  // 🎨 Memorizar mapa de colores (recalcular cuando cambien settings o updateTrigger)
   const colorMap = useMemo(() => {
     if (!settings || loadingMaritime) return {};
     const colors = {};
@@ -61,10 +79,17 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       colors[s.country_code] = s.color;
     });
     return colors;
-  }, [settings, loadingMaritime]);
+  }, [settings, loadingMaritime, updateTrigger]);
 
-  // 🌊 Hook para obtener límites marítimos (solo cuando cambien los códigos)
-  const { boundaries } = useMaritimeBoundaries(visibleCountryCodes, showBoundaries);
+  // 🌊 Hook para obtener límites marítimos con caché en Supabase (RÁPIDO)
+  const { boundaries, loading: boundariesLoading, cacheHit } = useMaritimeBoundariesCached(visibleCountryCodes, showBoundaries);
+  
+  // Log de rendimiento del caché
+  useEffect(() => {
+    if (boundaries && cacheHit) {
+      console.log('⚡ CACHE HIT - Límites marítimos cargados desde Supabase (instantáneo)');
+    }
+  }, [boundaries, cacheHit]);
 
   // 📡 Obtener entidades desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
@@ -544,13 +569,21 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         </div>
       )}
 
-      {/* Indicador de bloqueo */}
-      {isLocked && (
-        <div className="absolute top-20 right-4 bg-orange-600/90 backdrop-blur-sm text-white px-3 py-2 rounded-md shadow-lg text-sm flex items-center gap-2 animate-pulse">
-          <Lock className="w-4 h-4" />
-          <span className="font-semibold">Movimiento Bloqueado</span>
-        </div>
-      )}
+      {/* Indicador de bloqueo - Candado esquina superior izquierda */}
+      <div 
+        className="absolute top-16 left-4 z-50 transition-all duration-300"
+        title={isLocked ? "Movimiento bloqueado - Click en Ver > Bloquear/Desbloquear para cambiar" : "Movimiento desbloqueado"}
+      >
+        {isLocked ? (
+          <div className="p-2.5 bg-orange-600/90 backdrop-blur-sm rounded-lg shadow-lg border-2 border-orange-500/50 animate-pulse">
+            <Lock className="w-5 h-5 text-white" />
+          </div>
+        ) : (
+          <div className="p-2.5 bg-green-600/90 backdrop-blur-sm rounded-lg shadow-lg border-2 border-green-500/50">
+            <Unlock className="w-5 h-5 text-white" />
+          </div>
+        )}
+      </div>
 
       {/* Dashboard de estadísticas (reemplaza contador simple) */}
       {mapLoaded && !loading && <DeploymentStats />}

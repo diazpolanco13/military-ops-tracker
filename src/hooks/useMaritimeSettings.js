@@ -9,6 +9,7 @@ export function useMaritimeSettings() {
   const [settings, setSettings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updateTrigger, setUpdateTrigger] = useState(0); // Para forzar re-renders
 
   // Fetch inicial
   useEffect(() => {
@@ -59,6 +60,14 @@ export function useMaritimeSettings() {
         console.log('📊 Settings updated:', { prev: prev.length, new: updated.length });
         return updated;
       });
+
+      // Forzar trigger para re-render
+      setUpdateTrigger(prev => prev + 1);
+
+      // Disparar evento personalizado
+      window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+        detail: { country: countryCode, visible: true, action: 'added' }
+      }));
       
       return { success: true, data };
     } catch (err) {
@@ -84,10 +93,29 @@ export function useMaritimeSettings() {
 
       if (error) throw error;
 
-      // Actualizar estado local
-      setSettings(prev => prev.map(s => 
-        s.country_code === countryCode ? data : s
-      ));
+      // Actualizar estado local - CREAR NUEVO ARRAY para forzar re-render
+      setSettings(prev => {
+        const updated = prev.map(s => 
+          s.country_code === countryCode ? { ...data } : s
+        );
+        
+        console.log('🔄 Settings updated after toggle:', {
+          country: countryCode,
+          newVisibility: data.is_visible,
+          visibleCount: updated.filter(s => s.is_visible).length,
+          visibleCodes: updated.filter(s => s.is_visible).map(s => s.country_code)
+        });
+        
+        return updated;
+      });
+
+      // Forzar trigger para que los componentes que dependen se re-rendericen
+      setUpdateTrigger(prev => prev + 1);
+
+      // Disparar evento personalizado para que MapContainer se entere
+      window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+        detail: { country: countryCode, visible: data.is_visible }
+      }));
 
       return { success: true, data };
     } catch (err) {
@@ -115,6 +143,15 @@ export function useMaritimeSettings() {
         s.country_code === countryCode ? data : s
       ));
 
+      // Forzar trigger
+      setUpdateTrigger(prev => prev + 1);
+
+      // Disparar evento
+      window.dispatchEvent(new Event('maritimeColorsChanged'));
+      window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+        detail: { country: countryCode, action: 'colorChanged' }
+      }));
+
       return { success: true, data };
     } catch (err) {
       console.error('Error updating color:', err);
@@ -136,6 +173,14 @@ export function useMaritimeSettings() {
 
       // Actualizar estado local
       setSettings(prev => prev.filter(s => s.country_code !== countryCode));
+
+      // Forzar trigger
+      setUpdateTrigger(prev => prev + 1);
+
+      // Disparar evento
+      window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+        detail: { country: countryCode, action: 'removed' }
+      }));
 
       return { success: true };
     } catch (err) {
@@ -173,6 +218,7 @@ export function useMaritimeSettings() {
     settings,
     loading,
     error,
+    updateTrigger, // Para que los componentes puedan detectar cambios
     addCountry,
     toggleVisibility,
     updateColor,

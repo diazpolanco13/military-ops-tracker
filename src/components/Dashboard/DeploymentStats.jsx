@@ -1,62 +1,127 @@
-import { Ship, Plane, Users, Anchor, Target, Activity } from 'lucide-react';
+import { Ship, Plane, Users, Anchor, Target, Activity, Truck, Package } from 'lucide-react';
 import { useEntities } from '../../hooks/useEntities';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 /**
- * 📊 Dashboard de Estadísticas de Despliegue
- * Muestra cantidad de unidades y personal por tipo
+ * 📊 Dashboard de Estadísticas de Despliegue - DINÁMICO
+ * Contabiliza todas las entidades presentes usando el campo quantity
+ * Se adapta automáticamente a cualquier tipo de entidad
  */
 export default function DeploymentStats() {
   const { entities } = useEntities();
-  const [stats, setStats] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  useEffect(() => {
-    if (!entities || entities.length === 0) return;
+  // Mapeo de iconos por tipo (se adapta dinámicamente)
+  const iconMap = {
+    destructor: Ship,
+    fragata: Ship,
+    portaaviones: Anchor,
+    submarino: Target,
+    patrullero: Ship,
+    avion: Plane,
+    caza: Plane,
+    helicoptero: Plane,
+    drone: Plane,
+    tropas: Users,
+    insurgente: Users,
+    vehiculo: Truck,
+    tanque: Truck,
+  };
+
+  // Mapeo de colores por tipo
+  const colorMap = {
+    destructor: '#ef4444',
+    fragata: '#3b82f6',
+    portaaviones: '#f59e0b',
+    submarino: '#8b5cf6',
+    patrullero: '#06b6d4',
+    avion: '#6b7280',
+    caza: '#dc2626',
+    helicoptero: '#10b981',
+    drone: '#a855f7',
+    tropas: '#22c55e',
+    insurgente: '#f87171',
+    vehiculo: '#eab308',
+    tanque: '#fb923c',
+  };
+
+  // Calcular estadísticas dinámicamente
+  const stats = useMemo(() => {
+    if (!entities || entities.length === 0) return null;
 
     // Filtrar solo entidades visibles y no archivadas
     const activeEntities = entities.filter(e => e.is_visible !== false && !e.archived_at);
 
-    // Calcular estadísticas por tipo
-    const byType = {
-      destructor: { count: 0, personnel: 0, icon: Ship, color: '#ef4444', label: 'Buques' },
-      fragata: { count: 0, personnel: 0, icon: Anchor, color: '#3b82f6', label: 'Fragatas' },
-      avion: { count: 0, personnel: 0, icon: Plane, color: '#6b7280', label: 'Aeronaves' },
-      tropas: { count: 0, personnel: 0, icon: Users, color: '#22c55e', label: 'Tropas' },
-      submarino: { count: 0, personnel: 0, icon: Target, color: '#8b5cf6', label: 'Submarinos' },
-    };
-
+    // Agrupar por tipo DINÁMICAMENTE
+    const byType = {};
+    
     activeEntities.forEach(entity => {
-      if (byType[entity.type]) {
-        byType[entity.type].count++;
-        byType[entity.type].personnel += entity.crew_count || 0;
+      const type = entity.type;
+      if (!type) return;
+
+      // Inicializar el tipo si no existe
+      if (!byType[type]) {
+        byType[type] = {
+          count: 0,
+          totalUnits: 0, // Total considerando quantity
+          personnel: 0,
+          icon: iconMap[type] || Package,
+          color: colorMap[type] || '#64748b',
+          label: type.charAt(0).toUpperCase() + type.slice(1) // Capitalizar
+        };
+      }
+
+      // Contar marcadores
+      byType[type].count++;
+      
+      // Sumar unidades reales (quantity o 1 si no existe)
+      const quantity = entity.quantity || 1;
+      byType[type].totalUnits += quantity;
+      
+      // Sumar personal según el tipo de entidad
+      const crewCount = entity.crew_count || 0;
+      
+      if (type === 'tropas' || type === 'insurgente') {
+        // Para tropas: quantity YA representa los efectivos
+        // Solo usar crew_count si existe y quantity no
+        if (quantity > 1) {
+          byType[type].personnel += quantity;
+        } else {
+          byType[type].personnel += crewCount;
+        }
+      } else {
+        // Para vehículos/barcos/aviones: crew_count × quantity
+        byType[type].personnel += crewCount * quantity;
       }
     });
 
-    const totalUnits = activeEntities.length;
+    // Calcular totales
+    const totalMarkers = activeEntities.length;
+    const totalUnits = Object.values(byType).reduce((sum, t) => sum + t.totalUnits, 0);
     const totalPersonnel = Object.values(byType).reduce((sum, t) => sum + t.personnel, 0);
 
-    setStats({
+    return {
       byType,
+      totalMarkers,
       totalUnits,
       totalPersonnel
-    });
+    };
   }, [entities]);
 
   if (!stats) return null;
 
   return (
     <>
-      {/* Badge compacto (siempre visible) */}
+      {/* Badge compacto (siempre visible) - Centrado en la parte inferior */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="absolute bottom-4 right-4 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl transition-all hover:scale-105 hover:border-blue-500"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl transition-all hover:scale-105 hover:border-blue-500"
       >
         <div className="px-4 py-2 flex items-center gap-3">
           <Activity className="w-5 h-5 text-blue-400" />
           <div className="text-left">
             <div className="text-white font-bold text-sm">
-              {stats.totalUnits} unidades activas
+              {stats.totalMarkers} marcadores • {stats.totalUnits} unidades
             </div>
             <div className="text-slate-400 text-xs">
               {stats.totalPersonnel.toLocaleString()} efectivos
@@ -65,9 +130,9 @@ export default function DeploymentStats() {
         </div>
       </button>
 
-      {/* Panel expandido (al hacer click) */}
+      {/* Panel expandido (al hacer click) - Centrado en la parte inferior */}
       {isExpanded && (
-        <div className="absolute bottom-20 right-4 w-96 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl animate-in slide-in-from-bottom duration-300">
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl animate-in slide-in-from-bottom duration-300">
           
           {/* Header */}
           <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-900">
@@ -79,7 +144,11 @@ export default function DeploymentStats() {
           </div>
 
           {/* Estadísticas Generales */}
-          <div className="p-4 grid grid-cols-2 gap-3 border-b border-slate-800">
+          <div className="p-4 grid grid-cols-3 gap-3 border-b border-slate-800">
+            <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 text-center">
+              <div className="text-2xl font-bold text-white">{stats.totalMarkers}</div>
+              <div className="text-xs text-slate-400 font-semibold">MARCADORES</div>
+            </div>
             <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-900/30 text-center">
               <div className="text-2xl font-bold text-white">{stats.totalUnits}</div>
               <div className="text-xs text-blue-400 font-semibold">UNIDADES</div>
@@ -97,8 +166,8 @@ export default function DeploymentStats() {
             </h4>
             
             {Object.entries(stats.byType)
-              .filter(([_, data]) => data.count > 0)
-              .sort((a, b) => b[1].count - a[1].count)
+              .filter(([_, data]) => data.totalUnits > 0)
+              .sort((a, b) => b[1].totalUnits - a[1].totalUnits)
               .map(([type, data]) => {
                 const Icon = data.icon;
                 return (
@@ -123,8 +192,10 @@ export default function DeploymentStats() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white font-bold text-xl">{data.count}</div>
-                      <div className="text-slate-500 text-xs">unidades</div>
+                      <div className="text-white font-bold text-xl">{data.totalUnits}</div>
+                      <div className="text-slate-500 text-xs">
+                        {data.count > 1 ? `${data.count} grupos` : 'unidades'}
+                      </div>
                     </div>
                   </div>
                 );
