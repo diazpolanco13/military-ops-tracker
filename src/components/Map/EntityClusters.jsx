@@ -103,7 +103,7 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
       }
     });
 
-    // 🎨 Layer principal de clusters (círculos sólidos)
+    // 🎨 Layer principal de clusters (círculos sólidos, sin borde)
     map.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -132,9 +132,8 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
           20,
           40  // 20+ entidades
         ],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': 'rgba(255, 255, 255, 0.8)',
         'circle-opacity': 0.95
+        // ❌ Sin stroke (borde) para que solo se vea el círculo de color
       }
     });
 
