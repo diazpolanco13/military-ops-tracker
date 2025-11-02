@@ -155,14 +155,14 @@ export default function EventTimeline({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Sidebar derecho */}
-      <div className="fixed right-0 top-0 h-full w-[500px] bg-slate-900 border-l border-slate-700 shadow-2xl z-[40] flex flex-col" style={{ paddingTop: '56px' }}>
+      {/* Sidebar derecho - Responsive */}
+      <div className="fixed right-0 top-0 h-full w-full sm:w-[450px] md:w-[500px] lg:w-[550px] bg-slate-900 border-l border-slate-700 shadow-2xl z-[40] flex flex-col" style={{ paddingTop: '56px' }}>
         {/* Header */}
-        <div className="px-4 py-4 border-b border-slate-700 bg-gradient-to-r from-slate-800 to-slate-900 space-y-3">
+        <div className="px-3 sm:px-4 py-3 sm:py-4 border-b border-slate-700 bg-gradient-to-r from-slate-800 to-slate-900 space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-400" />
-              <h2 className="text-lg font-bold text-white">Timeline de Eventos</h2>
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+              <h2 className="text-base sm:text-lg font-bold text-white">Timeline de Eventos</h2>
             </div>
             <button
               onClick={onClose}
@@ -174,13 +174,13 @@ export default function EventTimeline({ isOpen, onClose }) {
 
           {/* Búsqueda */}
           <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+            <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400" size={14} />
             <input
               type="text"
               placeholder="Buscar eventos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-1.5 sm:py-2 bg-slate-800 border border-slate-600 rounded-lg text-xs sm:text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -273,10 +273,10 @@ export default function EventTimeline({ isOpen, onClose }) {
           </div>
 
           {/* Filtros */}
-          <div className="flex gap-1 overflow-x-auto scrollbar-thin">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-thin pb-1">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-2.5 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-medium whitespace-nowrap transition-colors ${
                 filterType === 'all' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -284,7 +284,7 @@ export default function EventTimeline({ isOpen, onClose }) {
             </button>
             <button
               onClick={() => setFilterType('evento')}
-              className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-2.5 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-medium whitespace-nowrap transition-colors ${
                 filterType === 'evento' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -292,7 +292,7 @@ export default function EventTimeline({ isOpen, onClose }) {
             </button>
             <button
               onClick={() => setFilterType('noticia')}
-              className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-2.5 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-medium whitespace-nowrap transition-colors ${
                 filterType === 'noticia' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -300,7 +300,7 @@ export default function EventTimeline({ isOpen, onClose }) {
             </button>
             <button
               onClick={() => setFilterType('informe')}
-              className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-2.5 sm:px-3 py-1 rounded text-[11px] sm:text-xs font-medium whitespace-nowrap transition-colors ${
                 filterType === 'informe' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
@@ -310,19 +310,19 @@ export default function EventTimeline({ isOpen, onClose }) {
         </div>
 
         {/* Timeline vertical */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 no-scrollbar">
           {loading && (
-            <div className="text-center text-slate-400 py-8">
-              <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-              Cargando eventos...
+            <div className="text-center text-slate-400 py-6 sm:py-8">
+              <div className="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+              <p className="text-xs sm:text-sm">Cargando eventos...</p>
             </div>
           )}
 
           {!loading && filteredEvents.length === 0 && (
-            <div className="text-center text-slate-400 py-12">
-              <Clock size={48} className="mx-auto mb-3 text-slate-600" />
-              <p className="text-sm font-semibold mb-1">Sin eventos</p>
-              <p className="text-xs text-slate-500">
+            <div className="text-center text-slate-400 py-8 sm:py-12">
+              <Clock size={40} className="sm:w-12 sm:h-12 mx-auto mb-3 text-slate-600" />
+              <p className="text-xs sm:text-sm font-semibold mb-1">Sin eventos</p>
+              <p className="text-[10px] sm:text-xs text-slate-500 px-4">
                 {searchTerm || filterType !== 'all' 
                   ? 'No se encontraron eventos con estos filtros'
                   : 'Agrega tu primer evento al timeline'}
@@ -333,18 +333,18 @@ export default function EventTimeline({ isOpen, onClose }) {
           {!loading && Object.entries(groupedEvents).map(([date, dayEvents]) => (
             <div key={date}>
               {/* Fecha del grupo */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
                 <div className="h-px flex-1 bg-slate-700"></div>
-                <div className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full">
-                  <span className="text-xs font-semibold text-slate-300">{date}</span>
+                <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-slate-800 border border-slate-700 rounded-full">
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-300">{date}</span>
                 </div>
                 <div className="h-px flex-1 bg-slate-700"></div>
               </div>
 
               {/* Eventos del día */}
-              <div className="space-y-3 relative pl-6">
+              <div className="space-y-2 sm:space-y-3 relative pl-4 sm:pl-6">
                 {/* Línea vertical del timeline */}
-                <div className="absolute left-2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-slate-700 to-transparent"></div>
+                <div className="absolute left-1.5 sm:left-2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 via-slate-700 to-transparent"></div>
 
                 {dayEvents.map((event, index) => (
                   <EventCard
@@ -361,12 +361,12 @@ export default function EventTimeline({ isOpen, onClose }) {
         </div>
 
         {/* Botón agregar evento */}
-        <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+        <div className="p-3 sm:p-4 border-t border-slate-700 bg-slate-800/50">
           <button
             onClick={handleAddEvent}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+            className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
           >
-            <Plus size={18} />
+            <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span>Agregar Evento</span>
           </button>
         </div>
