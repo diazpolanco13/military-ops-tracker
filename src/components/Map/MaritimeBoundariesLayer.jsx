@@ -11,7 +11,7 @@ import { COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
  * @param {object} boundaries - GeoJSON de límites marítimos
  * @param {boolean} visible - Si la capa es visible
  */
-export default function MaritimeBoundariesLayer({ map, boundaries, visible = true, colorMap = COUNTRY_COLORS }) {
+export default function MaritimeBoundariesLayer({ map, boundaries, visible = true, colorMap = COUNTRY_COLORS, opacityMap = {} }) {
   const layersRef = useRef({
     source: 'maritime-boundaries',
     fillLayer: 'maritime-boundaries-fill',
@@ -19,13 +19,19 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
   });
 
   // 🎨 Estilos por país (usando colorMap dinámico desde BD)
-  const getLayerStyles = () => {
+  const getLayerStyles = (opacityMap = {}) => {
     const colors = colorMap || COUNTRY_COLORS;
     
     // Crear array de match para Mapbox expression
     const colorMatches = [];
     Object.entries(colors).forEach(([iso3, color]) => {
       colorMatches.push(iso3, color);
+    });
+
+    // Crear array de match para opacidades
+    const opacityMatches = [];
+    Object.entries(opacityMap).forEach(([iso3, opacity]) => {
+      opacityMatches.push(iso3, opacity);
     });
 
     return {
@@ -36,7 +42,12 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
           ...colorMatches,
           '#64748b' // Gris por defecto
         ],
-        'fill-opacity': 0.2,
+        'fill-opacity': opacityMatches.length > 0 ? [
+          'match',
+          ['get', 'iso_sov1'],
+          ...opacityMatches,
+          0.2 // Opacidad por defecto
+        ] : 0.2,
       },
       line: {
         'line-color': [
@@ -51,28 +62,29 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
     };
   };
 
-  // 🎨 Escuchar cambios de color
+  // 🎨 Escuchar cambios de color y opacidad
   useEffect(() => {
     const handleColorChange = () => {
       if (!map) return;
       
       const { fillLayer, lineLayer } = layersRef.current;
-      const styles = getLayerStyles();
+      const styles = getLayerStyles(opacityMap);
       
       // Actualizar paint properties
       if (map.getLayer(fillLayer)) {
         map.setPaintProperty(fillLayer, 'fill-color', styles.fill['fill-color']);
+        map.setPaintProperty(fillLayer, 'fill-opacity', styles.fill['fill-opacity']);
       }
       if (map.getLayer(lineLayer)) {
         map.setPaintProperty(lineLayer, 'line-color', styles.line['line-color']);
       }
       
-      console.log('🎨 Maritime colors updated');
+      console.log('🎨 Maritime colors/opacity updated');
     };
 
     window.addEventListener('maritimeColorsChanged', handleColorChange);
     return () => window.removeEventListener('maritimeColorsChanged', handleColorChange);
-  }, [map]);
+  }, [map, opacityMap]);
 
   // 🗺️ Agregar/actualizar capa cuando cambien los límites
   useEffect(() => {
@@ -137,7 +149,7 @@ export default function MaritimeBoundariesLayer({ map, boundaries, visible = tru
 
       console.log('✅ Source added:', source);
 
-      const styles = getLayerStyles();
+      const styles = getLayerStyles(opacityMap);
 
       // Agregar capa de relleno (polígonos)
       map.addLayer({

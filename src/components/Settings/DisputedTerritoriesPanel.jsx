@@ -34,33 +34,13 @@ export default function DisputedTerritoriesPanel({ onLoadTerrestrial, loadingTer
             </div>
 
             <div className="flex items-start gap-2 text-slate-400">
-              <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-cyan-400" />
-              <div>
-                <p className="mb-1">
-                  Las zonas disputadas se muestran con <strong className="text-red-400">líneas punteadas</strong> y <strong className="text-red-400">mayor opacidad</strong> para distinguirlas de límites establecidos.
+              <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-400" />
+              <div className="text-xs">
+                <p className="text-amber-300">
+                  ⚠️ <strong>Limitación:</strong> La zona en disputa territorial (Guayana Esequiba) no puede representarse correctamente porque la API de Marine Regions la asigna a Guyana según reconocimiento internacional.
                 </p>
-                <p className="mb-2">
-                  La asignación visual se configura automáticamente según la tabla de territorios disputados en la base de datos.
-                </p>
-
-                <div className="mt-3 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg">
-                  <p className="text-xs text-amber-300 mb-2 font-semibold">
-                    ⚠️ Limitación Actual:
-                  </p>
-                  <p className="text-xs text-slate-300 mb-2">
-                    Por ahora, el sistema muestra:
-                  </p>
-                  <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside ml-2">
-                    <li>✅ Zona MARÍTIMA de Esequibo (ya reasignada a Venezuela)</li>
-                    <li>❌ Falta polígono TERRESTRE con Esequibo</li>
-                  </ul>
-                  <p className="text-xs text-slate-400 mt-2">
-                    <strong>Solución temporal:</strong> Elimina Guyana del gestor para que solo Venezuela aparezca. La zona marítima en reclamación ya está correctamente asignada a Venezuela en la base de datos.
-                  </p>
-                </div>
-
-                <p className="mt-2 text-xs text-slate-500">
-                  Los límites terrestres de GADM (que incluyen Guayana Esequiba) requieren descarga manual debido a restricciones CORS. Por ahora, el sistema respeta el reclamo marítimo venezolano.
+                <p className="text-slate-400 mt-2">
+                  <strong>Recomendación:</strong> Elimina Guyana del gestor y trabaja solo con Venezuela para evitar conflictos visuales.
                 </p>
               </div>
             </div>

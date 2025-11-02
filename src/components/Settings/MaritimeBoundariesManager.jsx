@@ -15,7 +15,8 @@ export default function MaritimeBoundariesManager({ onClose }) {
     loading, 
     addCountry, 
     toggleVisibility, 
-    updateColor, 
+    updateColor,
+    updateOpacity,
     removeCountry,
     refetch
   } = useMaritimeSettings();
@@ -281,19 +282,38 @@ export default function MaritimeBoundariesManager({ onClose }) {
                     </div>
                   </div>
 
-                  {/* Selector de color */}
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-full h-8 rounded border-2 border-white/20"
-                      style={{ backgroundColor: country.color }}
-                    />
-                    <input
-                      type="color"
-                      value={country.color}
-                      onChange={(e) => updateColor(country.country_code, e.target.value)}
-                      className="w-12 h-8 rounded cursor-pointer"
-                      title="Cambiar color"
-                    />
+                  {/* Selector de color y opacidad */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-full h-8 rounded border-2 border-white/20"
+                        style={{ backgroundColor: country.color, opacity: country.opacity || 0.2 }}
+                      />
+                      <input
+                        type="color"
+                        value={country.color}
+                        onChange={(e) => updateColor(country.country_code, e.target.value)}
+                        className="w-12 h-8 rounded cursor-pointer"
+                        title="Cambiar color"
+                      />
+                    </div>
+
+                    {/* Slider de opacidad */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400 w-14 shrink-0">Opacidad:</span>
+                      <input
+                        type="range"
+                        min="0.05"
+                        max="0.6"
+                        step="0.05"
+                        value={country.opacity || 0.2}
+                        onChange={(e) => updateOpacity(country.country_code, parseFloat(e.target.value))}
+                        className="flex-1 h-1.5 bg-slate-700 rounded-lg cursor-pointer accent-cyan-500"
+                      />
+                      <span className="text-[10px] text-cyan-400 w-8 text-right font-mono">
+                        {Math.round((country.opacity || 0.2) * 100)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -160,6 +160,41 @@ export function useMaritimeSettings() {
   }
 
   /**
+   * Actualizar opacidad de país
+   */
+  async function updateOpacity(countryCode, newOpacity) {
+    try {
+      const { data, error } = await supabase
+        .from('maritime_boundaries_settings')
+        .update({ opacity: newOpacity })
+        .eq('country_code', countryCode)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setSettings(prev => prev.map(s => 
+        s.country_code === countryCode ? data : s
+      ));
+
+      // Forzar trigger
+      setUpdateTrigger(prev => prev + 1);
+
+      // Disparar evento para actualizar mapa
+      window.dispatchEvent(new Event('maritimeColorsChanged'));
+      window.dispatchEvent(new CustomEvent('maritimeSettingsChanged', {
+        detail: { country: countryCode, action: 'opacityChanged' }
+      }));
+
+      return { success: true, data };
+    } catch (err) {
+      console.error('Error updating opacity:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
    * Eliminar país
    */
   async function removeCountry(countryCode) {
@@ -222,6 +257,7 @@ export function useMaritimeSettings() {
     addCountry,
     toggleVisibility,
     updateColor,
+    updateOpacity,
     removeCountry,
     getVisibleCountries,
     getVisibleCountryCodes,

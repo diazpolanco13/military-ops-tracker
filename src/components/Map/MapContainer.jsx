@@ -81,6 +81,16 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     return colors;
   }, [settings, loadingMaritime, updateTrigger]);
 
+  // 🎨 Memorizar mapa de opacidades
+  const opacityMap = useMemo(() => {
+    if (!settings || loadingMaritime) return {};
+    const opacities = {};
+    settings.forEach(s => {
+      opacities[s.country_code] = s.opacity || 0.2;
+    });
+    return opacities;
+  }, [settings, loadingMaritime, updateTrigger]);
+
   // 🌊 Hook para obtener límites marítimos con caché en Supabase (RÁPIDO)
   const { boundaries, loading: boundariesLoading, cacheHit } = useMaritimeBoundariesCached(visibleCountryCodes, showBoundaries);
   
@@ -517,6 +527,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           boundaries={boundaries}
           visible={showBoundaries}
           colorMap={colorMap}
+          opacityMap={opacityMap}
         />
       )}
 
