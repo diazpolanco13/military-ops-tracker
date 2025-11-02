@@ -78,19 +78,37 @@ export default function DeploymentStats() {
       const quantity = entity.quantity || 1;
       byType[type].totalUnits += quantity;
       
-      // Sumar personal según el tipo de entidad
-      const crewCount = entity.crew_count || 0;
+      // ========================================
+      // CÁLCULO DE EFECTIVOS - LÓGICA CORREGIDA
+      // ========================================
       
-      if (type === 'tropas' || type === 'insurgente') {
-        // Para tropas: quantity YA representa los efectivos
-        // Solo usar crew_count si existe y quantity no
-        if (quantity > 1) {
-          byType[type].personnel += quantity;
-        } else {
-          byType[type].personnel += crewCount;
-        }
-      } else {
-        // Para vehículos/barcos/aviones: crew_count × quantity
+      const crewCount = entity.crew_count || 0;
+      const embarkedPersonnel = entity.embarked_personnel || 0;
+      
+      // EMBARCACIONES (Únicas, con identidad propia)
+      // quantity siempre es 1, cada barco tiene nombre
+      if (['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(type)) {
+        // Tripulación + Personal embarcado (marines, tropas)
+        byType[type].personnel += (crewCount + embarkedPersonnel);
+      }
+      
+      // AVIONES/HELICÓPTEROS (Agrupados por tipo)
+      // quantity = número de aeronaves idénticas
+      // crew_count = tripulación por aeronave
+      else if (['avion', 'caza', 'helicoptero', 'drone'].includes(type)) {
+        byType[type].personnel += crewCount * quantity;
+      }
+      
+      // TROPAS/INSURGENTES (Agrupados)
+      // quantity = número total de efectivos
+      else if (['tropas', 'insurgente'].includes(type)) {
+        byType[type].personnel += quantity;
+      }
+      
+      // VEHÍCULOS/TANQUES (Agrupados)
+      // quantity = número de vehículos
+      // crew_count = tripulación por vehículo
+      else {
         byType[type].personnel += crewCount * quantity;
       }
     });

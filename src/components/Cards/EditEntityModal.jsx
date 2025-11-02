@@ -44,6 +44,9 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
     range_km: null,
     max_speed_knots: null,
     quantity: 1, // Cantidad de unidades agrupadas
+    // Personal y aeronaves embarcadas (para portaviones/destructores)
+    embarked_personnel: null,
+    embarked_aircraft: null,
     // Multimedia
     icon_url: '', // PNG para icono del mapa
     image_url: '', // Imagen completa
@@ -81,6 +84,8 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
         range_km: entity.range_km || null,
         max_speed_knots: entity.max_speed_knots || null,
         quantity: entity.quantity || 1,
+        embarked_personnel: entity.embarked_personnel || null,
+        embarked_aircraft: entity.embarked_aircraft || null,
         icon_url: entity.icon_url || '',
         image_url: entity.image_url || '',
         video_url: entity.video_url || '',
@@ -551,7 +556,46 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                     placeholder={entity.type === 'tropas' ? '2700' : entity.type === 'avion' ? '2' : '330'}
                   />
+                  {entity.type === 'tropas' && (
+                    <p className="text-xs text-slate-400 mt-1">💡 Para tropas, usa el campo "Cantidad" arriba para definir efectivos totales</p>
+                  )}
+                  {['portaaviones', 'destructor', 'fragata'].includes(entity.type) && (
+                    <p className="text-xs text-slate-400 mt-1">ℹ️ Solo tripulación del barco (sin personal embarcado)</p>
+                  )}
                 </div>
+
+                {/* CAMPOS DE PERSONAL/AERONAVES EMBARCADAS (SOLO PARA EMBARCACIONES) */}
+                {['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                        👥 Personal Embarcado
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.embarked_personnel || ''}
+                        onChange={(e) => handleChange('embarked_personnel', e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                        placeholder="2480"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Marines, tropas, fuerzas especiales embarcadas</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                        ✈️ Aeronaves Embarcadas
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.embarked_aircraft || ''}
+                        onChange={(e) => handleChange('embarked_aircraft', e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                        placeholder="75"
+                      />
+                      <p className="text-xs text-slate-400 mt-1">Cantidad total de aviones y helicópteros</p>
+                    </div>
+                  </>
+                )}
 
                 {/* CAMPOS SOLO PARA BARCOS/AVIONES */}
                 {entity.type !== 'tropas' && (

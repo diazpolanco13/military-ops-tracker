@@ -339,6 +339,46 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
             </div>
           )}
 
+          {/* Personal y Aeronaves Embarcadas (solo para embarcaciones) */}
+          {['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && 
+           (getValue('crew_count') || getValue('embarked_personnel') || getValue('embarked_aircraft')) && (
+            <div className="px-4 py-3 space-y-2 border-b border-slate-700/30 bg-gradient-to-br from-slate-800/30 to-slate-900/30">
+              {/* Tripulación */}
+              {getValue('crew_count') && (
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-400">⚓ Tripulación</div>
+                  <div className="text-sm font-bold text-white">{getValue('crew_count').toLocaleString()}</div>
+                </div>
+              )}
+              
+              {/* Personal Embarcado */}
+              {getValue('embarked_personnel') && (
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-cyan-400">👥 Personal Embarcado</div>
+                  <div className="text-sm font-bold text-cyan-300">{getValue('embarked_personnel').toLocaleString()}</div>
+                </div>
+              )}
+              
+              {/* Aeronaves */}
+              {getValue('embarked_aircraft') && (
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-amber-400">✈️ Aeronaves</div>
+                  <div className="text-sm font-bold text-amber-300">{getValue('embarked_aircraft')}</div>
+                </div>
+              )}
+              
+              {/* Total Efectivos (solo si hay tripulación o personal embarcado) */}
+              {(getValue('crew_count') || getValue('embarked_personnel')) && (
+                <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
+                  <div className="text-xs text-green-400 font-semibold uppercase">💪 Total Efectivos</div>
+                  <div className="text-base font-bold text-green-300">
+                    {((getValue('crew_count') || 0) + (getValue('embarked_personnel') || 0)).toLocaleString()}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Botón VER DETALLES - COMPACTO */}
           <div className="px-3 py-2">
             <button

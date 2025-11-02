@@ -522,6 +522,54 @@ export default function EntityDetailedModal({ entity, onClose }) {
                         </div>
                       )}
                       
+                      {/* Personal Embarcado (solo para embarcaciones) */}
+                      {['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && getValue('embarked_personnel') && (
+                        <div className="bg-cyan-900/20 rounded-lg p-3 border border-cyan-900/30">
+                          <div className="text-xs text-cyan-400 mb-1 flex items-center gap-1">
+                            👥 Personal Embarcado
+                          </div>
+                          <div className="text-xl text-white font-bold">
+                            {getValue('embarked_personnel').toLocaleString()}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            Marines, tropas, fuerzas especiales
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Aeronaves Embarcadas (solo para embarcaciones) */}
+                      {['portaaviones', 'destructor', 'fragata'].includes(entity.type) && getValue('embarked_aircraft') && (
+                        <div className="bg-amber-900/20 rounded-lg p-3 border border-amber-900/30">
+                          <div className="text-xs text-amber-400 mb-1 flex items-center gap-1">
+                            ✈️ Aeronaves Embarcadas
+                          </div>
+                          <div className="text-xl text-white font-bold">
+                            {getValue('embarked_aircraft')}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            Aviones y helicópteros
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Efectivos Totales (Resumen para embarcaciones) */}
+                      {['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && 
+                       (getValue('crew_count') || getValue('embarked_personnel')) && (
+                        <div className="bg-green-900/20 rounded-lg p-3 border-2 border-green-900/40">
+                          <div className="text-xs text-green-400 mb-1 font-semibold uppercase">
+                            💪 Efectivos Totales
+                          </div>
+                          <div className="text-2xl text-white font-bold">
+                            {((getValue('crew_count') || 0) + (getValue('embarked_personnel') || 0)).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            {getValue('crew_count') ? `${getValue('crew_count').toLocaleString()} tripulación` : ''}
+                            {getValue('crew_count') && getValue('embarked_personnel') ? ' + ' : ''}
+                            {getValue('embarked_personnel') ? `${getValue('embarked_personnel').toLocaleString()} embarcados` : ''}
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Solo para barcos/aviones */}
                       {entity.type !== 'tropas' && getValue('range_km') && (
                         <div>
