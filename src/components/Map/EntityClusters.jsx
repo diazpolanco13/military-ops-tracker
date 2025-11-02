@@ -57,9 +57,10 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
       clusterRadius: 50 // Radio en píxeles para agrupar
     });
 
-    // 🎨 Layer para anillo exterior (glow effect)
+    // 💓 NUEVO: Anillo de latido exterior (animado)
+    const pulseLayerId = `${clusterLayerId}-pulse`;
     map.addLayer({
-      id: `${clusterLayerId}-glow`,
+      id: pulseLayerId,
       type: 'circle',
       source: sourceId,
       filter: ['has', 'point_count'],
@@ -67,29 +68,42 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
         'circle-color': [
           'step',
           ['get', 'point_count'],
-          'rgba(59, 130, 246, 0.2)', // Azul con transparencia
+          'rgba(59, 130, 246, 0)', // Azul transparente
           5,
-          'rgba(245, 158, 11, 0.2)', // Naranja con transparencia
+          'rgba(245, 158, 11, 0)', // Naranja transparente
           10,
-          'rgba(239, 68, 68, 0.2)'   // Rojo con transparencia
+          'rgba(239, 68, 68, 0)',  // Rojo transparente
+          20,
+          'rgba(220, 38, 38, 0)'   // Rojo oscuro transparente
         ],
         'circle-radius': [
           'step',
           ['get', 'point_count'],
-          28, // Radio exterior base
+          22, // Mismo tamaño que el círculo principal
           5,
-          35, // Más grande para 5+
+          28,
           10,
-          42, // Más grande para 10+
+          34,
           20,
-          50  // Extra grande para 20+
+          40
         ],
-        'circle-opacity': 0.4,
-        'circle-blur': 0.8
+        'circle-stroke-width': 2,
+        'circle-stroke-color': [
+          'step',
+          ['get', 'point_count'],
+          '#3b82f6',
+          5,
+          '#f59e0b',
+          10,
+          '#ef4444',
+          20,
+          '#dc2626'
+        ],
+        'circle-stroke-opacity': 0.6
       }
     });
 
-    // 🎨 Layer principal de clusters (círculos con gradiente)
+    // 🎨 Layer principal de clusters (círculos sólidos)
     map.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -118,45 +132,56 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
           20,
           40  // 20+ entidades
         ],
-        'circle-stroke-width': 3,
-        'circle-stroke-color': '#ffffff',
-        'circle-opacity': 0.9
+        'circle-stroke-width': 2,
+        'circle-stroke-color': 'rgba(255, 255, 255, 0.8)',
+        'circle-opacity': 0.95
       }
     });
 
-    // 🎨 Layer para borde interior (profesional)
-    map.addLayer({
-      id: `${clusterLayerId}-inner`,
-      type: 'circle',
-      source: sourceId,
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': 'transparent',
-        'circle-radius': [
-          'step',
-          ['get', 'point_count'],
-          18, // Radio interior base
-          5,
-          23,
-          10,
-          28,
-          20,
-          34
-        ],
-        'circle-stroke-width': 1.5,
-        'circle-stroke-color': [
-          'step',
-          ['get', 'point_count'],
-          'rgba(255, 255, 255, 0.3)',
-          5,
-          'rgba(255, 255, 255, 0.3)',
-          10,
-          'rgba(255, 255, 255, 0.3)',
-          20,
-          'rgba(255, 255, 255, 0.3)'
-        ]
+    // 💓 Animación de latido (pulse effect)
+    let pulseRadius = 0;
+    let pulseOpacity = 0.6;
+    let growing = true;
+
+    const animatePulse = () => {
+      if (!map.getLayer(pulseLayerId)) return;
+
+      // Animación suave de crecimiento/reducción
+      if (growing) {
+        pulseRadius += 0.3;
+        pulseOpacity -= 0.01;
+        if (pulseRadius >= 8) { // Máximo crecimiento: +8px
+          growing = false;
+        }
+      } else {
+        pulseRadius -= 0.3;
+        pulseOpacity += 0.01;
+        if (pulseRadius <= 0) { // Volver al tamaño original
+          growing = true;
+          pulseOpacity = 0.6;
+        }
       }
-    });
+
+      // Aplicar la animación
+      map.setPaintProperty(pulseLayerId, 'circle-radius', [
+        'step',
+        ['get', 'point_count'],
+        22 + pulseRadius,
+        5,
+        28 + pulseRadius,
+        10,
+        34 + pulseRadius,
+        20,
+        40 + pulseRadius
+      ]);
+
+      map.setPaintProperty(pulseLayerId, 'circle-stroke-opacity', pulseOpacity);
+
+      requestAnimationFrame(animatePulse);
+    };
+
+    // Iniciar animación
+    animatePulse();
 
     // 🔢 Layer para contar entidades en cluster (texto mejorado)
     map.addLayer({
@@ -244,10 +269,9 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
 
     // Cleanup (importante limpiar todas las capas)
     return () => {
-      if (map.getLayer(`${clusterLayerId}-inner`)) map.removeLayer(`${clusterLayerId}-inner`);
       if (map.getLayer(clusterCountLayerId)) map.removeLayer(clusterCountLayerId);
       if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
-      if (map.getLayer(`${clusterLayerId}-glow`)) map.removeLayer(`${clusterLayerId}-glow`);
+      if (map.getLayer(pulseLayerId)) map.removeLayer(pulseLayerId);
       if (map.getLayer(unclusteredLayerId)) map.removeLayer(unclusteredLayerId);
       if (map.getSource(sourceId)) map.removeSource(sourceId);
     };
