@@ -355,53 +355,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       clusterRadius: clusterRadius // Radio configurable
     });
 
-    // 💓 Layer de latido exterior (pulse effect)
-    const pulseLayerId = `${clusterLayerId}-pulse`;
-    map.current.addLayer({
-      id: pulseLayerId,
-      type: 'circle',
-      source: sourceId,
-      filter: ['has', 'point_count'],
-      paint: {
-        'circle-color': [
-          'step',
-          ['get', 'point_count'],
-          'rgba(59, 130, 246, 0)', // Azul transparente
-          5,
-          'rgba(245, 158, 11, 0)', // Naranja transparente
-          10,
-          'rgba(239, 68, 68, 0)',  // Rojo transparente
-          20,
-          'rgba(220, 38, 38, 0)'   // Rojo oscuro transparente
-        ],
-        'circle-radius': [
-          'step',
-          ['get', 'point_count'],
-          25, // Mismo tamaño base
-          5,
-          30,
-          10,
-          35,
-          20,
-          42
-        ],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': [
-          'step',
-          ['get', 'point_count'],
-          '#3b82f6',
-          5,
-          '#f59e0b',
-          10,
-          '#ef4444',
-          20,
-          '#dc2626'
-        ],
-        'circle-stroke-opacity': 0.6
-      }
-    });
-
-    // 🎨 Layer principal de clusters (semi-transparente)
+    // 🎨 Layer principal de clusters (estático, sin animación)
     map.current.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -433,69 +387,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         'circle-opacity': 0.85 // Semi-transparente
       }
     });
-
-    // 💓 Animación de latido optimizada (reduce de 60fps a ~20fps)
-    let pulseRadius = 0;
-    let pulseOpacity = 0.6;
-    let growing = true;
-    let animationId = null;
-    let lastTime = 0;
-    const frameDelay = 50; // ~20fps (en lugar de 60fps)
-
-    const animatePulse = (currentTime) => {
-      if (!map.current || !map.current.getLayer(pulseLayerId)) {
-        if (animationId) cancelAnimationFrame(animationId);
-        return;
-      }
-
-      // Limitar framerate para mejor rendimiento
-      if (currentTime - lastTime < frameDelay) {
-        animationId = requestAnimationFrame(animatePulse);
-        return;
-      }
-      lastTime = currentTime;
-
-      // Animación suave
-      if (growing) {
-        pulseRadius += 0.5; // Incremento más rápido
-        pulseOpacity -= 0.015;
-        if (pulseRadius >= 8) { // Reducido de 10 a 8
-          growing = false;
-        }
-      } else {
-        pulseRadius -= 0.5;
-        pulseOpacity += 0.015;
-        if (pulseRadius <= 0) {
-          growing = true;
-          pulseOpacity = 0.6;
-        }
-      }
-
-      try {
-        map.current.setPaintProperty(pulseLayerId, 'circle-radius', [
-          'step',
-          ['get', 'point_count'],
-          25 + pulseRadius,
-          5,
-          30 + pulseRadius,
-          10,
-          35 + pulseRadius,
-          20,
-          42 + pulseRadius
-        ]);
-
-        map.current.setPaintProperty(pulseLayerId, 'circle-stroke-opacity', pulseOpacity);
-      } catch (err) {
-        // Layer removido, detener animación
-        if (animationId) cancelAnimationFrame(animationId);
-        return;
-      }
-
-      animationId = requestAnimationFrame(animatePulse);
-    };
-
-    // Iniciar animación
-    animatePulse(0);
 
     // 🔢 Layer para el número de entidades en el cluster (mejorado)
     map.current.addLayer({
@@ -608,12 +499,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     map.current.on('zoom', handleZoomChange);
     handleZoomChange(); // Ejecutar inmediatamente
 
-    // Cleanup (importante limpiar todas las capas)
+    // Cleanup
     return () => {
       if (map.current) {
         if (map.current.getLayer(clusterCountLayerId)) map.current.removeLayer(clusterCountLayerId);
         if (map.current.getLayer(clusterLayerId)) map.current.removeLayer(clusterLayerId);
-        if (map.current.getLayer(pulseLayerId)) map.current.removeLayer(pulseLayerId);
         if (map.current.getLayer(unclusteredLayerId)) map.current.removeLayer(unclusteredLayerId);
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
       }
