@@ -57,7 +57,39 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
       clusterRadius: 50 // Radio en píxeles para agrupar
     });
 
-    // Layer para clusters (círculos con número)
+    // 🎨 Layer para anillo exterior (glow effect)
+    map.addLayer({
+      id: `${clusterLayerId}-glow`,
+      type: 'circle',
+      source: sourceId,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': [
+          'step',
+          ['get', 'point_count'],
+          'rgba(59, 130, 246, 0.2)', // Azul con transparencia
+          5,
+          'rgba(245, 158, 11, 0.2)', // Naranja con transparencia
+          10,
+          'rgba(239, 68, 68, 0.2)'   // Rojo con transparencia
+        ],
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          28, // Radio exterior base
+          5,
+          35, // Más grande para 5+
+          10,
+          42, // Más grande para 10+
+          20,
+          50  // Extra grande para 20+
+        ],
+        'circle-opacity': 0.4,
+        'circle-blur': 0.8
+      }
+    });
+
+    // 🎨 Layer principal de clusters (círculos con gradiente)
     map.addLayer({
       id: clusterLayerId,
       type: 'circle',
@@ -67,27 +99,66 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
         'circle-color': [
           'step',
           ['get', 'point_count'],
-          '#3b82f6', // Azul para pocos
+          '#3b82f6', // Azul para 2-4 entidades
           5,
-          '#f59e0b', // Naranja para medio
+          '#f59e0b', // Naranja para 5-9 entidades
           10,
-          '#ef4444'  // Rojo para muchos
+          '#ef4444', // Rojo para 10-19 entidades
+          20,
+          '#dc2626'  // Rojo oscuro para 20+ entidades
         ],
         'circle-radius': [
           'step',
           ['get', 'point_count'],
-          20, // Radio base
+          22, // Radio base (2-4)
           5,
-          25, // Más grande para 5+
+          28, // 5-9 entidades
           10,
-          30  // Más grande para 10+
+          34, // 10-19 entidades
+          20,
+          40  // 20+ entidades
         ],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#fff'
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9
       }
     });
 
-    // Layer para contar entidades en cluster
+    // 🎨 Layer para borde interior (profesional)
+    map.addLayer({
+      id: `${clusterLayerId}-inner`,
+      type: 'circle',
+      source: sourceId,
+      filter: ['has', 'point_count'],
+      paint: {
+        'circle-color': 'transparent',
+        'circle-radius': [
+          'step',
+          ['get', 'point_count'],
+          18, // Radio interior base
+          5,
+          23,
+          10,
+          28,
+          20,
+          34
+        ],
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': [
+          'step',
+          ['get', 'point_count'],
+          'rgba(255, 255, 255, 0.3)',
+          5,
+          'rgba(255, 255, 255, 0.3)',
+          10,
+          'rgba(255, 255, 255, 0.3)',
+          20,
+          'rgba(255, 255, 255, 0.3)'
+        ]
+      }
+    });
+
+    // 🔢 Layer para contar entidades en cluster (texto mejorado)
     map.addLayer({
       id: clusterCountLayerId,
       type: 'symbol',
@@ -96,10 +167,23 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
       layout: {
         'text-field': '{point_count_abbreviated}',
         'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-        'text-size': 14
+        'text-size': [
+          'step',
+          ['get', 'point_count'],
+          16, // Tamaño base
+          5,
+          18, // Más grande para 5+
+          10,
+          20, // Más grande para 10+
+          20,
+          22  // Extra grande para 20+
+        ]
       },
       paint: {
-        'text-color': '#ffffff'
+        'text-color': '#ffffff',
+        'text-halo-color': 'rgba(0, 0, 0, 0.5)',
+        'text-halo-width': 1.5,
+        'text-halo-blur': 1
       }
     });
 
@@ -158,10 +242,12 @@ export default function EntityClusters({ map, entities, onEntityClick, onPositio
       map.getCanvas().style.cursor = '';
     });
 
-    // Cleanup
+    // Cleanup (importante limpiar todas las capas)
     return () => {
-      if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
+      if (map.getLayer(`${clusterLayerId}-inner`)) map.removeLayer(`${clusterLayerId}-inner`);
       if (map.getLayer(clusterCountLayerId)) map.removeLayer(clusterCountLayerId);
+      if (map.getLayer(clusterLayerId)) map.removeLayer(clusterLayerId);
+      if (map.getLayer(`${clusterLayerId}-glow`)) map.removeLayer(`${clusterLayerId}-glow`);
       if (map.getLayer(unclusteredLayerId)) map.removeLayer(unclusteredLayerId);
       if (map.getSource(sourceId)) map.removeSource(sourceId);
     };
