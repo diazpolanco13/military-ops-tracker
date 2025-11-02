@@ -42,6 +42,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
   });
   const [showDetailedModal, setShowDetailedModal] = useState(false);
+  
+  // 🖼️ Estado para usar imágenes de plantillas
+  const [useImages, setUseImages] = useState(() => {
+    return localStorage.getItem('useImages') === 'true';
+  });
 
   // 🌊 Obtener configuración de límites marítimos desde BD
   const { showBoundaries } = useMaritimeBoundariesContext();
@@ -108,8 +113,13 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // Cachear plantillas para evitar recargas constantes
   useEffect(() => {
     async function loadTemplates() {
-      const useImages = localStorage.getItem('useImages') === 'true';
-      if (!useImages || !entities || entities.length === 0) return;
+      // Si useImages está desactivado, limpiar el caché
+      if (!useImages) {
+        setTemplatesCache({});
+        return;
+      }
+      
+      if (!entities || entities.length === 0) return;
 
       // Obtener IDs únicos de plantillas
       const templateIds = [...new Set(entities.map(e => e.template_id).filter(Boolean))];
@@ -128,6 +138,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             cache[t.id] = t;
           });
           setTemplatesCache(cache);
+          console.log('✅ Plantillas cargadas:', Object.keys(cache).length);
         }
       } catch (err) {
         console.error('Error caching templates:', err);
@@ -135,7 +146,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     }
 
     loadTemplates();
-  }, [entities]);
+  }, [entities, useImages]); // ✅ Agregado useImages como dependencia
 
   // Exponer funciones al componente padre
   useEffect(() => {
@@ -157,6 +168,11 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       }
       if (e.detail.entityViewMode !== undefined) {
         setViewMode(e.detail.entityViewMode);
+      }
+      // ✅ NUEVO: Escuchar cambios en useImages
+      if (e.detail.useImages !== undefined) {
+        console.log('🔄 Cambio detectado en useImages:', e.detail.useImages);
+        setUseImages(e.detail.useImages);
       }
     };
 
