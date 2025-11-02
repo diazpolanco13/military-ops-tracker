@@ -2,7 +2,6 @@ import { X, Waves, Search, Plus, Trash2, Eye, EyeOff, Check, Globe } from 'lucid
 import { useState } from 'react';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { searchCountries } from '../../data/worldCountries';
-import DisputedTerritoriesPanel from './DisputedTerritoriesPanel';
 import { loadVenezuelaWithEsequibo, loadCaribbeanFromGADM } from '../../utils/loadGADMBoundaries';
 
 /**
@@ -319,15 +318,6 @@ export default function MaritimeBoundariesManager({ onClose }) {
               ))}
             </div>
           )}
-        </div>
-
-        {/* Panel de Territorios Disputados */}
-        <div className="p-4 border-t border-slate-700">
-          <DisputedTerritoriesPanel 
-            onLoadTerrestrial={handleLoadTerrestrial}
-            loadingTerrestrial={loadingTerrestrial}
-            terrestrialStatus={terrestrialStatus}
-          />
         </div>
 
         {/* Footer con info */}
