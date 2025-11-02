@@ -434,28 +434,37 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       }
     });
 
-    // 💓 Animación de latido
+    // 💓 Animación de latido optimizada (reduce de 60fps a ~20fps)
     let pulseRadius = 0;
     let pulseOpacity = 0.6;
     let growing = true;
     let animationId = null;
+    let lastTime = 0;
+    const frameDelay = 50; // ~20fps (en lugar de 60fps)
 
-    const animatePulse = () => {
+    const animatePulse = (currentTime) => {
       if (!map.current || !map.current.getLayer(pulseLayerId)) {
         if (animationId) cancelAnimationFrame(animationId);
         return;
       }
 
+      // Limitar framerate para mejor rendimiento
+      if (currentTime - lastTime < frameDelay) {
+        animationId = requestAnimationFrame(animatePulse);
+        return;
+      }
+      lastTime = currentTime;
+
       // Animación suave
       if (growing) {
-        pulseRadius += 0.25;
-        pulseOpacity -= 0.008;
-        if (pulseRadius >= 10) {
+        pulseRadius += 0.5; // Incremento más rápido
+        pulseOpacity -= 0.015;
+        if (pulseRadius >= 8) { // Reducido de 10 a 8
           growing = false;
         }
       } else {
-        pulseRadius -= 0.25;
-        pulseOpacity += 0.008;
+        pulseRadius -= 0.5;
+        pulseOpacity += 0.015;
         if (pulseRadius <= 0) {
           growing = true;
           pulseOpacity = 0.6;
@@ -486,7 +495,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     };
 
     // Iniciar animación
-    animatePulse();
+    animatePulse(0);
 
     // 🔢 Layer para el número de entidades en el cluster (mejorado)
     map.current.addLayer({
