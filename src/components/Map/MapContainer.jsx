@@ -401,7 +401,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       }
     });
 
-    // Layer para marcadores individuales
+    // Layer para marcadores individuales (sin borde blanco)
     map.current.addLayer({
       id: unclusteredLayerId,
       type: 'circle',
@@ -410,9 +410,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       paint: {
         'circle-color': '#ef4444',
         'circle-radius': 14,
-        'circle-stroke-width': 3,
-        'circle-stroke-color': '#ffffff',
-        'circle-opacity': 0.9
+        'circle-opacity': 0.95
+        // ❌ Sin borde blanco para diseño limpio
       }
     });
 
