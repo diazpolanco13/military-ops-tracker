@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -54,8 +54,12 @@ export default function LoginPage({ onLoginSuccess }) {
         <div className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-lg shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-full mb-4 shadow-lg shadow-blue-500/50">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-24 h-24 mb-4">
+              <img 
+                src="/logo_sae.png" 
+                alt="SAE Logo" 
+                className="w-full h-full object-contain drop-shadow-2xl"
+              />
             </div>
             <h1 className="text-2xl font-bold text-white mb-2">
               SAE - MONITOR
