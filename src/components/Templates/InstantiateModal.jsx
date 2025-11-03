@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { X, Ship, Plane, Users, Shield, MapPin, Navigation, Gauge, Eye } from 'lucide-react';
+import { X, Ship, Plane, Users, Shield, MapPin, Navigation, Gauge, Eye, Building2 } from 'lucide-react';
 
 /**
  * Modal para instanciar una nueva entidad desde una plantilla
  * Estilo profesional militar, solo pide datos únicos
+ * Adapta campos según el tipo de entidad (móvil vs fija)
  */
 export default function InstantiateModal({ 
   template, 
@@ -11,12 +12,16 @@ export default function InstantiateModal({
   onClose, 
   onConfirm 
 }) {
+  // Determinar si la entidad es estática (no se mueve)
+  const isStaticEntity = template.entity_type === 'lugar' || template.entity_type === 'tropas';
+  
   const [formData, setFormData] = useState({
     name: '',
     code: '',
     status: 'activo',
-    heading: 180,
-    speed: 0,
+    // Solo para entidades móviles
+    heading: isStaticEntity ? null : 180,
+    speed: isStaticEntity ? null : 0,
     commissioned_year: template?.commissioned_year || new Date().getFullYear(),
     // Posición inicial
     latitude: position?.lat || 18.4655,
@@ -36,6 +41,7 @@ export default function InstantiateModal({
     avion: Plane,
     tropas: Users,
     tanque: Shield,
+    lugar: Building2,
   };
 
   const Icon = ENTITY_ICONS[template.entity_type] || Ship;
@@ -56,6 +62,12 @@ export default function InstantiateModal({
       type: template.entity_type,
       // Los demás campos se heredan de la plantilla
     };
+
+    // Limpiar campos que no aplican para entidades estáticas
+    if (isStaticEntity) {
+      delete entityData.heading;
+      delete entityData.speed;
+    }
 
     onConfirm(entityData);
   };
@@ -136,65 +148,70 @@ export default function InstantiateModal({
               />
             </div>
 
-            {/* Grid 2 columnas */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Estado */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Estado Operacional
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="activo">Activo</option>
-                  <option value="patrullando">Patrullando</option>
-                  <option value="estacionado">Estacionado</option>
-                  <option value="en_transito">En Tránsito</option>
-                  <option value="en_vuelo">En Vuelo</option>
-                  <option value="vigilancia">Vigilancia</option>
-                </select>
-              </div>
-
-              {/* Rumbo */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center">
-                  <Navigation size={14} className="mr-1" />
-                  Rumbo Inicial (°)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="359"
-                  value={formData.heading}
-                  onChange={(e) => handleChange('heading', parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Velocidad */}
+            {/* Estado Operacional */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center">
-                <Gauge size={14} className="mr-1" />
-                Velocidad Actual (nudos)
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                Estado Operacional
               </label>
-              <input
-                type="number"
-                min="0"
-                value={formData.speed}
-                onChange={(e) => handleChange('speed', parseFloat(e.target.value) || 0)}
+              <select
+                value={formData.status}
+                onChange={(e) => handleChange('status', e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              >
+                <option value="activo">Activo</option>
+                {!isStaticEntity && <option value="patrullando">Patrullando</option>}
+                {!isStaticEntity && <option value="estacionado">Estacionado</option>}
+                {!isStaticEntity && <option value="en_transito">En Tránsito</option>}
+                {!isStaticEntity && <option value="en_vuelo">En Vuelo</option>}
+                <option value="vigilancia">Vigilancia</option>
+              </select>
             </div>
+
+            {/* Campos específicos para entidades MÓVILES (barcos, aviones, vehículos) */}
+            {!isStaticEntity && (
+              <>
+                {/* Grid 2 columnas - Rumbo y Velocidad */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Rumbo */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center">
+                      <Navigation size={14} className="mr-1" />
+                      Rumbo Inicial (°)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="359"
+                      value={formData.heading}
+                      onChange={(e) => handleChange('heading', parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Velocidad */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center">
+                      <Gauge size={14} className="mr-1" />
+                      Velocidad Actual (nudos)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.speed}
+                      onChange={(e) => handleChange('speed', parseFloat(e.target.value) || 0)}
+                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Sección: Posición Inicial */}
+          {/* Sección: Posición/Ubicación */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-green-400 uppercase tracking-wider flex items-center">
               <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-              Posición Inicial
+              {isStaticEntity ? 'Ubicación en el Mapa' : 'Posición Inicial'}
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
@@ -246,19 +263,37 @@ export default function InstantiateModal({
                 Aquí puedes sobrescribir valores específicos si es necesario.
               </p>
               
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Año de Comisionado
-                </label>
-                <input
-                  type="number"
-                  min="1900"
-                  max="2100"
-                  value={formData.commissioned_year}
-                  onChange={(e) => handleChange('commissioned_year', parseInt(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              {!isStaticEntity && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Año de Comisionado
+                  </label>
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value={formData.commissioned_year}
+                    onChange={(e) => handleChange('commissioned_year', parseInt(e.target.value))}
+                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
+              
+              {isStaticEntity && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                    Año de Construcción/Establecimiento
+                  </label>
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value={formData.commissioned_year}
+                    onChange={(e) => handleChange('commissioned_year', parseInt(e.target.value))}
+                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
             </div>
           )}
 

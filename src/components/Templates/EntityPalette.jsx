@@ -175,6 +175,15 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate, onClos
         'Ligeros': ['vehiculo-patrulla-general', 'vehiculo-utilitario-general']
       }
     },
+    'Instalaciones y Lugares': {
+      icon: '🏢',
+      types: ['lugar'],
+      color: '#8b5cf6',
+      subgroups: {
+        'Militares': ['base-militar-general', 'centro-comunicaciones-general', 'radar-general'],
+        'Civiles': ['aeropuerto-general']
+      }
+    },
     'Personal y Tropas': {
       icon: '👥',
       types: ['tropas'],

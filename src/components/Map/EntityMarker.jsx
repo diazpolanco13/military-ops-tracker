@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
 import { getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
+import { getFlagComponent } from '../Common/CountrySelector';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -178,6 +179,9 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
 
     // Si configuración permite y tiene imagen, usar imagen
     if (shouldUseImage) {
+      // Obtener bandera del país
+      const FlagComponent = entity.country_origin ? getFlagComponent(entity.country_origin) : null;
+      
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
@@ -203,6 +207,19 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
                 }}
               />
             </div>
+            
+            {/* Bandera del país - esquina superior izquierda */}
+            {FlagComponent && (
+              <div 
+                className="absolute -top-1 -left-1 rounded-sm shadow-lg border-2 border-slate-900 overflow-hidden"
+                style={{ width: '16px', height: '12px' }}
+              >
+                <FlagComponent 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  title={entity.country_origin}
+                />
+              </div>
+            )}
             
             {/* Badge con cantidad - posicionado a la derecha */}
             {entity.quantity > 1 && (
@@ -273,6 +290,9 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
     } else {
       // Usar iconos i2 profesionales
       const iconPath = getEntityIconPath(entity, template);
+      // Obtener bandera del país
+      const FlagComponent = entity.country_origin ? getFlagComponent(entity.country_origin) : null;
+      
       const root = createRoot(el);
       root.render(
         <div className="flex flex-col items-center gap-1">
@@ -302,6 +322,19 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
                 </div>
               )}
             </div>
+            
+            {/* Bandera del país - esquina superior izquierda */}
+            {FlagComponent && (
+              <div 
+                className="absolute -top-1 -left-1 rounded-sm shadow-lg border-2 border-slate-900 overflow-hidden"
+                style={{ width: '16px', height: '12px' }}
+              >
+                <FlagComponent 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  title={entity.country_origin}
+                />
+              </div>
+            )}
             
             {/* Badge con cantidad - posicionado a la derecha */}
             {entity.quantity > 1 && (

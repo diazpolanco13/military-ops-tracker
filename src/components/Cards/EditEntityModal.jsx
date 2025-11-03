@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { X, Ship, Plane, Users, Shield, Save, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, Ship, Plane, Users, Shield, Save, Upload, Image as ImageIcon, Building2 } from 'lucide-react';
 import { useUpdateEntityFull } from '../../hooks/useUpdateEntityFull';
 import Toast from '../Common/Toast';
 import ImageUploader from '../ImageUploader';
+import CountrySelector from '../Common/CountrySelector';
 
 /**
  * Modal para editar una entidad existente
  * Permite modificar todos los campos importantes
+ * Adapta campos según el tipo de entidad (móvil vs fija)
  */
 export default function EditEntityModal({ entity, onClose, onSuccess }) {
   const { updateEntityFull, updating } = useUpdateEntityFull();
   const [toast, setToast] = useState(null); // { message, type }
+  
+  // Determinar si la entidad es estática (no se mueve)
+  const isStaticEntity = entity?.type === 'lugar' || entity?.type === 'tropas';
   const [showImageUploader, setShowImageUploader] = useState(false);
   const [uploadType, setUploadType] = useState('icon'); // 'icon' o 'video'
   const [formData, setFormData] = useState({
@@ -146,6 +151,7 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
     tropas: Users,
     tanque: Shield,
     submarino: Ship,
+    lugar: Building2,
   };
 
   const Icon = ENTITY_ICONS[entity.type] || Ship;
@@ -230,10 +236,10 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="activo">Activo</option>
-                    <option value="patrullando">Patrullando</option>
-                    <option value="estacionado">Estacionado</option>
-                    <option value="en_transito">En Tránsito</option>
-                    <option value="en_vuelo">En Vuelo</option>
+                    {!isStaticEntity && <option value="patrullando">Patrullando</option>}
+                    {!isStaticEntity && <option value="estacionado">Estacionado</option>}
+                    {!isStaticEntity && <option value="en_transito">En Tránsito</option>}
+                    {!isStaticEntity && <option value="en_vuelo">En Vuelo</option>}
                     <option value="vigilancia">Vigilancia</option>
                   </select>
                 </div>
@@ -323,8 +329,8 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                     />
                   </div>
 
-                  {/* Solo para barcos/aviones (no tropas) */}
-                  {entity.type !== 'tropas' && (
+                  {/* Solo para barcos/aviones (no tropas ni lugares) */}
+                  {!isStaticEntity && (
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
                         Alcance de Radar (km)
@@ -421,44 +427,53 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       País de Origen
                     </label>
-                    <input
-                      type="text"
+                    <CountrySelector
                       value={formData.country_origin}
-                      onChange={(e) => handleChange('country_origin', e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                      placeholder="Estados Unidos"
+                      onChange={(code) => handleChange('country_origin', code)}
+                      placeholder="Seleccionar país..."
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Astillero
+                      {entity.type === 'lugar' ? 'Operador/Administrador' : 
+                       entity.type === 'avion' ? 'Fabricante' : 
+                       entity.type === 'tropas' ? 'Unidad Matriz' : 
+                       'Astillero'}
                     </label>
                     <input
                       type="text"
                       value={formData.manufacturer}
                       onChange={(e) => handleChange('manufacturer', e.target.value)}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
-                      placeholder="Bath Iron Works"
+                      placeholder={
+                        entity.type === 'lugar' ? 'SOUTHCOM' :
+                        entity.type === 'avion' ? 'Lockheed Martin' :
+                        entity.type === 'tropas' ? '24th MEU' :
+                        'Bath Iron Works'
+                      }
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Año de Comisión
+                      {isStaticEntity ? 'Año de Construcción' : 'Año de Comisión'}
                     </label>
                     <input
                       type="number"
                       value={formData.commissioned_year || ''}
                       onChange={(e) => handleChange('commissioned_year', e.target.value ? parseInt(e.target.value) : null)}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                      placeholder="1993"
+                      placeholder={isStaticEntity ? '2010' : '1993'}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
-                      {entity.type === 'tropas' ? 'Base de Operaciones' : entity.type === 'avion' ? 'Base Aérea' : 'Puerto Base'}
+                      {entity.type === 'lugar' ? 'Región/Jurisdicción' :
+                       entity.type === 'tropas' ? 'Base de Operaciones' : 
+                       entity.type === 'avion' ? 'Base Aérea' : 
+                       'Puerto Base'}
                     </label>
                     <input
                       type="text"
@@ -466,6 +481,7 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                       onChange={(e) => handleChange('homeport', e.target.value)}
                       className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
                       placeholder={
+                        entity.type === 'lugar' ? 'Caribe Sur' :
                         entity.type === 'tropas' ? 'Guantánamo Bay, Cuba' :
                         entity.type === 'avion' ? 'Homestead AFB, Florida' :
                         'Pearl Harbor, Hawái'
@@ -479,12 +495,14 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
             {/* Sección: Especificaciones Técnicas - CONDICIONAL por tipo */}
             <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
               <h3 className="text-sm font-bold text-green-400 uppercase tracking-wide mb-4">
-                {entity.type === 'tropas' ? 'Especificaciones Unidad' : 'Especificaciones Técnicas'}
+                {entity.type === 'lugar' ? 'Especificaciones Instalación' :
+                 entity.type === 'tropas' ? 'Especificaciones Unidad' : 
+                 'Especificaciones Técnicas'}
               </h3>
               
               <div className="grid grid-cols-3 gap-4">
-                {/* CAMPOS SOLO PARA BARCOS/AVIONES (no tropas) */}
-                {entity.type !== 'tropas' && (
+                {/* CAMPOS SOLO PARA BARCOS/AVIONES (no tropas ni lugares) */}
+                {!isStaticEntity && (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -597,8 +615,8 @@ export default function EditEntityModal({ entity, onClose, onSuccess }) {
                   </>
                 )}
 
-                {/* CAMPOS SOLO PARA BARCOS/AVIONES */}
-                {entity.type !== 'tropas' && (
+                {/* CAMPOS SOLO PARA BARCOS/AVIONES (no lugares ni tropas) */}
+                {!isStaticEntity && (
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
                       Alcance Op. (km)

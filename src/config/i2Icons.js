@@ -51,10 +51,14 @@ export const ENTITY_TYPE_ICONS = {
   mbrl: 'MBRL.png',
   lanzacohetes: 'MBRL.png',
   
-  // INSTALACIONES
+  // INSTALACIONES Y LUGARES
+  lugar: 'Military Base.png',
   base: 'Military Base.png',
+  'base-militar': 'Airfield.png',
   puerto: 'Port.png',
-  aeropuerto: 'Airport.png',
+  aeropuerto: 'Terminal.png',
+  'centro-comunicaciones': 'Communications Center.png',
+  radar: 'Radar Site.png',
   
   // ARMAMENTO
   misil: 'Missile.png',
@@ -103,6 +107,12 @@ export const TEMPLATE_CODE_ICONS = {
   'vehiculo-utilitario-general': 'Utility Vehicle.png',
   'vehiculo-tanque-general': 'MBT.png',
   'vehiculo-mbrl-general': 'MBRL.png',
+  
+  // LUGARES E INSTALACIONES
+  'base-militar-general': 'Airfield.png',
+  'centro-comunicaciones-general': 'Communications Center.png',
+  'radar-general': 'Radar Site.png',
+  'aeropuerto-general': 'Terminal.png',
 };
 
 /**
@@ -115,6 +125,7 @@ export const CATEGORY_ICONS = {
   'Vehículos Militares': 'APC.png',
   'Fuerzas Irregulares': 'Insurgent.png',
   'Instalaciones': 'Military Base.png',
+  'Instalaciones y Lugares': 'Airfield.png',
   'Eventos': 'Explosion.png',
 };
 
