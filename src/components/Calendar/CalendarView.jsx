@@ -258,8 +258,10 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         </button>
       </div>
 
-      {/* Navegación, búsqueda y filtros - TODO EN UNA FILA */}
-      <div className="bg-slate-800/50 border-b border-slate-700 px-6 py-3 flex items-center gap-3">
+      {/* Navegación, búsqueda y filtros - Responsive */}
+      <div className="bg-slate-800/50 border-b border-slate-700 px-6 py-3">
+        {/* Fila 1: Controles de vista y navegación */}
+        <div className="flex items-center gap-3 mb-3">
         {/* Selector de tipo de vista */}
         <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
           <button
@@ -320,84 +322,84 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
           <ChevronRight size={20} />
         </button>
 
-        <div className="h-6 w-px bg-slate-700"></div>
+          {/* Botón Hoy */}
+          <button
+            onClick={goToToday}
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium whitespace-nowrap"
+          >
+            📅 Ir a Hoy
+          </button>
+        </div>
 
-        {/* Búsqueda */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar eventos..."
-            className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {searchTerm && (
+        {/* Fila 2: Búsqueda y filtros */}
+        <div className="flex items-center gap-3">
+          {/* Búsqueda */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar eventos por título, descripción, ubicación o etiquetas..."
+              className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Filtro por prioridad */}
+          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
             <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+              onClick={() => setFilterPriority('all')}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                filterPriority === 'all' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
             >
-              <X size={16} />
+              Todos
             </button>
-          )}
+            <button
+              onClick={() => setFilterPriority('urgente')}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                filterPriority === 'urgente' 
+                  ? 'bg-red-600 text-white' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              🚨 Urgentes
+            </button>
+            <button
+              onClick={() => setFilterPriority('importante')}
+              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                filterPriority === 'importante' 
+                  ? 'bg-yellow-600 text-white' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              ⚠️ Importantes
+            </button>
+          </div>
+
+          {/* Contador de resultados */}
+          <div className="text-xs text-slate-400 min-w-[120px] text-right">
+            {(searchTerm || filterPriority !== 'all') ? (
+              <>
+                {filteredEvents.length} encontrado{filteredEvents.length !== 1 ? 's' : ''}
+              </>
+            ) : (
+              <>
+                {events.length} total{events.length !== 1 ? 'es' : ''}
+              </>
+            )}
+          </div>
         </div>
-
-        {/* Filtro por prioridad */}
-        <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button
-            onClick={() => setFilterPriority('all')}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              filterPriority === 'all' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilterPriority('urgente')}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              filterPriority === 'urgente' 
-                ? 'bg-red-600 text-white' 
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            🚨 Urgentes
-          </button>
-          <button
-            onClick={() => setFilterPriority('importante')}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-              filterPriority === 'importante' 
-                ? 'bg-yellow-600 text-white' 
-                : 'text-slate-300 hover:text-white'
-            }`}
-          >
-            ⚠️ Importantes
-          </button>
-        </div>
-
-        <div className="h-6 w-px bg-slate-700"></div>
-
-        {/* Contador de resultados */}
-        <div className="text-xs text-slate-400 min-w-[120px] text-right">
-          {(searchTerm || filterPriority !== 'all') ? (
-            <>
-              {filteredEvents.length} encontrado{filteredEvents.length !== 1 ? 's' : ''}
-            </>
-          ) : (
-            <>
-              {events.length} total{events.length !== 1 ? 'es' : ''}
-            </>
-          )}
-        </div>
-
-        {/* Botón Hoy */}
-        <button
-          onClick={goToToday}
-          className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium whitespace-nowrap"
-        >
-          📅 Ir a Hoy
-        </button>
       </div>
 
       {/* Vista condicional: Calendario o Resultados de Búsqueda */}
