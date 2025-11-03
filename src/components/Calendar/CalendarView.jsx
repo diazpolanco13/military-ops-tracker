@@ -12,8 +12,8 @@ import {
   isToday,
   addMonths,
   subMonths,
-  addWeeks,
-  subWeeks
+  addDays,
+  subDays
 } from 'date-fns';
 import CalendarDayCell from './CalendarDayCell';
 import EventDayModal from './EventDayModal';
@@ -45,10 +45,10 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
         return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
       } else if (calendarView === 'week') {
-        // Vista semanal: 7 días
-        const weekStart = startOfWeek(currentMonth, { weekStartsOn: 0 });
-        const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 0 });
-        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+        // Vista de 3 días: día anterior, actual y siguiente
+        const dayBefore = subDays(currentMonth, 1);
+        const dayAfter = addDays(currentMonth, 1);
+        return [dayBefore, currentMonth, dayAfter];
       } else {
         // Vista semestral: 6 meses
         return [];
@@ -182,7 +182,8 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
     if (calendarView === 'month') {
       setCurrentMonth(prev => subMonths(prev, 1));
     } else if (calendarView === 'week') {
-      setCurrentMonth(prev => subWeeks(prev, 1));
+      // Vista de 3 días: retroceder 3 días
+      setCurrentMonth(prev => subDays(prev, 3));
     } else {
       // Vista semestral: retroceder 6 meses
       setCurrentMonth(prev => subMonths(prev, 6));
@@ -194,7 +195,8 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
     if (calendarView === 'month') {
       setCurrentMonth(prev => addMonths(prev, 1));
     } else if (calendarView === 'week') {
-      setCurrentMonth(prev => addWeeks(prev, 1));
+      // Vista de 3 días: avanzar 3 días
+      setCurrentMonth(prev => addDays(prev, 3));
     } else {
       // Vista semestral: avanzar 6 meses
       setCurrentMonth(prev => addMonths(prev, 6));
@@ -212,9 +214,10 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
     if (calendarView === 'month') {
       return format(currentMonth, 'MMMM yyyy');
     } else if (calendarView === 'week') {
-      const weekStart = startOfWeek(currentMonth, { weekStartsOn: 0 });
-      const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 0 });
-      return `${format(weekStart, 'd MMM')} - ${format(weekEnd, 'd MMM yyyy')}`;
+      // Vista de 3 días centrada en el día actual
+      const dayBefore = subDays(currentMonth, 1);
+      const dayAfter = addDays(currentMonth, 1);
+      return `${format(dayBefore, 'd')} - ${format(dayAfter, 'd MMM yyyy')}`;
     } else {
       // Vista semestral
       const currentMonthNum = currentMonth.getMonth();
@@ -300,7 +303,7 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         <button
           onClick={goToPrevious}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title={calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Semana anterior' : 'Semestre anterior'}
+          title={calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? '3 días anteriores' : 'Semestre anterior'}
         >
           <ChevronLeft size={20} />
         </button>
@@ -312,7 +315,7 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         <button
           onClick={goToNext}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title={calendarView === 'month' ? 'Mes siguiente' : calendarView === 'week' ? 'Semana siguiente' : 'Semestre siguiente'}
+          title={calendarView === 'month' ? 'Mes siguiente' : calendarView === 'week' ? '3 días siguientes' : 'Semestre siguiente'}
         >
           <ChevronRight size={20} />
         </button>
@@ -501,8 +504,8 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         ) : (
           /* VISTA DE CALENDARIO NORMAL */
           <div className="max-w-7xl mx-auto h-full flex flex-col">
-          {/* Header de días de la semana - Solo en vista mensual y semanal */}
-          {(calendarView === 'month' || calendarView === 'week') && (
+          {/* Header de días de la semana - Solo en vista mensual */}
+          {calendarView === 'month' && (
             <div className="grid grid-cols-7 gap-2 mb-2">
               {weekDays.map(day => (
                 <div
@@ -598,9 +601,9 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
             </div>
           ) : (
             /* VISTA MENSUAL Y SEMANAL: Grid de días */
-            <div className={`grid gap-2 ${
+            <div className={`grid gap-4 ${
               calendarView === 'week' 
-                ? 'grid-cols-7 grid-rows-1 h-full' 
+                ? 'grid-cols-3 grid-rows-1 h-full' 
                 : 'grid-cols-7'
             }`}>
             {calendarDays.map(day => {
