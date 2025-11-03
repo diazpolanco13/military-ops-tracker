@@ -107,12 +107,12 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
       {/* Número y nombre del día */}
       <div className="absolute top-1.5 left-2">
         {isWeekView ? (
-          /* Vista de 3 días: Mostrar día de semana + número */
+          /* Vista de 3 días: Mostrar día de semana completo + número */
           <div className="flex flex-col">
-            <span className={`text-xs font-bold uppercase ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
-              {format(day, 'EEE')}
+            <span className={`text-sm font-bold uppercase ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
+              {format(day, 'EEEE')}
             </span>
-            <span className={`text-2xl font-bold ${isToday ? 'text-blue-400' : 'text-white'}`}>
+            <span className={`text-3xl font-bold ${isToday ? 'text-blue-400' : 'text-white'}`}>
               {format(day, 'd')}
             </span>
           </div>
@@ -135,7 +135,7 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
 
       {/* Lista de eventos - Adaptativa según vista */}
       {hasEvents && (
-        <div className={`absolute inset-x-1 ${isWeekView ? 'top-16' : 'top-9'} bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1.5`}>
+        <div className={`absolute inset-x-1 ${isWeekView ? 'top-20' : 'top-9'} bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1.5`}>
           {events.map((event, idx) => {
             // Color según prioridad
             const getBadgeColor = () => {
