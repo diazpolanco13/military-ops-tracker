@@ -41,6 +41,7 @@ import SettingsPanel from '../Settings/SettingsPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
 import ZonesPanel from './ZonesPanel';
 import WeatherLayersPanel from '../Weather/WeatherLayersPanel';
+import LogoutConfirmModal from '../Auth/LogoutConfirmModal';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -72,6 +73,7 @@ export default function TopNavigationBar({
   const [showEntitiesModal, setShowEntitiesModal] = useState(null); // 'hidden' | 'archived' | null
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
 
@@ -192,11 +194,7 @@ export default function TopNavigationBar({
               <span className="text-slate-300">{user.email}</span>
             </div>
             <button
-              onClick={() => {
-                if (confirm('¿Cerrar sesión?')) {
-                  onSignOut();
-                }
-              }}
+              onClick={() => setShowLogoutModal(true)}
               className="flex items-center gap-1 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 rounded-lg transition-all border border-red-900/30 hover:border-red-700/50"
               title="Cerrar Sesión"
             >
@@ -283,6 +281,18 @@ export default function TopNavigationBar({
       {/* Gestor de Límites Marítimos */}
       {showMaritimePanel && (
         <MaritimeBoundariesManager onClose={() => setShowMaritimePanel(false)} />
+      )}
+
+      {/* Modal de Confirmación de Logout */}
+      {showLogoutModal && user && (
+        <LogoutConfirmModal
+          userEmail={user.email}
+          onConfirm={() => {
+            setShowLogoutModal(false);
+            onSignOut();
+          }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
       )}
     </>
   );
