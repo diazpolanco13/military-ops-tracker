@@ -161,6 +161,22 @@ ESTILO:
 - Si no sabes algo, di "No tengo información actualizada sobre eso"
 - Sugiere acciones cuando sea relevante`;
 
+      // 🤖 Leer configuración de IA desde localStorage
+      const aiModel = localStorage.getItem('aiModel') || 'grok-4';
+      const aiTemperature = parseFloat(localStorage.getItem('aiTemperature') || '0.7');
+      const aiMaxTokens = parseInt(localStorage.getItem('aiMaxTokens') || '1000');
+      const aiPersonality = localStorage.getItem('aiPersonality') || 'profesional';
+
+      // 🎭 Definir personalidad según configuración
+      const personalityPrompts = {
+        profesional: 'Eres SAE-IA, un analista de inteligencia militar profesional. Usa terminología militar precisa y formal. Responde de manera estructurada y oficial.',
+        tecnico: 'Eres SAE-IA, un analista técnico especializado. Prioriza datos, coordenadas, especificaciones y análisis cuantitativo. Sé preciso y detallado.',
+        casual: 'Eres SAE-IA, un asistente conversacional amigable. Explica conceptos militares de forma accesible sin perder precisión. Usa un tono cercano.',
+        conciso: 'Eres SAE-IA, un analista directo y eficiente. Responde en forma de bullet points. Sin introducciones largas, solo información clave.'
+      };
+
+      const personalityInstructions = personalityPrompts[aiPersonality] || personalityPrompts.profesional;
+
       // Preparar mensajes para la API (últimos 10 para no exceder tokens)
       const conversationHistory = messages.slice(-10).map(m => ({
         role: m.role,
@@ -175,11 +191,11 @@ ESTILO:
           'Authorization': `Bearer ${import.meta.env.VITE_XAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'grok-2-1212',
+          model: aiModel,
           messages: [
             {
               role: 'system',
-              content: systemContext
+              content: `${personalityInstructions}\n\n${systemContext}`
             },
             ...conversationHistory,
             {
@@ -187,8 +203,8 @@ ESTILO:
               content: userMessage
             }
           ],
-          temperature: 0.7,
-          max_tokens: 1000,
+          temperature: aiTemperature,
+          max_tokens: aiMaxTokens,
           stream: false
         })
       });

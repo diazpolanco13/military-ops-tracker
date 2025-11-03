@@ -1,4 +1,4 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 /**
@@ -50,6 +50,23 @@ export default function SettingsPanel({ onClose }) {
     return stored === null ? false : stored === 'true'; // ✅ Default false, respeta valor guardado
   });
 
+  // 🤖 NUEVO: Configuración de IA (Grok)
+  const [aiModel, setAiModel] = useState(() => {
+    return localStorage.getItem('aiModel') || 'grok-4';
+  });
+
+  const [aiTemperature, setAiTemperature] = useState(() => {
+    return parseFloat(localStorage.getItem('aiTemperature') || '0.7');
+  });
+
+  const [aiMaxTokens, setAiMaxTokens] = useState(() => {
+    return parseInt(localStorage.getItem('aiMaxTokens') || '1000');
+  });
+
+  const [aiPersonality, setAiPersonality] = useState(() => {
+    return localStorage.getItem('aiPersonality') || 'profesional';
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
@@ -61,6 +78,10 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('showLabelClass', showLabelClass);
     localStorage.setItem('entityViewMode', entityViewMode);
     localStorage.setItem('showEntityCircle', showEntityCircle);
+    localStorage.setItem('aiModel', aiModel);
+    localStorage.setItem('aiTemperature', aiTemperature);
+    localStorage.setItem('aiMaxTokens', aiMaxTokens);
+    localStorage.setItem('aiPersonality', aiPersonality);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
@@ -73,10 +94,14 @@ export default function SettingsPanel({ onClose }) {
         showLabelType,
         showLabelClass,
         entityViewMode,
-        showEntityCircle
+        showEntityCircle,
+        aiModel,
+        aiTemperature,
+        aiMaxTokens,
+        aiPersonality
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(6); // ✅ Actualizado
@@ -88,6 +113,10 @@ export default function SettingsPanel({ onClose }) {
     setShowLabelClass(false);
     setEntityViewMode('card');
     setShowEntityCircle(false); // ✅ Actualizado
+    setAiModel('grok-4');
+    setAiTemperature(0.7);
+    setAiMaxTokens(1000);
+    setAiPersonality('profesional');
   };
 
   // 📑 Definición de tabs
@@ -96,6 +125,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'visualizacion', label: 'Visualización', icon: Eye },
     { id: 'vista', label: 'Modo Vista', icon: Monitor },
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag },
+    { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
   ];
 
   return (
@@ -451,6 +481,154 @@ export default function SettingsPanel({ onClose }) {
                     {!showLabelName && !showLabelType && !showLabelClass && (
                       <div className="text-sm text-slate-500 italic">Sin etiquetas</div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: Configuración de IA (Grok 4) */}
+          {activeTab === 'ia' && (
+            <div className="space-y-6">
+              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                <h3 className="text-lg font-semibold text-cyan-400 mb-6 flex items-center gap-2">
+                  <Bot className="w-5 h-5" />
+                  Configuración de SAE-IA (Grok 4)
+                </h3>
+
+                <div className="space-y-6">
+                  {/* Modelo de IA */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="block mb-3">
+                      <span className="text-base text-slate-200 font-medium block mb-2">Modelo de IA</span>
+                      <select
+                        value={aiModel}
+                        onChange={(e) => setAiModel(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                      >
+                        <option value="grok-4">Grok 4 (Recomendado - Más reciente)</option>
+                        <option value="grok-2-1212">Grok 2 (Diciembre 2024)</option>
+                        <option value="grok-2-latest">Grok 2 Latest (Siempre última versión)</option>
+                        <option value="grok-beta">Grok Beta (Experimental)</option>
+                      </select>
+                    </label>
+                    <p className="text-sm text-slate-400 bg-slate-900/50 p-3 rounded">
+                      🚀 <strong>Grok 4:</strong> Lanzado en julio 2025. Mayor precisión en razonamiento y análisis militar.
+                    </p>
+                  </div>
+
+                  {/* Personalidad de la IA */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="block mb-3">
+                      <span className="text-base text-slate-200 font-medium block mb-2">Personalidad de la IA</span>
+                      <select
+                        value={aiPersonality}
+                        onChange={(e) => setAiPersonality(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
+                      >
+                        <option value="profesional">🎖️ Profesional Militar</option>
+                        <option value="tecnico">🔧 Técnico/Analítico</option>
+                        <option value="casual">💬 Conversacional</option>
+                        <option value="conciso">⚡ Conciso y Directo</option>
+                      </select>
+                    </label>
+                    <p className="text-sm text-slate-400 bg-slate-900/50 p-3 rounded">
+                      ℹ️ Define el tono y estilo de las respuestas de SAE-IA.
+                    </p>
+                  </div>
+
+                  {/* Temperature */}
+                  <div className="pt-6 border-t border-slate-700">
+                    <label className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-base text-slate-200 font-medium">Creatividad (Temperature)</span>
+                        <span className="block text-xs text-slate-400 mt-1">
+                          {aiTemperature < 0.4 ? '🔒 Muy preciso y factual' :
+                           aiTemperature < 0.7 ? '⚖️ Balanceado' :
+                           '🎨 Más creativo'}
+                        </span>
+                      </div>
+                      <span className="text-lg font-mono text-cyan-400 bg-slate-900 px-3 py-1 rounded">{aiTemperature.toFixed(2)}</span>
+                    </label>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={aiTemperature}
+                      onChange={(e) => setAiTemperature(parseFloat(e.target.value))}
+                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                    <div className="flex justify-between text-sm text-slate-500 mt-2">
+                      <span>0.0 (Preciso)</span>
+                      <span>0.5 (Equilibrado)</span>
+                      <span>1.0 (Creativo)</span>
+                    </div>
+                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
+                      ℹ️ <strong>Recomendado: 0.7</strong> - Balance entre precisión y fluidez en respuestas.
+                    </p>
+                  </div>
+
+                  {/* Max Tokens */}
+                  <div className="pt-6 border-t border-slate-700">
+                    <label className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-base text-slate-200 font-medium">Longitud de respuesta</span>
+                        <span className="block text-xs text-slate-400 mt-1">
+                          {aiMaxTokens < 500 ? '📝 Breve' :
+                           aiMaxTokens < 1500 ? '📄 Media' :
+                           '📚 Detallada'}
+                        </span>
+                      </div>
+                      <span className="text-lg font-mono text-cyan-400 bg-slate-900 px-3 py-1 rounded">{aiMaxTokens}</span>
+                    </label>
+                    <input 
+                      type="range"
+                      min="500"
+                      max="4000"
+                      step="500"
+                      value={aiMaxTokens}
+                      onChange={(e) => setAiMaxTokens(parseInt(e.target.value))}
+                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                    <div className="flex justify-between text-sm text-slate-500 mt-2">
+                      <span>500 (Corto)</span>
+                      <span>1000 (Normal)</span>
+                      <span>4000 (Largo)</span>
+                    </div>
+                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
+                      ℹ️ Controla cuánto texto puede generar SAE-IA por respuesta.
+                    </p>
+                  </div>
+
+                  {/* Información del sistema */}
+                  <div className="pt-6 border-t border-slate-700 bg-cyan-900/20 p-4 rounded-lg">
+                    <h4 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+                      <Sliders className="w-4 h-4" />
+                      Capacidades de SAE-IA
+                    </h4>
+                    <ul className="space-y-2 text-sm text-slate-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>Consulta en tiempo real a la base de datos Supabase</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>Acceso a todas las entidades desplegadas (ubicación, tripulación, estado)</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>Análisis del Timeline de eventos militares</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>Cálculo automático de efectivos totales</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400">⚠</span>
+                        <span>No inventa datos - solo usa información verificada del sistema</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
