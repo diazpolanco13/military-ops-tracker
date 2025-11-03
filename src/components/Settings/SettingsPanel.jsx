@@ -25,7 +25,8 @@ export default function SettingsPanel({ onClose }) {
   });
 
   const [useImages, setUseImages] = useState(() => {
-    return localStorage.getItem('useImages') === 'true';
+    const stored = localStorage.getItem('useImages');
+    return stored === null ? true : stored === 'true'; // ✅ Default TRUE (mostrar imágenes)
   });
 
   // 🏷️ NUEVO: Configuración de etiquetas
@@ -140,10 +141,10 @@ export default function SettingsPanel({ onClose }) {
   }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective, mapPitch, mapBearing, weatherLayers]);
 
   const resetToDefaults = () => {
-    setClusterZoomThreshold(6); // ✅ Actualizado
+    setClusterZoomThreshold(5); // ✅ Actualizado
     setClusterRadius(58); // ✅ Actualizado
     setIconSize(48);
-    setUseImages(false);
+    setUseImages(true);
     setShowLabelName(true);
     setShowLabelType(true);
     setShowLabelClass(false);
@@ -154,7 +155,7 @@ export default function SettingsPanel({ onClose }) {
     setAiMaxTokens(1000);
     setAiPersonality('profesional');
     setAiPerspective('neutral');
-    setMapPitch(60);
+    setMapPitch(45);
     setMapBearing(0);
     setWeatherLayers({
       clouds: false,
@@ -247,7 +248,7 @@ export default function SettingsPanel({ onClose }) {
                 </label>
                 <input 
                   type="range"
-                  min="5"
+                  min="3"
                   max="12"
                   step="1"
                   value={clusterZoomThreshold}
