@@ -1,6 +1,7 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
+import UserManagement from '../Auth/UserManagement';
 
 /**
  * ⚙️ Panel de Configuración
@@ -180,6 +181,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag },
     { id: 'mapa', label: 'Cámara Mapa', icon: Video },
     { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
+    { id: 'usuarios', label: 'Usuarios', icon: Users },
   ];
 
   return (
@@ -234,58 +236,58 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-blue-400 mb-6 flex items-center gap-2">
                   <Layers className="w-5 h-5" />
                   Clustering de Entidades
-                </h3>
+            </h3>
 
-                {/* Umbral de zoom */}
+            {/* Umbral de zoom */}
                 <div className="space-y-6">
-                  <div>
+              <div>
                     <label className="flex items-center justify-between mb-3">
                       <span className="text-base text-slate-200 font-medium">Cambiar a iconos en zoom:</span>
                       <span className="text-lg font-mono text-blue-400 bg-slate-900 px-3 py-1 rounded">{clusterZoomThreshold}</span>
-                    </label>
-                    <input 
-                      type="range"
-                      min="5"
-                      max="12"
-                      step="1"
-                      value={clusterZoomThreshold}
-                      onChange={(e) => setClusterZoomThreshold(parseInt(e.target.value))}
+                </label>
+                <input 
+                  type="range"
+                  min="5"
+                  max="12"
+                  step="1"
+                  value={clusterZoomThreshold}
+                  onChange={(e) => setClusterZoomThreshold(parseInt(e.target.value))}
                       className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                    />
+                />
                     <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>5 (Más temprano)</span>
-                      <span>12 (Más tarde)</span>
-                    </div>
+                  <span>5 (Más temprano)</span>
+                  <span>12 (Más tarde)</span>
+                </div>
                     <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      ℹ️ Valor menor = iconos aparecen con menos zoom. Recomendado: 6-7 para ver iconos antes.
-                    </p>
-                  </div>
+                  ℹ️ Valor menor = iconos aparecen con menos zoom. Recomendado: 6-7 para ver iconos antes.
+                </p>
+              </div>
 
-                  {/* Radio de cluster */}
+              {/* Radio de cluster */}
                   <div className="pt-6 border-t border-slate-700">
                     <label className="flex items-center justify-between mb-3">
                       <span className="text-base text-slate-200 font-medium">Radio de agrupación:</span>
                       <span className="text-lg font-mono text-blue-400 bg-slate-900 px-3 py-1 rounded">{clusterRadius}px</span>
-                    </label>
-                    <input 
-                      type="range"
-                      min="30"
-                      max="100"
+                </label>
+                <input 
+                  type="range"
+                  min="30"
+                  max="100"
                       step="2"
-                      value={clusterRadius}
-                      onChange={(e) => setClusterRadius(parseInt(e.target.value))}
+                  value={clusterRadius}
+                  onChange={(e) => setClusterRadius(parseInt(e.target.value))}
                       className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                    />
+                />
                     <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>30px (Menos agrupación)</span>
-                      <span>100px (Más agrupación)</span>
-                    </div>
-                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      ℹ️ Controla qué tan cerca deben estar las entidades para agruparse.
-                    </p>
-                  </div>
+                  <span>30px (Menos agrupación)</span>
+                  <span>100px (Más agrupación)</span>
                 </div>
+                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
+                  ℹ️ Controla qué tan cerca deben estar las entidades para agruparse.
+                </p>
               </div>
+            </div>
+          </div>
             </div>
           )}
 
@@ -296,12 +298,12 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-green-400 mb-6 flex items-center gap-2">
                   <Eye className="w-5 h-5" />
                   Visualización de Entidades
-                </h3>
+            </h3>
 
                 <div className="space-y-6">
-                  {/* Toggle Iconos/Imágenes */}
+            {/* Toggle Iconos/Imágenes */}
                   <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                    <label className="flex items-center justify-between mb-2">
+              <label className="flex items-center justify-between mb-2">
                       <div>
                         <span className="text-base text-slate-200 font-medium block mb-1">Usar imágenes de plantillas</span>
                         <span className="text-xs text-slate-400">
@@ -310,24 +312,24 @@ export default function SettingsPanel({ onClose }) {
                             : 'Mostrando solo iconos (más rápido)'}
                         </span>
                       </div>
-                      <button
-                        onClick={() => setUseImages(!useImages)}
+                <button
+                  onClick={() => setUseImages(!useImages)}
                         className={`relative w-14 h-7 rounded-full transition-colors ${
-                          useImages ? 'bg-green-600' : 'bg-slate-600'
-                        }`}
-                      >
-                        <div
+                    useImages ? 'bg-green-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
                           className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
                             useImages ? 'translate-x-7' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  </div>
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
 
-                  {/* Toggle Mostrar Círculo */}
+            {/* Toggle Mostrar Círculo */}
                   <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                    <label className="flex items-center justify-between mb-2">
+              <label className="flex items-center justify-between mb-2">
                       <div>
                         <span className="text-base text-slate-200 font-medium block mb-1">Mostrar círculo de entidades</span>
                         <span className="text-xs text-slate-400">
@@ -336,46 +338,46 @@ export default function SettingsPanel({ onClose }) {
                             : 'Solo icono sin círculo (vista minimalista)'}
                         </span>
                       </div>
-                      <button
-                        onClick={() => setShowEntityCircle(!showEntityCircle)}
+                <button
+                  onClick={() => setShowEntityCircle(!showEntityCircle)}
                         className={`relative w-14 h-7 rounded-full transition-colors ${
-                          showEntityCircle ? 'bg-green-600' : 'bg-slate-600'
-                        }`}
-                      >
-                        <div
+                    showEntityCircle ? 'bg-green-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
                           className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
                             showEntityCircle ? 'translate-x-7' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  </div>
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
 
                   {/* Tamaño de iconos */}
                   <div className="pt-6 border-t border-slate-700">
                     <label className="flex items-center justify-between mb-3">
                       <span className="text-base text-slate-200 font-medium">Tamaño de iconos:</span>
                       <span className="text-lg font-mono text-green-400 bg-slate-900 px-3 py-1 rounded">{iconSize}px</span>
-                    </label>
-                    <input 
-                      type="range"
-                      min="24"
-                      max="72"
-                      step="8"
-                      value={iconSize}
-                      onChange={(e) => setIconSize(parseInt(e.target.value))}
+              </label>
+              <input 
+                type="range"
+                min="24"
+                max="72"
+                step="8"
+                value={iconSize}
+                onChange={(e) => setIconSize(parseInt(e.target.value))}
                       className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-green-500"
-                    />
+              />
                     <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>24px (Pequeño)</span>
-                      <span>48px (Normal)</span>
-                      <span>72px (Grande)</span>
-                    </div>
+                <span>24px (Pequeño)</span>
+                <span>48px (Normal)</span>
+                <span>72px (Grande)</span>
+              </div>
                     <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      ℹ️ Tamaño de los iconos de barcos/aviones en el mapa.
-                    </p>
-                  </div>
-                </div>
+                ℹ️ Tamaño de los iconos de barcos/aviones en el mapa.
+              </p>
+            </div>
+          </div>
               </div>
             </div>
           )}
@@ -387,55 +389,55 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
                   <Monitor className="w-5 h-5" />
                   Modo de Vista de Entidad
-                </h3>
+            </h3>
                 <p className="text-sm text-slate-400 mb-6">
-                  Elige cómo mostrar los detalles cuando haces clic en una entidad del mapa.
-                </p>
+              Elige cómo mostrar los detalles cuando haces clic en una entidad del mapa.
+            </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Opción: Card Futurista */}
-                  <button
-                    onClick={() => setEntityViewMode('card')}
+              {/* Opción: Card Futurista */}
+              <button
+                onClick={() => setEntityViewMode('card')}
                     className={`p-6 rounded-lg border-2 transition-all ${
-                      entityViewMode === 'card'
-                        ? 'border-cyan-500 bg-cyan-500/20'
-                        : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
-                    }`}
-                  >
-                    <div className="text-center">
+                  entityViewMode === 'card'
+                    ? 'border-cyan-500 bg-cyan-500/20'
+                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                }`}
+              >
+                <div className="text-center">
                       <div className="text-5xl mb-3">🎴</div>
                       <div className="text-base font-semibold text-white mb-2">Card Futurista</div>
                       <div className="text-sm text-slate-400">
-                        Flotante, centrada, estilo juego
-                      </div>
-                      {entityViewMode === 'card' && (
+                    Flotante, centrada, estilo juego
+                  </div>
+                  {entityViewMode === 'card' && (
                         <div className="mt-3 text-sm font-bold text-cyan-400">✓ ACTIVO</div>
-                      )}
-                    </div>
-                  </button>
+                  )}
+                </div>
+              </button>
 
-                  {/* Opción: Sidebar Clásico */}
-                  <button
-                    onClick={() => setEntityViewMode('sidebar')}
+              {/* Opción: Sidebar Clásico */}
+              <button
+                onClick={() => setEntityViewMode('sidebar')}
                     className={`p-6 rounded-lg border-2 transition-all ${
-                      entityViewMode === 'sidebar'
-                        ? 'border-cyan-500 bg-cyan-500/20'
-                        : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
-                    }`}
-                  >
-                    <div className="text-center">
+                  entityViewMode === 'sidebar'
+                    ? 'border-cyan-500 bg-cyan-500/20'
+                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                }`}
+              >
+                <div className="text-center">
                       <div className="text-5xl mb-3">📊</div>
                       <div className="text-base font-semibold text-white mb-2">Sidebar Clásico</div>
                       <div className="text-sm text-slate-400">
-                        Panel lateral, más espacio
-                      </div>
-                      {entityViewMode === 'sidebar' && (
+                    Panel lateral, más espacio
+                  </div>
+                  {entityViewMode === 'sidebar' && (
                         <div className="mt-3 text-sm font-bold text-cyan-400">✓ ACTIVO</div>
-                      )}
-                    </div>
-                  </button>
+                  )}
                 </div>
-              </div>
+              </button>
+            </div>
+          </div>
             </div>
           )}
 
@@ -446,98 +448,98 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-purple-400 mb-4 flex items-center gap-2">
                   <Tag className="w-5 h-5" />
                   Etiquetas de Información
-                </h3>
+            </h3>
                 <p className="text-sm text-slate-400 mb-6">
-                  Controla qué información se muestra debajo de cada entidad en el mapa.
-                </p>
+              Controla qué información se muestra debajo de cada entidad en el mapa.
+            </p>
 
                 <div className="space-y-4">
-                  {/* Toggle: Nombre del barco */}
+              {/* Toggle: Nombre del barco */}
                   <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                    <div>
+                <div>
                       <div className="text-base font-medium text-white mb-1">Nombre de la entidad</div>
                       <div className="text-sm text-slate-400">USS Newport News, MV Ocean Trader, etc.</div>
-                    </div>
-                    <button
-                      onClick={() => setShowLabelName(!showLabelName)}
+                </div>
+                <button
+                  onClick={() => setShowLabelName(!showLabelName)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        showLabelName ? 'bg-purple-600' : 'bg-slate-600'
-                      }`}
-                    >
-                      <div
+                    showLabelName ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
                         className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
                           showLabelName ? 'translate-x-7' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                    }`}
+                  />
+                </button>
+              </div>
 
-                  {/* Toggle: Tipo de barco */}
+              {/* Toggle: Tipo de barco */}
                   <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                    <div>
+                <div>
                       <div className="text-base font-medium text-white mb-1">Tipo de entidad</div>
                       <div className="text-sm text-slate-400">Destructor, Submarino, Aeronave, etc.</div>
-                    </div>
-                    <button
-                      onClick={() => setShowLabelType(!showLabelType)}
+                </div>
+                <button
+                  onClick={() => setShowLabelType(!showLabelType)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        showLabelType ? 'bg-purple-600' : 'bg-slate-600'
-                      }`}
-                    >
-                      <div
+                    showLabelType ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
                         className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
                           showLabelType ? 'translate-x-7' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                    }`}
+                  />
+                </button>
+              </div>
 
-                  {/* Toggle: Modelo/Clase del barco */}
+              {/* Toggle: Modelo/Clase del barco */}
                   <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg border border-slate-600">
-                    <div>
+                <div>
                       <div className="text-base font-medium text-white mb-1">Modelo/Clase</div>
                       <div className="text-sm text-slate-400">Arleigh Burke Flight IIA, Los Angeles Class, etc.</div>
-                    </div>
-                    <button
-                      onClick={() => setShowLabelClass(!showLabelClass)}
+                </div>
+                <button
+                  onClick={() => setShowLabelClass(!showLabelClass)}
                       className={`relative w-14 h-7 rounded-full transition-colors ${
-                        showLabelClass ? 'bg-purple-600' : 'bg-slate-600'
-                      }`}
-                    >
-                      <div
+                    showLabelClass ? 'bg-purple-600' : 'bg-slate-600'
+                  }`}
+                >
+                  <div
                         className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
                           showLabelClass ? 'translate-x-7' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
 
-                {/* Vista previa */}
+            {/* Vista previa */}
                 <div className="mt-6 p-4 bg-slate-900/50 rounded-lg border border-purple-900/30">
                   <div className="text-sm text-slate-400 mb-3 font-medium">Vista previa:</div>
                   <div className="flex flex-col items-center gap-1">
-                    {showLabelName && (
+                {showLabelName && (
                       <div className="px-3 py-1 bg-slate-800 text-white text-sm font-semibold rounded border border-red-500">
-                        USS Newport News
-                      </div>
-                    )}
-                    {showLabelType && (
-                      <div className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs">
-                        Submarino
-                      </div>
-                    )}
-                    {showLabelClass && (
-                      <div className="px-2 py-0.5 bg-slate-700 text-slate-400 rounded text-[11px]">
-                        Los Angeles Class
-                      </div>
-                    )}
-                    {!showLabelName && !showLabelType && !showLabelClass && (
-                      <div className="text-sm text-slate-500 italic">Sin etiquetas</div>
-                    )}
+                    USS Newport News
                   </div>
-                </div>
+                )}
+                {showLabelType && (
+                      <div className="px-2 py-0.5 bg-slate-700 text-slate-300 rounded text-xs">
+                    Submarino
+                  </div>
+                )}
+                {showLabelClass && (
+                      <div className="px-2 py-0.5 bg-slate-700 text-slate-400 rounded text-[11px]">
+                    Los Angeles Class
+                  </div>
+                )}
+                {!showLabelName && !showLabelType && !showLabelClass && (
+                      <div className="text-sm text-slate-500 italic">Sin etiquetas</div>
+                )}
               </div>
+            </div>
+          </div>
             </div>
           )}
 
@@ -548,7 +550,7 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-purple-400 mb-6 flex items-center gap-2">
                   <Video className="w-5 h-5" />
                   Configuración de Cámara del Mapa
-                </h3>
+            </h3>
 
                 <div className="space-y-6">
                   {/* Pitch (Inclinación) */}
@@ -562,7 +564,7 @@ export default function SettingsPanel({ onClose }) {
                            mapPitch < 50 ? '🏔️ Inclinación media (3D)' :
                            '🏔️ Muy inclinado (3D profundo)'}
                         </span>
-                      </div>
+              </div>
                       <span className="text-lg font-mono text-purple-400 bg-slate-900 px-3 py-1 rounded">{mapPitch}°</span>
                     </label>
                     <input 
@@ -578,7 +580,7 @@ export default function SettingsPanel({ onClose }) {
                       <span>0° (Plano)</span>
                       <span>45° (Medio)</span>
                       <span>85° (Máximo)</span>
-                    </div>
+              </div>
                     
                     {/* Presets de Pitch */}
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -612,7 +614,7 @@ export default function SettingsPanel({ onClose }) {
                       >
                         🏔️ 3D Completo (60°)
                       </button>
-                    </div>
+              </div>
 
                     <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
                       ℹ️ <strong>Pitch (Inclinación):</strong> Define el ángulo de la cámara. 
@@ -620,7 +622,7 @@ export default function SettingsPanel({ onClose }) {
                       <br/>• 60-85° = Vista 3D con edificios y terreno en perspectiva
                       <br/>💡 Usa pitch alto para visualizar operaciones militares en terreno montañoso
                     </p>
-                  </div>
+            </div>
 
                   {/* Bearing (Rotación) */}
                   <div className="pt-6 border-t border-slate-700">
@@ -634,7 +636,7 @@ export default function SettingsPanel({ onClose }) {
                            mapBearing === 270 ? '🧭 Oeste arriba' :
                            `🧭 ${mapBearing}° desde el norte`}
                         </span>
-                      </div>
+          </div>
                       <span className="text-lg font-mono text-purple-400 bg-slate-900 px-3 py-1 rounded">{mapBearing}°</span>
                     </label>
                     <input 
@@ -652,8 +654,8 @@ export default function SettingsPanel({ onClose }) {
                       <span>180° (Sur)</span>
                       <span>270° (Oeste)</span>
                       <span>360°</span>
-                    </div>
-                    
+        </div>
+
                     {/* Presets de Bearing */}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
@@ -1204,6 +1206,15 @@ export default function SettingsPanel({ onClose }) {
               </div>
             </div>
           )}
+
+          {/* TAB: Gestión de Usuarios */}
+          {activeTab === 'usuarios' && (
+            <div className="space-y-6">
+              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                <UserManagement />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer con resumen y botones */}
@@ -1228,18 +1239,18 @@ export default function SettingsPanel({ onClose }) {
 
           {/* Botones de acción */}
           <div className="p-4 flex justify-between">
-            <button
-              onClick={resetToDefaults}
+          <button
+            onClick={resetToDefaults}
               className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
-            >
-              Restablecer Valores
-            </button>
-            <button
-              onClick={onClose}
+          >
+            Restablecer Valores
+          </button>
+          <button
+            onClick={onClose}
               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
-            >
-              Aplicar y Cerrar
-            </button>
+          >
+            Aplicar y Cerrar
+          </button>
           </div>
         </div>
       </div>
