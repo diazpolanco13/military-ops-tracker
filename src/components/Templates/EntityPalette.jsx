@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Settings, Grid3x3, List } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, ChevronDown, ChevronRight, Star, Clock, FolderOpen, Plus, Settings, Grid3x3, List, X } from 'lucide-react';
 import { useEntityTemplates } from '../../hooks/useEntityTemplates';
 import { getCategoryIcon } from '../../config/i2Icons';
 import TemplateCard from './TemplateCard';
@@ -11,8 +11,9 @@ import TemplateDetailsModal from './TemplateDetailsModal';
  * Panel lateral de paleta de plantillas tipo IBM Analyst's Notebook
  * Organiza plantillas en jerarquía de categorías y tipos
  */
-export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
+export default function EntityPalette({ onSelectTemplate, onDragTemplate, onClose }) {
   const { templates, loading, getTemplatesHierarchy, getTopTemplates, searchTemplates } = useEntityTemplates();
+  const sidebarRef = useRef(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -55,6 +56,25 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]); // ✅ Solo depender de searchTerm para evitar loops
+
+  // 🖱️ Cerrar al hacer click fuera del sidebar
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target) && onClose) {
+        onClose();
+      }
+    };
+
+    // Agregar listener después de un pequeño delay para evitar que se cierre inmediatamente al abrir
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   // Obtener jerarquía de plantillas
   const hierarchy = getTemplatesHierarchy();
@@ -171,6 +191,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
 
   return (
     <div 
+      ref={sidebarRef}
       className="fixed left-0 w-80 bg-slate-900 border-r border-slate-700 flex flex-col palette-enter shadow-2xl" 
       style={{ 
         zIndex: 50, // ✅ Mayor que SearchBar (z-40) para evitar superposición en mobile
@@ -180,9 +201,20 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     >
       {/* Header - Siempre visible desde el inicio */}
       <div className="p-4 border-b border-slate-700 bg-slate-800">
-        <h2 className="text-lg font-bold text-white mb-3">
-          🎨 Paleta de Entidades
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-bold text-white">
+            🎨 Paleta de Entidades
+          </h2>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+              aria-label="Cerrar paleta"
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
 
         {/* Búsqueda */}
         <div className="relative">
