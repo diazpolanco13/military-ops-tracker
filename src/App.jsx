@@ -8,8 +8,10 @@ import MeasurementTools from './components/Measurement/MeasurementTools';
 import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
 import EventTimeline from './components/Timeline/EventTimeline';
 import SearchBar from './components/Search/SearchBar';
+import LoginPage from './components/Auth/LoginPage';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
+import { useAuth } from './hooks/useAuth';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
@@ -18,6 +20,7 @@ import './utils/loadGADMBoundaries';
 import './utils/loadTerrestrialBoundaries';
 
 function App() {
+  const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
@@ -70,6 +73,24 @@ function App() {
     // Aquí puedes agregar sonidos, notificaciones, etc.
   };
 
+  // 🔐 Mostrar pantalla de carga mientras verifica autenticación
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white text-lg font-semibold">Verificando autenticación...</p>
+          <p className="text-slate-400 text-sm mt-2">🔒 Conexión segura con Supabase</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 🔐 Mostrar login si no está autenticado
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <LockProvider>
       <SelectionProvider>
@@ -89,6 +110,8 @@ function App() {
           timelineVisible={showEventTimeline}
           onToggleSearch={() => setShowSearch(!showSearch)}
           searchVisible={showSearch}
+          user={user}
+          onSignOut={signOut}
         />
 
       {/* HeaderBar eliminado - Funcionalidad movida al menú "Ver" de la navbar */}

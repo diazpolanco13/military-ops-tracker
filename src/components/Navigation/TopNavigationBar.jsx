@@ -25,7 +25,9 @@ import {
   Activity,
   Ruler,
   TrendingUp,
-  Clock
+  Clock,
+  User,
+  LogOut
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -58,7 +60,9 @@ export default function TopNavigationBar({
   onToggleTimeline = () => {},
   timelineVisible = false,
   onToggleSearch = () => {},
-  searchVisible = true
+  searchVisible = true,
+  user = null,
+  onSignOut = null
 }) {
   const [activePanel, setActivePanel] = useState(null);
   // 🗺️ Persistir selección de mapa en localStorage
@@ -169,7 +173,7 @@ export default function TopNavigationBar({
         {/* Spacer - Empuja configuración a la derecha */}
         <div className="flex-1"></div>
 
-        {/* ⚙️ Configuración (derecha) */}
+        {/* ⚙️ Configuración */}
         <NavButton
           icon={<Settings className="w-5 h-5" />}
           label="Config"
@@ -177,6 +181,30 @@ export default function TopNavigationBar({
           onClick={() => setShowSettingsPanel(true)}
           tooltip="Configuración"
         />
+
+        {/* 👤 Usuario (extremo derecho) */}
+        {user && onSignOut && (
+          <div className="ml-auto flex items-center gap-2 pl-4 border-l border-slate-700">
+            <div className="hidden sm:flex items-center gap-2 text-xs">
+              <div className="text-slate-400">
+                <User className="w-4 h-4" />
+              </div>
+              <span className="text-slate-300">{user.email}</span>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm('¿Cerrar sesión?')) {
+                  onSignOut();
+                }
+              }}
+              className="flex items-center gap-1 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 rounded-lg transition-all border border-red-900/30 hover:border-red-700/50"
+              title="Cerrar Sesión"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-xs font-medium hidden sm:inline">Salir</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* PANELES DESPLEGABLES (se expanden hacia abajo desde la navbar) */}
