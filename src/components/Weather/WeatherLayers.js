@@ -21,7 +21,7 @@ export const WEATHER_LAYERS = {
     id: 'clouds_new',
     name: '☁️ Nubes',
     description: 'Cobertura de nubes en tiempo real',
-    url: `https://tile.openweathermap.org/map/clouds_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
+    layerName: 'clouds_new', // Nombre de la capa en OpenWeatherMap
     opacity: 0.6,
     color: '#FFFFFF'
   },
@@ -29,7 +29,7 @@ export const WEATHER_LAYERS = {
     id: 'precipitation_new',
     name: '🌧️ Precipitación',
     description: 'Lluvia y nieve en tiempo real',
-    url: `https://tile.openweathermap.org/map/precipitation_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
+    layerName: 'precipitation_new',
     opacity: 0.7,
     color: '#0099FF'
   },
@@ -37,7 +37,7 @@ export const WEATHER_LAYERS = {
     id: 'temp_new',
     name: '🌡️ Temperatura',
     description: 'Temperatura del aire',
-    url: `https://tile.openweathermap.org/map/temp_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
+    layerName: 'temp_new',
     opacity: 0.6,
     color: '#FF6B35'
   },
@@ -45,7 +45,7 @@ export const WEATHER_LAYERS = {
     id: 'wind_new',
     name: '💨 Viento',
     description: 'Velocidad y dirección del viento',
-    url: `https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
+    layerName: 'wind_new',
     opacity: 0.7,
     color: '#00D9FF'
   },
@@ -53,11 +53,18 @@ export const WEATHER_LAYERS = {
     id: 'pressure_new',
     name: '📊 Presión',
     description: 'Presión atmosférica',
-    url: `https://tile.openweathermap.org/map/pressure_new/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`,
+    layerName: 'pressure_new',
     opacity: 0.6,
     color: '#A8E6CF'
   }
 };
+
+/**
+ * Construir URL de tile dinámicamente
+ */
+function getWeatherTileUrl(layerName) {
+  return `https://tile.openweathermap.org/map/${layerName}/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`;
+}
 
 /**
  * Agregar capa de clima al mapa
@@ -90,10 +97,13 @@ export function addWeatherLayer(map, layerType) {
   }
 
   try {
+    // Construir URL dinámicamente con la API key actual
+    const tileUrl = getWeatherTileUrl(layer.layerName);
+    
     // Agregar source
     map.addSource(layer.id, {
       type: 'raster',
-      tiles: [layer.url],
+      tiles: [tileUrl],
       tileSize: 256,
       attribution: '© <a href="https://openweathermap.org/">OpenWeatherMap</a>',
       // ✅ PREVENIR BUCLE INFINITO: No reintentar si falla
