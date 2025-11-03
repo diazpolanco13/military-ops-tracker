@@ -7,11 +7,14 @@ import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
 import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
 import EventTimeline from './components/Timeline/EventTimeline';
+import CalendarView from './components/Calendar/CalendarView';
+import AddEventModal from './components/Timeline/AddEventModal';
 import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
 import { useState } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
+import { useEvents } from './hooks/useEvents';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
@@ -21,6 +24,7 @@ import './utils/loadTerrestrialBoundaries';
 
 function App() {
   const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
+  const { events, loading: eventsLoading, updateEvent, deleteEvent } = useEvents();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
@@ -29,7 +33,9 @@ function App() {
   const [radarCompact, setRadarCompact] = useState(true); // Radar en modo compacto por defecto
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
   const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
+  const [showCalendar, setShowCalendar] = useState(false); // Control del Calendario de Eventos
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
+  const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar desde el calendario
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -108,6 +114,8 @@ function App() {
           measurementVisible={showMeasurementTools}
           onToggleTimeline={() => setShowEventTimeline(!showEventTimeline)}
           timelineVisible={showEventTimeline}
+          onToggleCalendar={() => setShowCalendar(!showCalendar)}
+          calendarVisible={showCalendar}
           onToggleSearch={() => setShowSearch(!showSearch)}
           searchVisible={showSearch}
           user={user}
@@ -169,6 +177,37 @@ function App() {
           <EventTimeline 
             isOpen={showEventTimeline}
             onClose={() => setShowEventTimeline(false)}
+          />
+        )}
+
+        {/* Calendario de Eventos - Vista completa */}
+        {showCalendar && (
+          <CalendarView
+            events={events}
+            loading={eventsLoading}
+            onClose={() => setShowCalendar(false)}
+            onEditEvent={(event) => setEventToEdit(event)}
+            onDeleteEvent={async (eventId) => {
+              await deleteEvent(eventId);
+            }}
+          />
+        )}
+
+        {/* Modal de edición de evento desde calendario */}
+        {eventToEdit && (
+          <AddEventModal
+            event={eventToEdit}
+            onClose={() => setEventToEdit(null)}
+            onCreate={async (_, data) => {
+              return { success: false, error: 'Usar el timeline para crear eventos' };
+            }}
+            onUpdate={async (id, data) => {
+              const result = await updateEvent(id, data);
+              if (result.success) {
+                setEventToEdit(null);
+              }
+              return result;
+            }}
           />
         )}
 

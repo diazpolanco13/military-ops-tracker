@@ -22,6 +22,8 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    analyst_analysis: '',
+    analyst_recommendations: '',
     event_date: getLocalDateTimeString(),
     type: 'evento',
     location: '',
@@ -189,22 +191,22 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
 
   return (
     <div className="fixed inset-0 z-[300] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">
-            {event ? 'Editar Evento' : 'Nuevo Evento'}
+        <div className="px-6 py-4 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-800 flex justify-between items-center flex-shrink-0">
+          <h2 className="text-2xl font-bold text-white">
+            {event ? '✏️ Editar Evento' : '➕ Nuevo Evento'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+            className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Tipo de evento */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -336,18 +338,52 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
             />
           </div>
 
-          {/* Descripción */}
+          {/* Descripción Completa */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Descripción
+              Descripción Completa
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descripción detallada del evento..."
+              placeholder="Descripción detallada de lo que sucedió, quién estuvo involucrado, contexto del evento..."
               rows={4}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+          </div>
+
+          {/* Análisis del Analista */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              📊 Análisis del Analista
+            </label>
+            <textarea
+              value={formData.analyst_analysis}
+              onChange={(e) => setFormData({ ...formData, analyst_analysis: e.target.value })}
+              placeholder="Tu análisis profesional: implicaciones estratégicas, patrones detectados, relación con otros eventos, evaluación de amenazas..."
+              rows={5}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              💡 Campo exclusivo para el análisis del analista de inteligencia
+            </p>
+          </div>
+
+          {/* Recomendaciones del Analista */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              💡 Recomendaciones
+            </label>
+            <textarea
+              value={formData.analyst_recommendations}
+              onChange={(e) => setFormData({ ...formData, analyst_recommendations: e.target.value })}
+              placeholder="Acciones recomendadas, seguimiento necesario, alertas a emitir, recursos a desplegar..."
+              rows={4}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              💡 Acciones sugeridas basadas en este evento
+            </p>
           </div>
 
           {/* Ubicación */}
@@ -525,21 +561,22 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
         </form>
 
         {/* Footer con botones */}
-        <div className="px-4 py-3 border-t border-slate-700 bg-slate-800/50 flex gap-2">
+        <div className="px-6 py-4 border-t border-slate-700 bg-slate-800/50 flex gap-3 flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium"
           >
+            <X size={18} />
             Cancelar
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save size={18} />
-            <span>{saving ? 'Guardando...' : (event ? 'Actualizar' : 'Guardar')}</span>
+            <span>{saving ? 'Guardando...' : (event ? 'Actualizar Evento' : 'Guardar Evento')}</span>
           </button>
         </div>
       </div>
@@ -547,7 +584,7 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
       {/* Modal de subida de imagen */}
       {showImageUploader && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[400]">
-          <div className="bg-slate-900 rounded-xl p-6 max-w-2xl w-full mx-4 border border-slate-700">
+          <div className="bg-slate-900 rounded-xl p-6 max-w-4xl w-full mx-4 border border-slate-700">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                 <ImageIcon size={20} />

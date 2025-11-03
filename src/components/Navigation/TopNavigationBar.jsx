@@ -26,6 +26,7 @@ import {
   Ruler,
   TrendingUp,
   Clock,
+  Calendar,
   User,
   LogOut
 } from 'lucide-react';
@@ -60,6 +61,8 @@ export default function TopNavigationBar({
   measurementVisible = false,
   onToggleTimeline = () => {},
   timelineVisible = false,
+  onToggleCalendar = () => {},
+  calendarVisible = false,
   onToggleSearch = () => {},
   searchVisible = true,
   user = null,
@@ -167,6 +170,15 @@ export default function TopNavigationBar({
           active={timelineVisible}
           onClick={onToggleTimeline}
           tooltip="Timeline de Eventos"
+        />
+
+        {/* Calendario de Eventos */}
+        <NavButton
+          icon={<Calendar className="w-5 h-5" />}
+          label="Calendario"
+          active={calendarVisible}
+          onClick={onToggleCalendar}
+          tooltip="Vista de Calendario"
         />
 
         {/* Separador - Oculto en móvil */}
