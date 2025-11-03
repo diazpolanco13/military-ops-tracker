@@ -27,6 +27,7 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('all'); // all, urgente, importante, normal
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewMode, setViewMode] = useState('calendar'); // 'calendar' o 'search-results'
 
   // Generar días del calendario (incluye días del mes anterior/siguiente para completar semanas)
   const calendarDays = useMemo(() => {
@@ -56,6 +57,13 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         event.location?.toLowerCase().includes(term) ||
         event.tags?.some(tag => tag.toLowerCase().includes(term))
       );
+      
+      // Cambiar a vista de resultados si hay búsqueda activa
+      if (filtered.length > 0) {
+        setViewMode('search-results');
+      }
+    } else {
+      setViewMode('calendar');
     }
     
     // Filtrar por prioridad
@@ -102,17 +110,47 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
     return eventsByDay[dateKey] || [];
   };
 
+  // Agrupar eventos filtrados por mes y día (para vista de búsqueda)
+  const eventsByMonthAndDay = useMemo(() => {
+    const grouped = {};
+    
+    filteredEvents.forEach(event => {
+      if (!event || !event.event_date) return;
+      
+      try {
+        const eventDate = new Date(event.event_date);
+        const monthKey = format(eventDate, 'yyyy-MM');
+        const dayKey = format(eventDate, 'yyyy-MM-dd');
+        
+        if (!grouped[monthKey]) {
+          grouped[monthKey] = {};
+        }
+        if (!grouped[monthKey][dayKey]) {
+          grouped[monthKey][dayKey] = [];
+        }
+        grouped[monthKey][dayKey].push(event);
+      } catch (error) {
+        console.error('Error grouping event:', error);
+      }
+    });
+    
+    return grouped;
+  }, [filteredEvents]);
+
   // Navegación de meses
   const goToPreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
+    setViewMode('calendar');
   };
 
   const goToNextMonth = () => {
     setCurrentMonth(prev => addMonths(prev, 1));
+    setViewMode('calendar');
   };
 
   const goToToday = () => {
     setCurrentMonth(new Date());
+    setViewMode('calendar');
   };
 
   // Handler para click en día
@@ -247,9 +285,110 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         </button>
       </div>
 
-      {/* Calendario Grid */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="max-w-7xl mx-auto">
+      {/* Vista condicional: Calendario o Resultados de Búsqueda */}
+      <div className="flex-1 overflow-auto p-6 custom-scrollbar-transparent">
+        {viewMode === 'search-results' ? (
+          /* VISTA DE RESULTADOS DE BÚSQUEDA */
+          <div className="max-w-5xl mx-auto space-y-6">
+            {Object.entries(eventsByMonthAndDay)
+              .sort(([a], [b]) => b.localeCompare(a)) // Orden descendente (más reciente primero)
+              .map(([monthKey, days]) => {
+                // Parsear correctamente el mes (formato: yyyy-MM)
+                const [year, month] = monthKey.split('-');
+                const monthDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+                const totalEvents = Object.values(days).flat().length;
+                
+                return (
+                  <div key={monthKey} className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
+                    {/* Header del mes */}
+                    <div className="bg-gradient-to-r from-blue-900/30 to-slate-800 px-5 py-3 border-b border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-white capitalize">
+                          {format(monthDate, 'MMMM yyyy')}
+                        </h3>
+                        <span className="text-sm text-slate-400">
+                          {totalEvents} evento{totalEvents !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Días con eventos */}
+                    <div className="p-4 space-y-4">
+                      {Object.entries(days)
+                        .sort(([a], [b]) => b.localeCompare(a))
+                        .map(([dayKey, dayEvents]) => {
+                          // Parsear correctamente la fecha (formato: yyyy-MM-dd)
+                          const [year, month, day] = dayKey.split('-');
+                          const dayDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                          
+                          return (
+                            <div key={dayKey} className="space-y-2">
+                              {/* Header del día */}
+                              <div 
+                                className="flex items-center gap-3 cursor-pointer hover:bg-slate-700/30 p-2 rounded-lg transition-colors"
+                                onClick={() => setSelectedDate(dayDate)}
+                              >
+                                <div className="text-slate-400 text-sm font-medium min-w-[140px] capitalize">
+                                  {format(dayDate, "EEEE d")}
+                                </div>
+                                <div className="flex-1 h-px bg-slate-700"></div>
+                                <div className="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+                                  {dayEvents.length}
+                                </div>
+                              </div>
+                              
+                              {/* Lista de eventos del día */}
+                              <div className="pl-4 space-y-2">
+                                {dayEvents.map(event => {
+                                  const getPriorityColor = () => {
+                                    switch (event.priority_level) {
+                                      case 'urgente': return 'border-l-red-500 bg-red-950/20';
+                                      case 'importante': return 'border-l-yellow-500 bg-yellow-950/20';
+                                      default: return 'border-l-slate-600 bg-slate-800/30';
+                                    }
+                                  };
+                                  
+                                  return (
+                                    <div
+                                      key={event.id}
+                                      onClick={() => {
+                                        setSelectedDate(dayDate);
+                                        // El EventDayModal se abrirá y desde ahí pueden ver detalles
+                                      }}
+                                      className={`border-l-4 ${getPriorityColor()} p-3 rounded-r-lg cursor-pointer hover:bg-slate-700/50 transition-colors`}
+                                    >
+                                      <div className="flex items-start gap-2">
+                                        <span className="text-lg">
+                                          {event.type === 'evento' ? '🎯' : event.type === 'noticia' ? '📰' : '📄'}
+                                        </span>
+                                        <div className="flex-1">
+                                          <h4 className="text-sm font-semibold text-white mb-1">{event.title}</h4>
+                                          {event.description && (
+                                            <p className="text-xs text-slate-400 line-clamp-2 mb-2">
+                                              {event.description}
+                                            </p>
+                                          )}
+                                          <div className="flex gap-2 text-xs text-slate-500">
+                                            <span>🕐 {format(new Date(event.event_date), 'HH:mm')}</span>
+                                            {event.location && <span>📍 {event.location}</span>}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        ) : (
+          /* VISTA DE CALENDARIO NORMAL */
+          <div className="max-w-7xl mx-auto">
           {/* Header de días de la semana */}
           <div className="grid grid-cols-7 gap-2 mb-2">
             {weekDays.map(day => (
@@ -305,7 +444,8 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
               <span>Alta actividad (6+)</span>
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Modal de eventos del día */}
@@ -319,10 +459,10 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         />
       )}
 
-      {/* Botón flotante para crear evento */}
+      {/* Botón flotante para crear evento - Esquina inferior IZQUIERDA */}
       <button
         onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
+        className="fixed bottom-8 left-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
         title="Crear nuevo evento"
       >
         <Plus size={28} strokeWidth={2.5} />
