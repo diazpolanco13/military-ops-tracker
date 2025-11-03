@@ -104,11 +104,24 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
       className={cellClasses}
       onClick={hasEvents ? onClick : undefined}
     >
-      {/* Número del día */}
+      {/* Número y nombre del día */}
       <div className="absolute top-1.5 left-2">
-        <span className={`text-sm font-semibold ${isToday ? 'text-blue-400' : 'text-slate-300'}`}>
-          {format(day, 'd')}
-        </span>
+        {isWeekView ? (
+          /* Vista de 3 días: Mostrar día de semana + número */
+          <div className="flex flex-col">
+            <span className={`text-xs font-bold uppercase ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
+              {format(day, 'EEE')}
+            </span>
+            <span className={`text-2xl font-bold ${isToday ? 'text-blue-400' : 'text-white'}`}>
+              {format(day, 'd')}
+            </span>
+          </div>
+        ) : (
+          /* Vista mensual: Solo número */
+          <span className={`text-sm font-semibold ${isToday ? 'text-blue-400' : 'text-slate-300'}`}>
+            {format(day, 'd')}
+          </span>
+        )}
       </div>
 
       {/* Badge con cantidad de eventos - Círculo bonito */}
@@ -122,7 +135,7 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
 
       {/* Lista de eventos - Adaptativa según vista */}
       {hasEvents && (
-        <div className="absolute inset-x-1 top-9 bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1.5">
+        <div className={`absolute inset-x-1 ${isWeekView ? 'top-16' : 'top-9'} bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1.5`}>
           {events.map((event, idx) => {
             // Color según prioridad
             const getBadgeColor = () => {
