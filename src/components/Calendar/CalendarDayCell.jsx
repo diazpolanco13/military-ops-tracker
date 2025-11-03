@@ -84,17 +84,17 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
     return 'bg-blue-600';
   };
 
-  // Estilos dinámicos
+  // Estilos dinámicos - Sin aspect-square en vista semanal
   const cellClasses = `
     relative
-    aspect-square
+    ${isWeekView ? 'min-h-full' : 'aspect-square'}
     rounded-lg
     border-2
     transition-all
     duration-200
     ${getHeatmapColor()}
     ${isCurrentMonth ? 'border-slate-700' : 'border-slate-800'}
-    ${hasEvents ? 'cursor-pointer hover:border-blue-500 hover:scale-105' : 'cursor-default'}
+    ${hasEvents ? 'cursor-pointer hover:border-blue-500 hover:scale-[1.02]' : 'cursor-default'}
     ${isToday ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900' : ''}
     ${!isCurrentMonth ? 'opacity-40' : ''}
   `;

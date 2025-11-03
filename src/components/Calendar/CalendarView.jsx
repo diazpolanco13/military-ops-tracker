@@ -598,8 +598,10 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
             </div>
           ) : (
             /* VISTA MENSUAL Y SEMANAL: Grid de días */
-            <div className={`grid gap-2 flex-1 ${
-              calendarView === 'week' ? 'grid-cols-7 auto-rows-fr' : 'grid-cols-7'
+            <div className={`grid gap-2 ${
+              calendarView === 'week' 
+                ? 'grid-cols-7 grid-rows-1 h-full' 
+                : 'grid-cols-7'
             }`}>
             {calendarDays.map(day => {
               const dayEvents = getEventsForDay(day);
