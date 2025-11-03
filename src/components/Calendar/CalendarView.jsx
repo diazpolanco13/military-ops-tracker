@@ -1,16 +1,19 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter, Plus, Grid3x3, Columns, LayoutGrid } from 'lucide-react';
 import { 
   startOfMonth, 
   endOfMonth, 
   startOfWeek, 
   endOfWeek, 
   eachDayOfInterval,
+  eachMonthOfInterval,
   format,
   isSameMonth,
   isToday,
   addMonths,
-  subMonths
+  subMonths,
+  addWeeks,
+  subWeeks
 } from 'date-fns';
 import CalendarDayCell from './CalendarDayCell';
 import EventDayModal from './EventDayModal';
@@ -28,21 +31,58 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
   const [filterPriority, setFilterPriority] = useState('all'); // all, urgente, importante, normal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' o 'search-results'
+  const [calendarView, setCalendarView] = useState('month'); // 'month', 'week', 'semester'
+  const [selectedEventFromSemester, setSelectedEventFromSemester] = useState(null);
 
-  // Generar días del calendario (incluye días del mes anterior/siguiente para completar semanas)
+  // Generar días/meses del calendario según el tipo de vista
   const calendarDays = useMemo(() => {
     try {
-      const monthStart = startOfMonth(currentMonth);
-      const monthEnd = endOfMonth(currentMonth);
-      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 }); // Domingo
-      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
-
-      return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+      if (calendarView === 'month') {
+        // Vista mensual: 7×6 grid (días)
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+        const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+        const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+        return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+      } else if (calendarView === 'week') {
+        // Vista semanal: 7 días
+        const weekStart = startOfWeek(currentMonth, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 0 });
+        return eachDayOfInterval({ start: weekStart, end: weekEnd });
+      } else {
+        // Vista semestral: 6 meses
+        return [];
+      }
     } catch (error) {
       console.error('Error generating calendar days:', error);
       return [];
     }
-  }, [currentMonth]);
+  }, [currentMonth, calendarView]);
+
+  // Generar meses para vista semestral
+  const semesterMonths = useMemo(() => {
+    if (calendarView !== 'semester') return [];
+    
+    try {
+      // Obtener el semestre actual (Enero-Junio o Julio-Diciembre)
+      const currentMonthNum = currentMonth.getMonth(); // 0-11
+      const currentYear = currentMonth.getFullYear();
+      
+      // Primer semestre: Enero-Junio (meses 0-5)
+      // Segundo semestre: Julio-Diciembre (meses 6-11)
+      const isFirstSemester = currentMonthNum < 6;
+      const startMonth = isFirstSemester ? 0 : 6;
+      const endMonth = isFirstSemester ? 5 : 11;
+      
+      const semesterStart = new Date(currentYear, startMonth, 1);
+      const semesterEnd = new Date(currentYear, endMonth, 1);
+      
+      return eachMonthOfInterval({ start: semesterStart, end: semesterEnd });
+    } catch (error) {
+      console.error('Error generating semester months:', error);
+      return [];
+    }
+  }, [currentMonth, calendarView]);
 
   // Filtrar eventos según búsqueda y prioridad
   const filteredEvents = useMemo(() => {
@@ -137,20 +177,53 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
     return grouped;
   }, [filteredEvents]);
 
-  // Navegación de meses
-  const goToPreviousMonth = () => {
-    setCurrentMonth(prev => subMonths(prev, 1));
+  // Navegación adaptativa según vista
+  const goToPrevious = () => {
+    if (calendarView === 'month') {
+      setCurrentMonth(prev => subMonths(prev, 1));
+    } else if (calendarView === 'week') {
+      setCurrentMonth(prev => subWeeks(prev, 1));
+    } else {
+      // Vista semestral: retroceder 6 meses
+      setCurrentMonth(prev => subMonths(prev, 6));
+    }
     setViewMode('calendar');
   };
 
-  const goToNextMonth = () => {
-    setCurrentMonth(prev => addMonths(prev, 1));
+  const goToNext = () => {
+    if (calendarView === 'month') {
+      setCurrentMonth(prev => addMonths(prev, 1));
+    } else if (calendarView === 'week') {
+      setCurrentMonth(prev => addWeeks(prev, 1));
+    } else {
+      // Vista semestral: avanzar 6 meses
+      setCurrentMonth(prev => addMonths(prev, 6));
+    }
     setViewMode('calendar');
   };
 
   const goToToday = () => {
     setCurrentMonth(new Date());
     setViewMode('calendar');
+  };
+
+  // Obtener el título según la vista
+  const getViewTitle = () => {
+    if (calendarView === 'month') {
+      return format(currentMonth, 'MMMM yyyy');
+    } else if (calendarView === 'week') {
+      const weekStart = startOfWeek(currentMonth, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(currentMonth, { weekStartsOn: 0 });
+      return `${format(weekStart, 'd MMM')} - ${format(weekEnd, 'd MMM yyyy')}`;
+    } else {
+      // Vista semestral
+      const currentMonthNum = currentMonth.getMonth();
+      const isFirstSemester = currentMonthNum < 6;
+      const year = currentMonth.getFullYear();
+      return isFirstSemester 
+        ? `Primer Semestre ${year} (Ene-Jun)` 
+        : `Segundo Semestre ${year} (Jul-Dic)`;
+    }
   };
 
   // Handler para click en día
@@ -184,23 +257,62 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
 
       {/* Navegación, búsqueda y filtros - TODO EN UNA FILA */}
       <div className="bg-slate-800/50 border-b border-slate-700 px-6 py-3 flex items-center gap-3">
-        {/* Navegación de mes */}
+        {/* Selector de tipo de vista */}
+        <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
+          <button
+            onClick={() => setCalendarView('semester')}
+            className={`p-2 rounded transition-colors ${
+              calendarView === 'semester' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-300 hover:text-white hover:bg-slate-600'
+            }`}
+            title="Vista semestral (6 meses)"
+          >
+            <LayoutGrid size={16} />
+          </button>
+          <button
+            onClick={() => setCalendarView('month')}
+            className={`p-2 rounded transition-colors ${
+              calendarView === 'month' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-300 hover:text-white hover:bg-slate-600'
+            }`}
+            title="Vista mensual"
+          >
+            <Grid3x3 size={16} />
+          </button>
+          <button
+            onClick={() => setCalendarView('week')}
+            className={`p-2 rounded transition-colors ${
+              calendarView === 'week' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-300 hover:text-white hover:bg-slate-600'
+            }`}
+            title="Vista semanal"
+          >
+            <Columns size={16} />
+          </button>
+        </div>
+
+        <div className="h-6 w-px bg-slate-700"></div>
+
+        {/* Navegación adaptativa */}
         <button
-          onClick={goToPreviousMonth}
+          onClick={goToPrevious}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title="Mes anterior"
+          title={calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? 'Semana anterior' : 'Semestre anterior'}
         >
           <ChevronLeft size={20} />
         </button>
         
-        <h3 className="text-lg font-semibold text-white min-w-[140px] text-center capitalize">
-          {format(currentMonth, 'MMMM yyyy')}
+        <h3 className="text-lg font-semibold text-white min-w-[280px] text-center capitalize">
+          {getViewTitle()}
         </h3>
         
         <button
-          onClick={goToNextMonth}
+          onClick={goToNext}
           className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title="Mes siguiente"
+          title={calendarView === 'month' ? 'Mes siguiente' : calendarView === 'week' ? 'Semana siguiente' : 'Semestre siguiente'}
         >
           <ChevronRight size={20} />
         </button>
@@ -388,21 +500,107 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
           </div>
         ) : (
           /* VISTA DE CALENDARIO NORMAL */
-          <div className="max-w-7xl mx-auto">
-          {/* Header de días de la semana */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {weekDays.map(day => (
-              <div
-                key={day}
-                className="text-center text-sm font-semibold text-slate-400 py-2"
-              >
-                {day}
-              </div>
-            ))}
-          </div>
+          <div className="max-w-7xl mx-auto h-full flex flex-col">
+          {/* Header de días de la semana - Solo en vista mensual y semanal */}
+          {(calendarView === 'month' || calendarView === 'week') && (
+            <div className="grid grid-cols-7 gap-2 mb-2">
+              {weekDays.map(day => (
+                <div
+                  key={day}
+                  className="text-center text-sm font-semibold text-slate-400 py-2"
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Grid de días */}
-          <div className="grid grid-cols-7 gap-2">
+          {/* Grid adaptativo según vista */}
+          {calendarView === 'semester' ? (
+            /* VISTA SEMESTRAL: Grid 3×2 con meses extendidos verticalmente */
+            <div className="grid grid-cols-3 gap-4 flex-1">
+              {semesterMonths.map(monthDate => {
+                // Contar eventos de todo el mes
+                const monthKey = format(monthDate, 'yyyy-MM');
+                const monthEvents = filteredEvents.filter(e => {
+                  const eventMonth = format(new Date(e.event_date), 'yyyy-MM');
+                  return eventMonth === monthKey;
+                });
+
+                return (
+                  <div
+                    key={monthKey}
+                    onClick={() => {
+                      setCurrentMonth(monthDate);
+                      setCalendarView('month');
+                    }}
+                    className="bg-slate-800/50 border-2 border-slate-700 rounded-xl p-4 cursor-pointer hover:border-blue-500 hover:scale-105 transition-all flex flex-col"
+                  >
+                    {/* Header del mes */}
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xl font-bold text-white capitalize">
+                        {format(monthDate, 'MMMM')}
+                      </h4>
+                      {monthEvents.length > 0 && (
+                        <div className="bg-blue-600 text-white text-sm font-bold w-8 h-8 rounded-full flex items-center justify-center border-2 border-blue-400">
+                          {monthEvents.length}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lista de eventos del mes */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar-transparent space-y-2">
+                      {monthEvents.map(event => {
+                        const getPriorityColor = () => {
+                          switch (event.priority_level) {
+                            case 'urgente': return 'bg-red-600/90 text-white border-red-500';
+                            case 'importante': return 'bg-yellow-600/90 text-white border-yellow-500';
+                            default: return 'bg-slate-700/90 text-slate-200 border-slate-600';
+                          }
+                        };
+
+                        const eventDate = new Date(event.event_date);
+
+                        return (
+                          <div
+                            key={event.id}
+                            onClick={(e) => {
+                              e.stopPropagation(); // Evitar que se active el click del mes
+                              setSelectedDate(eventDate);
+                            }}
+                            className={`${getPriorityColor()} px-3 py-2 rounded-lg border text-left line-clamp-3 leading-relaxed cursor-pointer hover:scale-105 transition-transform shadow-sm hover:shadow-md`}
+                          >
+                            {/* Fecha destacada */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-bold bg-black/30 px-2 py-0.5 rounded">
+                                {format(eventDate, 'd')}
+                              </span>
+                              <span className="text-[10px] opacity-75">
+                                {format(eventDate, 'HH:mm')} hrs
+                              </span>
+                            </div>
+                            {/* Título del evento */}
+                            <div className="text-xs font-medium leading-tight">
+                              {event.title}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {monthEvents.length === 0 && (
+                        <div className="text-sm text-slate-500 text-center py-8">
+                          Sin eventos este mes
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* VISTA MENSUAL Y SEMANAL: Grid de días */
+            <div className={`grid gap-2 flex-1 ${
+              calendarView === 'week' ? 'grid-cols-7 auto-rows-fr' : 'grid-cols-7'
+            }`}>
             {calendarDays.map(day => {
               const dayEvents = getEventsForDay(day);
               const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -420,30 +618,33 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
               );
             })}
           </div>
+          )}
 
-          {/* Leyenda */}
-          <div className="mt-6 flex items-center justify-center gap-6 text-sm text-slate-400">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-600"></div>
-              <span>Eventos urgentes</span>
+          {/* Leyenda - Solo en vista mensual */}
+          {calendarView === 'month' && (
+            <div className="mt-6 flex items-center justify-center gap-6 text-sm text-slate-400 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-600"></div>
+                <span>Eventos urgentes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
+                <span>Eventos importantes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-600/30 rounded"></div>
+                <span>Baja actividad (1-2)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-600/60 rounded"></div>
+                <span>Media actividad (3-5)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                <span>Alta actividad (6+)</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
-              <span>Eventos importantes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-600/30 rounded"></div>
-              <span>Baja actividad (1-2)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-600/60 rounded"></div>
-              <span>Media actividad (3-5)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-600 rounded"></div>
-              <span>Alta actividad (6+)</span>
-            </div>
-          </div>
+          )}
           </div>
         )}
       </div>
