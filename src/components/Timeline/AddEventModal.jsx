@@ -46,6 +46,8 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
   const [showPDFUploader, setShowPDFUploader] = useState(false);
   const [selectedEntities, setSelectedEntities] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [recommendations, setRecommendations] = useState(['']); // Array de recomendaciones individuales
+  const [currentRecommendation, setCurrentRecommendation] = useState('');
 
   useEffect(() => {
     if (event) {
@@ -65,6 +67,18 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
         event_date: eventDateFormatted,
         tags: event.tags || []
       });
+      
+      // Cargar recomendaciones si existen
+      if (event.analyst_recommendations) {
+        // Si las recomendaciones vienen separadas por saltos de línea numerados
+        const recs = event.analyst_recommendations
+          .split(/\n/)
+          .map(r => r.replace(/^\d+\.\s*/, '').trim())
+          .filter(r => r.length > 0);
+        
+        setRecommendations(recs.length > 0 ? recs : ['']);
+      }
+      
       // Cargar entidades asociadas
       loadEventEntities(event.id);
     }
@@ -108,16 +122,27 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
 
     setSaving(true);
     try {
+      // Combinar recomendaciones en un solo texto numerado
+      const recommendationsText = recommendations
+        .filter(r => r.trim().length > 0)
+        .map((r, idx) => `${idx + 1}. ${r}`)
+        .join('\n');
+
+      const finalData = {
+        ...formData,
+        analyst_recommendations: recommendationsText
+      };
+
       let result;
       let eventId;
       
       if (event?.id) {
         // Editando evento existente
-        result = await onUpdate(event.id, formData);
+        result = await onUpdate(event.id, finalData);
         eventId = event.id;
       } else {
         // Creando nuevo evento
-        result = await onCreate(null, formData);
+        result = await onCreate(null, finalData);
         eventId = result.data?.id;
       }
       
@@ -206,7 +231,7 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar-transparent">
           {/* Tipo de evento */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -340,49 +365,113 @@ export default function AddEventModal({ event, onClose, onCreate, onUpdate }) {
 
           {/* Descripción Completa */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Descripción Completa
+            <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>📋 Descripción Completa</span>
+              <span className="text-xs text-blue-400">Soporta Markdown • Redimensionable</span>
             </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Descripción detallada de lo que sucedió, quién estuvo involucrado, contexto del evento..."
-              rows={4}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-            />
-          </div>
-
-          {/* Análisis del Analista */}
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              📊 Análisis del Analista
-            </label>
-            <textarea
-              value={formData.analyst_analysis}
-              onChange={(e) => setFormData({ ...formData, analyst_analysis: e.target.value })}
-              placeholder="Tu análisis profesional: implicaciones estratégicas, patrones detectados, relación con otros eventos, evaluación de amenazas..."
-              rows={5}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
-            />
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-lg"></div>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descripción detallada de lo que sucedió, quién estuvo involucrado, contexto del evento... (Soporta **negrita**, *cursiva*, - listas)"
+                rows={4}
+                className="w-full pl-5 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-[100px] max-h-[300px]"
+              />
+            </div>
             <p className="text-xs text-slate-500 mt-1">
-              💡 Campo exclusivo para el análisis del analista de inteligencia
+              💡 Hechos objetivos de lo que ocurrió
             </p>
           </div>
 
-          {/* Recomendaciones del Analista */}
+          {/* Análisis del Analista - REDIMENSIONABLE */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              💡 Recomendaciones
+            <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>📊 Análisis del Analista de Inteligencia</span>
+              <span className="text-xs text-cyan-400">Soporta Markdown • Redimensionable</span>
             </label>
-            <textarea
-              value={formData.analyst_recommendations}
-              onChange={(e) => setFormData({ ...formData, analyst_recommendations: e.target.value })}
-              placeholder="Acciones recomendadas, seguimiento necesario, alertas a emitir, recursos a desplegar..."
-              rows={4}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
-            />
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-500 rounded-l-lg"></div>
+              <textarea
+                value={formData.analyst_analysis}
+                onChange={(e) => setFormData({ ...formData, analyst_analysis: e.target.value })}
+                placeholder="Tu análisis profesional: implicaciones estratégicas, patrones detectados, relación con otros eventos, evaluación de amenazas... (Soporta **negrita**, *cursiva*, - listas)"
+                rows={5}
+                className="w-full pl-5 pr-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-y min-h-[120px] max-h-[400px]"
+              />
+            </div>
             <p className="text-xs text-slate-500 mt-1">
-              💡 Acciones sugeridas basadas en este evento
+              💡 Interpretación profesional del analista • Arrastra esquina para ampliar
+            </p>
+          </div>
+
+          {/* Recomendaciones Individuales con Textarea */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>💡 Recomendaciones</span>
+              <span className="text-xs text-green-400">Soporta Markdown • Ctrl+Enter para nueva</span>
+            </label>
+            
+            <div className="space-y-3">
+              {recommendations.map((rec, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <div className="flex items-start justify-center w-7 pt-2 bg-green-600/20 rounded-lg text-green-400 font-bold text-sm flex-shrink-0 min-h-[60px]">
+                    {idx + 1}
+                  </div>
+                  <textarea
+                    value={rec}
+                    onChange={(e) => {
+                      const newRecs = [...recommendations];
+                      newRecs[idx] = e.target.value;
+                      setRecommendations(newRecs);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        // Agregar nueva recomendación si el actual no está vacío
+                        if (rec.trim()) {
+                          setRecommendations([...recommendations, '']);
+                          // Focus en el nuevo campo después de un tick
+                          setTimeout(() => {
+                            const textareas = document.querySelectorAll('textarea[placeholder*="Recomendación"]');
+                            textareas[textareas.length - 1]?.focus();
+                          }, 0);
+                        }
+                      }
+                    }}
+                    placeholder={`Recomendación ${idx + 1}... (Soporta **negrita**, *cursiva*, - listas, etc.)`}
+                    rows={3}
+                    className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-y min-h-[60px] max-h-[200px]"
+                  />
+                  {recommendations.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newRecs = recommendations.filter((_, i) => i !== idx);
+                        setRecommendations(newRecs.length > 0 ? newRecs : ['']);
+                      }}
+                      className="p-2 hover:bg-red-600/20 text-red-400 hover:text-red-300 rounded transition-colors h-10"
+                      title="Eliminar recomendación"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              
+              {/* Botón para agregar manualmente */}
+              <button
+                type="button"
+                onClick={() => setRecommendations([...recommendations, ''])}
+                className="w-full px-3 py-2 bg-green-600/10 hover:bg-green-600/20 border border-green-600/30 text-green-400 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
+              >
+                <span>+</span>
+                Agregar Recomendación
+              </button>
+            </div>
+            
+            <p className="text-xs text-slate-500 mt-2">
+              💡 Presiona <kbd className="px-1.5 py-0.5 bg-slate-700 rounded text-[10px]">Ctrl + Enter</kbd> para agregar otra recomendación • Soporta formato Markdown
             </p>
           </div>
 

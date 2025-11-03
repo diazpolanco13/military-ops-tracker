@@ -1,5 +1,6 @@
 import { X, Calendar, MapPin, Clock, ExternalLink, FileText, Tag, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import MarkdownRenderer from '../Common/MarkdownRenderer';
 
 /**
  * Modal de detalles COMPLETOS de un evento
@@ -189,12 +190,15 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
           {/* Descripción completa */}
           {event.description && (
             <div>
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">
+              <h3 className="text-sm font-bold text-blue-400 uppercase tracking-wider mb-3">
                 📋 Descripción Completa
               </h3>
-              <p className="text-base text-slate-300 leading-relaxed whitespace-pre-wrap bg-slate-800/30 p-4 rounded-lg border border-slate-700">
-                {event.description}
-              </p>
+              <div className="bg-blue-950/30 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                <MarkdownRenderer 
+                  content={event.description}
+                  className="text-base text-slate-200 leading-relaxed"
+                />
+              </div>
             </div>
           )}
 
@@ -205,9 +209,10 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
                 📊 Análisis del Analista de Inteligencia
               </h3>
               <div className="bg-cyan-950/30 border-l-4 border-cyan-500 p-4 rounded-r-lg">
-                <p className="text-base text-slate-200 leading-relaxed whitespace-pre-wrap">
-                  {event.analyst_analysis}
-                </p>
+                <MarkdownRenderer 
+                  content={event.analyst_analysis}
+                  className="text-base text-slate-200 leading-relaxed"
+                />
               </div>
             </div>
           )}
@@ -218,10 +223,20 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
               <h3 className="text-sm font-bold text-green-400 uppercase tracking-wider mb-3 flex items-center gap-2">
                 💡 Recomendaciones
               </h3>
-              <div className="bg-green-950/30 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <p className="text-base text-slate-200 leading-relaxed whitespace-pre-wrap">
-                  {event.analyst_recommendations}
-                </p>
+              <div className="bg-green-950/30 border-l-4 border-green-500 p-4 rounded-r-lg space-y-3">
+                {event.analyst_recommendations.split('\n').filter(r => r.trim()).map((rec, idx) => (
+                  <div key={idx} className="flex gap-3">
+                    <div className="flex items-center justify-center w-6 h-6 bg-green-600/30 rounded-full text-green-300 font-bold text-sm flex-shrink-0">
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1">
+                      <MarkdownRenderer 
+                        content={rec.replace(/^\d+\.\s*/, '')}
+                        className="text-base text-slate-200 leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

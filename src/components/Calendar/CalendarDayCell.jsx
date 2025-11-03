@@ -6,6 +6,7 @@ import { format } from 'date-fns';
  * - Badge con cantidad de eventos [N]
  * - Heatmap de color según densidad
  * - Indicadores de prioridad (🔴 urgente, 🟡 importante)
+ * - Preview del evento más importante del día
  */
 export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, onClick }) {
   const eventCount = events.length;
@@ -14,6 +15,65 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
   // Detectar si hay eventos urgentes o importantes
   const hasUrgent = events.some(e => e.priority_level === 'urgente');
   const hasImportant = events.some(e => e.priority_level === 'importante');
+
+  // Obtener el evento más importante del día (prioridad: urgente > importante > normal)
+  const getMostImportantEvent = () => {
+    if (!events || events.length === 0) return null;
+    
+    const urgent = events.find(e => e.priority_level === 'urgente');
+    if (urgent) return urgent;
+    
+    const important = events.find(e => e.priority_level === 'importante');
+    if (important) return important;
+    
+    return events[0]; // Retornar el primero si no hay urgentes/importantes
+  };
+
+  const topEvent = getMostImportantEvent();
+
+  // Obtener iconos de tipos de eventos del día
+  const getEventTypeIcons = () => {
+    const types = new Set(events.map(e => e.type));
+    return Array.from(types).map(type => {
+      switch (type) {
+        case 'evento': return '🎯';
+        case 'noticia': return '📰';
+        case 'informe': return '📄';
+        default: return '📌';
+      }
+    });
+  };
+
+  // Obtener iconos de entidades involucradas
+  const getEntityIcons = () => {
+    const entityTypes = new Set();
+    events.forEach(event => {
+      event.related_entities?.forEach(entity => {
+        entityTypes.add(entity.type);
+      });
+    });
+    
+    return Array.from(entityTypes).slice(0, 3).map(type => {
+      switch (type) {
+        case 'destructor':
+        case 'portaaviones':
+        case 'fragata':
+        case 'submarino':
+          return '🚢';
+        case 'avion':
+          return '✈️';
+        case 'tropas':
+          return '👥';
+        case 'lugar':
+          return '🏢';
+        default:
+          return '📍';
+      }
+    });
+  };
+
+  const typeIcons = getEventTypeIcons();
+  const entityIcons = getEntityIcons();
 
   // Calcular intensidad del heatmap según cantidad de eventos
   const getHeatmapColor = () => {
@@ -44,43 +104,50 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
       onClick={hasEvents ? onClick : undefined}
     >
       {/* Número del día */}
-      <div className="absolute top-2 left-2">
+      <div className="absolute top-1.5 left-2">
         <span className={`text-sm font-semibold ${isToday ? 'text-blue-400' : 'text-slate-300'}`}>
           {format(day, 'd')}
         </span>
       </div>
 
-      {/* Badge con cantidad de eventos */}
+      {/* Badge con cantidad de eventos - Círculo bonito */}
       {hasEvents && (
-        <div className="absolute top-2 right-2">
-          <div className="bg-slate-900/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-full border border-slate-600 shadow-lg">
-            [{eventCount}]
+        <div className="absolute top-1.5 right-1.5">
+          <div className="bg-blue-600 text-white text-xs font-bold w-6 h-6 rounded-full border-2 border-blue-400 shadow-lg flex items-center justify-center">
+            {eventCount}
           </div>
         </div>
       )}
 
-      {/* Indicadores de prioridad */}
+      {/* Lista de títulos de eventos con scroll */}
       {hasEvents && (
-        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-          {hasUrgent && (
-            <div 
-              className="w-2 h-2 rounded-full bg-red-600 shadow-lg"
-              title="Tiene eventos urgentes"
-            />
-          )}
-          {hasImportant && !hasUrgent && (
-            <div 
-              className="w-2 h-2 rounded-full bg-yellow-600 shadow-lg"
-              title="Tiene eventos importantes"
-            />
-          )}
+        <div className="absolute inset-x-1 top-9 bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1">
+          {events.map((event, idx) => {
+            // Color según prioridad
+            const getBadgeColor = () => {
+              switch (event.priority_level) {
+                case 'urgente': return 'bg-red-600/90 text-white border-red-500';
+                case 'importante': return 'bg-yellow-600/90 text-white border-yellow-500';
+                default: return 'bg-slate-700/90 text-slate-200 border-slate-600';
+              }
+            };
+
+            return (
+              <div
+                key={event.id}
+                className={`${getBadgeColor()} text-[9px] px-1.5 py-0.5 rounded border text-center line-clamp-2 leading-tight shadow-sm`}
+              >
+                {event.title}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Indicador de "Hoy" adicional */}
+      {/* Indicador de "Hoy" en esquina INFERIOR DERECHA */}
       {isToday && (
-        <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2">
-          <div className="bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+        <div className="absolute bottom-1 right-1">
+          <div className="bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-lg">
             HOY
           </div>
         </div>
