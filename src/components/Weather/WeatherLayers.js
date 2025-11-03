@@ -64,13 +64,29 @@ export const WEATHER_LAYERS = {
  */
 export function addWeatherLayer(map, layerType) {
   const layer = WEATHER_LAYERS[layerType];
-  if (!layer || !OPENWEATHER_API_KEY) return false;
+  
+  // ⚠️ VALIDACIÓN CRÍTICA: No intentar agregar capas si no hay API key
+  if (!layer) {
+    console.warn(`⚠️ Weather layer type "${layerType}" no existe`);
+    return false;
+  }
+  
+  if (!OPENWEATHER_API_KEY) {
+    console.warn('⚠️ No se puede agregar capa de clima: VITE_OPENWEATHER_API_KEY no está configurada en .env');
+    console.info('💡 Obtén tu API key gratis en: https://openweathermap.org/api');
+    return false;
+  }
 
   // Verificar si la capa ya existe
   if (map.getSource(layer.id)) {
     // Solo cambiar la visibilidad si ya existe
-    map.setLayoutProperty(layer.id, 'visibility', 'visible');
-    return true;
+    try {
+      map.setLayoutProperty(layer.id, 'visibility', 'visible');
+      return true;
+    } catch (error) {
+      console.error(`Error mostrando capa ${layerType}:`, error);
+      return false;
+    }
   }
 
   try {
@@ -79,7 +95,10 @@ export function addWeatherLayer(map, layerType) {
       type: 'raster',
       tiles: [layer.url],
       tileSize: 256,
-      attribution: '© <a href="https://openweathermap.org/">OpenWeatherMap</a>'
+      attribution: '© <a href="https://openweathermap.org/">OpenWeatherMap</a>',
+      // ✅ PREVENIR BUCLE INFINITO: No reintentar si falla
+      maxzoom: 18,
+      scheme: 'xyz'
     });
 
     // Agregar layer
@@ -93,9 +112,10 @@ export function addWeatherLayer(map, layerType) {
       }
     });
 
+    console.log(`✅ Capa de clima "${layer.name}" agregada correctamente`);
     return true;
   } catch (error) {
-    console.error(`Error adding weather layer ${layerType}:`, error);
+    console.error(`❌ Error agregando capa de clima ${layerType}:`, error);
     return false;
   }
 }

@@ -252,9 +252,13 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       setMapLoaded(true);
       
       // 🌦️ Cargar capas de clima activas desde localStorage
+      // ⚠️ SOLO cargar si están explícitamente activadas
       const activeWeatherLayers = getActiveWeatherLayers();
+      console.log('🌦️ Capas de clima guardadas:', activeWeatherLayers);
+      
       Object.keys(activeWeatherLayers).forEach(layerType => {
-        if (activeWeatherLayers[layerType]) {
+        if (activeWeatherLayers[layerType] === true) {
+          console.log(`🌦️ Cargando capa: ${layerType}`);
           toggleWeatherLayer(map.current, layerType, true);
         }
       });
