@@ -16,6 +16,7 @@ import EntityQuickCard from '../Cards/EntityQuickCard';
 import EntityDetailedModal from '../Cards/EntityDetailedModal';
 import { useSelection } from '../../stores/SelectionContext';
 import { supabase } from '../../lib/supabase';
+import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -173,6 +174,22 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         console.log('🔄 Cambio detectado en useImages:', e.detail.useImages);
         setUseImages(e.detail.useImages);
       }
+      
+      // 🌦️ NUEVO: Actualizar capas de clima
+      if (e.detail.weatherLayers !== undefined && map.current) {
+        console.log('🌦️ Actualizando capas de clima:', e.detail.weatherLayers);
+        Object.keys(e.detail.weatherLayers).forEach(layerType => {
+          toggleWeatherLayer(map.current, layerType, e.detail.weatherLayers[layerType]);
+        });
+      }
+
+      // 🎥 NUEVO: Actualizar pitch y bearing
+      if (e.detail.mapPitch !== undefined && map.current) {
+        map.current.setPitch(e.detail.mapPitch);
+      }
+      if (e.detail.mapBearing !== undefined && map.current) {
+        map.current.setBearing(e.detail.mapBearing);
+      }
     };
 
     window.addEventListener('settingsChanged', handleSettingsChange);
@@ -233,6 +250,15 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     // Cuando el mapa esté listo
     map.current.on('load', () => {
       setMapLoaded(true);
+      
+      // 🌦️ Cargar capas de clima activas desde localStorage
+      const activeWeatherLayers = getActiveWeatherLayers();
+      Object.keys(activeWeatherLayers).forEach(layerType => {
+        if (activeWeatherLayers[layerType]) {
+          toggleWeatherLayer(map.current, layerType, true);
+        }
+      });
+      
       // Exponer mapa al componente padre
       if (onMapReady) {
         onMapReady(map.current);
