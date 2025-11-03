@@ -179,7 +179,6 @@ export default function SettingsPanel({ onClose }) {
     { id: 'vista', label: 'Modo Vista', icon: Monitor },
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag },
     { id: 'mapa', label: 'Cámara Mapa', icon: Video },
-    { id: 'clima', label: 'Clima', icon: Cloud },
     { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
   ];
 

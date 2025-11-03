@@ -38,6 +38,7 @@ import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
 import ZonesPanel from './ZonesPanel';
+import WeatherLayersPanel from '../Weather/WeatherLayersPanel';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -127,6 +128,11 @@ export default function TopNavigationBar({
           tooltip="Estilos de Mapa"
           hasSubmenu
         />
+
+        {/* 🌦️ Clima - Panel independiente (no usa activePanel) */}
+        <div className="flex-shrink-0">
+          <WeatherLayersPanel map={map} />
+        </div>
 
         {/* 👁️ Ver */}
         <NavButton
