@@ -1,5 +1,16 @@
 import { format } from 'date-fns';
 
+// Mapeo de días en español
+const DAYS_ES = {
+  'Sunday': 'DOMINGO',
+  'Monday': 'LUNES',
+  'Tuesday': 'MARTES',
+  'Wednesday': 'MIÉRCOLES',
+  'Thursday': 'JUEVES',
+  'Friday': 'VIERNES',
+  'Saturday': 'SÁBADO'
+};
+
 /**
  * Celda individual del calendario que muestra:
  * - Número del día
@@ -107,10 +118,10 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
       {/* Número y nombre del día */}
       <div className="absolute top-1.5 left-2">
         {isWeekView ? (
-          /* Vista de 3 días: Mostrar día de semana completo + número */
+          /* Vista de 3 días: Mostrar día de semana completo en español + número */
           <div className="flex flex-col">
-            <span className={`text-sm font-bold uppercase ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
-              {format(day, 'EEEE')}
+            <span className={`text-sm font-bold ${isToday ? 'text-blue-400' : 'text-slate-400'}`}>
+              {DAYS_ES[format(day, 'EEEE')]}
             </span>
             <span className={`text-3xl font-bold ${isToday ? 'text-blue-400' : 'text-white'}`}>
               {format(day, 'd')}
