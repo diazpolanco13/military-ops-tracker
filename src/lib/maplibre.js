@@ -56,8 +56,11 @@ export const MAP_CONFIG = {
   options: {
     minZoom: 2,
     maxZoom: 18,
-    pitch: 0, // Ángulo de inclinación (0 = plano, 60 = 3D)
-    bearing: 0, // Rotación del mapa
+    // 🎥 Cámara: inclinación y rotación (desde .env o localStorage)
+    pitch: parseInt(localStorage.getItem('mapPitch')) || 
+           parseInt(import.meta.env.VITE_MAP_DEFAULT_PITCH) || 0, // 0-85° (0 = plano, 60 = 3D)
+    bearing: parseInt(localStorage.getItem('mapBearing')) || 
+             parseInt(import.meta.env.VITE_MAP_DEFAULT_BEARING) || 0, // 0-360° (0 = norte)
     antialias: true, // Mejor calidad visual
   }
 };

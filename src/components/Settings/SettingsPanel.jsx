@@ -1,4 +1,4 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 /**
@@ -72,6 +72,15 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('aiPerspective') || 'neutral';
   });
 
+  // 🎥 NUEVO: Configuración de cámara del mapa
+  const [mapPitch, setMapPitch] = useState(() => {
+    return parseInt(localStorage.getItem('mapPitch') || '0');
+  });
+
+  const [mapBearing, setMapBearing] = useState(() => {
+    return parseInt(localStorage.getItem('mapBearing') || '0');
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
@@ -88,6 +97,8 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('aiMaxTokens', aiMaxTokens);
     localStorage.setItem('aiPersonality', aiPersonality);
     localStorage.setItem('aiPerspective', aiPerspective);
+    localStorage.setItem('mapPitch', mapPitch);
+    localStorage.setItem('mapBearing', mapBearing);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
@@ -105,10 +116,12 @@ export default function SettingsPanel({ onClose }) {
         aiTemperature,
         aiMaxTokens,
         aiPersonality,
-        aiPerspective
+        aiPerspective,
+        mapPitch,
+        mapBearing
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective, mapPitch, mapBearing]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(6); // ✅ Actualizado
@@ -125,6 +138,8 @@ export default function SettingsPanel({ onClose }) {
     setAiMaxTokens(1000);
     setAiPersonality('profesional');
     setAiPerspective('neutral');
+    setMapPitch(0);
+    setMapBearing(0);
   };
 
   // 📑 Definición de tabs
@@ -133,6 +148,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'visualizacion', label: 'Visualización', icon: Eye },
     { id: 'vista', label: 'Modo Vista', icon: Monitor },
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag },
+    { id: 'mapa', label: 'Cámara Mapa', icon: Video },
     { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
   ];
 
@@ -489,6 +505,202 @@ export default function SettingsPanel({ onClose }) {
                     {!showLabelName && !showLabelType && !showLabelClass && (
                       <div className="text-sm text-slate-500 italic">Sin etiquetas</div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: Configuración de Cámara del Mapa */}
+          {activeTab === 'mapa' && (
+            <div className="space-y-6">
+              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
+                <h3 className="text-lg font-semibold text-purple-400 mb-6 flex items-center gap-2">
+                  <Video className="w-5 h-5" />
+                  Configuración de Cámara del Mapa
+                </h3>
+
+                <div className="space-y-6">
+                  {/* Pitch (Inclinación) */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-base text-slate-200 font-medium">Inclinación del Mapa (Pitch)</span>
+                        <span className="block text-xs text-slate-400 mt-1">
+                          {mapPitch === 0 ? '📐 Vista plana (2D)' :
+                           mapPitch < 30 ? '📐 Ligeramente inclinado' :
+                           mapPitch < 50 ? '🏔️ Inclinación media (3D)' :
+                           '🏔️ Muy inclinado (3D profundo)'}
+                        </span>
+                      </div>
+                      <span className="text-lg font-mono text-purple-400 bg-slate-900 px-3 py-1 rounded">{mapPitch}°</span>
+                    </label>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="85"
+                      step="5"
+                      value={mapPitch}
+                      onChange={(e) => setMapPitch(parseInt(e.target.value))}
+                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                    />
+                    <div className="flex justify-between text-sm text-slate-500 mt-2">
+                      <span>0° (Plano)</span>
+                      <span>45° (Medio)</span>
+                      <span>85° (Máximo)</span>
+                    </div>
+                    
+                    {/* Presets de Pitch */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setMapPitch(0)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapPitch === 0 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📐 Plano (0°)
+                      </button>
+                      <button
+                        onClick={() => setMapPitch(30)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapPitch === 30 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        🏞️ Ligero (30°)
+                      </button>
+                      <button
+                        onClick={() => setMapPitch(60)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapPitch === 60 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        🏔️ 3D Completo (60°)
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
+                      ℹ️ <strong>Pitch (Inclinación):</strong> Define el ángulo de la cámara. 
+                      <br/>• 0° = Vista plana tradicional (mapa 2D)
+                      <br/>• 60-85° = Vista 3D con edificios y terreno en perspectiva
+                      <br/>💡 Usa pitch alto para visualizar operaciones militares en terreno montañoso
+                    </p>
+                  </div>
+
+                  {/* Bearing (Rotación) */}
+                  <div className="pt-6 border-t border-slate-700">
+                    <label className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="text-base text-slate-200 font-medium">Rotación del Mapa (Bearing)</span>
+                        <span className="block text-xs text-slate-400 mt-1">
+                          {mapBearing === 0 ? '🧭 Norte arriba (estándar)' :
+                           mapBearing === 90 ? '🧭 Este arriba' :
+                           mapBearing === 180 ? '🧭 Sur arriba (invertido)' :
+                           mapBearing === 270 ? '🧭 Oeste arriba' :
+                           `🧭 ${mapBearing}° desde el norte`}
+                        </span>
+                      </div>
+                      <span className="text-lg font-mono text-purple-400 bg-slate-900 px-3 py-1 rounded">{mapBearing}°</span>
+                    </label>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="360"
+                      step="15"
+                      value={mapBearing}
+                      onChange={(e) => setMapBearing(parseInt(e.target.value))}
+                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                    />
+                    <div className="flex justify-between text-sm text-slate-500 mt-2">
+                      <span>0° (Norte)</span>
+                      <span>90° (Este)</span>
+                      <span>180° (Sur)</span>
+                      <span>270° (Oeste)</span>
+                      <span>360°</span>
+                    </div>
+                    
+                    {/* Presets de Bearing */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setMapBearing(0)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapBearing === 0 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        🧭 Norte (0°)
+                      </button>
+                      <button
+                        onClick={() => setMapBearing(90)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapBearing === 90 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ➡️ Este (90°)
+                      </button>
+                      <button
+                        onClick={() => setMapBearing(180)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapBearing === 180 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ⬇️ Sur (180°)
+                      </button>
+                      <button
+                        onClick={() => setMapBearing(270)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          mapBearing === 270 
+                            ? 'bg-purple-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ⬅️ Oeste (270°)
+                      </button>
+                    </div>
+
+                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
+                      ℹ️ <strong>Bearing (Rotación):</strong> Define la orientación del mapa.
+                      <br/>• 0° = Norte en la parte superior (estándar)
+                      <br/>• 90° = Este en la parte superior
+                      <br/>• 180° = Sur en la parte superior (mapa invertido)
+                      <br/>💡 Útil para alinear el mapa con la dirección de una operación militar
+                    </p>
+                  </div>
+
+                  {/* Info adicional */}
+                  <div className="pt-6 border-t border-slate-700 bg-purple-900/20 p-4 rounded-lg">
+                    <h4 className="text-sm font-semibold text-purple-300 mb-3 flex items-center gap-2">
+                      <Map className="w-4 h-4" />
+                      Cambios en Tiempo Real
+                    </h4>
+                    <ul className="space-y-2 text-sm text-slate-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>Los cambios se aplican instantáneamente al cerrar este panel</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span>También puedes rotar/inclinar con los controles del mapa</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-400">ℹ️</span>
+                        <span>Valores guardados en localStorage para persistencia</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-yellow-400">⚠️</span>
+                        <span>Recarga la página para aplicar completamente los cambios iniciales</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>
