@@ -67,6 +67,11 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('aiPersonality') || 'profesional';
   });
 
+  // 🌎 NUEVO: Perspectiva geopolítica
+  const [aiPerspective, setAiPerspective] = useState(() => {
+    return localStorage.getItem('aiPerspective') || 'neutral';
+  });
+
   // Guardar en localStorage cuando cambian
   useEffect(() => {
     localStorage.setItem('clusterZoomThreshold', clusterZoomThreshold);
@@ -82,6 +87,7 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('aiTemperature', aiTemperature);
     localStorage.setItem('aiMaxTokens', aiMaxTokens);
     localStorage.setItem('aiPersonality', aiPersonality);
+    localStorage.setItem('aiPerspective', aiPerspective);
     
     // Disparar evento personalizado para que el mapa se actualice
     window.dispatchEvent(new CustomEvent('settingsChanged', {
@@ -98,10 +104,11 @@ export default function SettingsPanel({ onClose }) {
         aiModel,
         aiTemperature,
         aiMaxTokens,
-        aiPersonality
+        aiPersonality,
+        aiPerspective
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(6); // ✅ Actualizado
@@ -117,6 +124,7 @@ export default function SettingsPanel({ onClose }) {
     setAiTemperature(0.7);
     setAiMaxTokens(1000);
     setAiPersonality('profesional');
+    setAiPerspective('neutral');
   };
 
   // 📑 Definición de tabs
@@ -535,6 +543,40 @@ export default function SettingsPanel({ onClose }) {
                     <p className="text-sm text-slate-400 bg-slate-900/50 p-3 rounded">
                       ℹ️ Define el tono y estilo de las respuestas de SAE-IA.
                     </p>
+                  </div>
+
+                  {/* Perspectiva Geopolítica */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-amber-700/50">
+                    <label className="block mb-3">
+                      <span className="text-base text-slate-200 font-medium block mb-2 flex items-center gap-2">
+                        🌎 Perspectiva Geopolítica
+                        <span className="text-xs text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded">IMPORTANTE</span>
+                      </span>
+                      <select
+                        value={aiPerspective}
+                        onChange={(e) => setAiPerspective(e.target.value)}
+                        className="w-full px-4 py-2 bg-slate-800 border border-amber-600 rounded-lg text-white focus:outline-none focus:border-amber-500"
+                      >
+                        <option value="neutral">⚖️ Neutral / Observador Internacional</option>
+                        <option value="venezuela">🇻🇪 Venezuela (Defensa Nacional)</option>
+                        <option value="eeuu">🇺🇸 Estados Unidos</option>
+                        <option value="regional">🌎 América Latina</option>
+                        <option value="rusia">🇷🇺 Rusia</option>
+                        <option value="china">🇨🇳 China</option>
+                        <option value="iran">🇮🇷 Irán</option>
+                      </select>
+                    </label>
+                    <div className="bg-amber-900/20 p-3 rounded border border-amber-800/30">
+                      <p className="text-sm text-amber-200 font-semibold mb-2">
+                        ⚠️ Esto cambia COMPLETAMENTE el análisis:
+                      </p>
+                      <ul className="text-xs text-slate-300 space-y-1">
+                        <li><strong>Neutral:</strong> Análisis objetivo sin afiliación</li>
+                        <li><strong>Venezuela:</strong> Análisis desde defensa nacional venezolana</li>
+                        <li><strong>EEUU:</strong> Perspectiva de comando militar estadounidense</li>
+                        <li><strong>Regional:</strong> Enfoque latinoamericano</li>
+                      </ul>
+                    </div>
                   </div>
 
                   {/* Temperature */}
