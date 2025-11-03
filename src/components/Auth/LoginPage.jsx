@@ -54,19 +54,34 @@ export default function LoginPage({ onLoginSuccess }) {
         <div className="relative bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-lg shadow-2xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 mb-4">
-              <img 
-                src="/logo_sae.png" 
-                alt="SAE Logo" 
-                className="w-full h-full object-contain drop-shadow-2xl"
-              />
+            {/* Logo grande e imponente */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                {/* Glow effect detrás del logo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-3xl opacity-40 animate-pulse" />
+                
+                {/* Logo */}
+                <div className="relative w-32 h-32 sm:w-40 sm:h-40">
+                  <img 
+                    src="/logo_sae.png" 
+                    alt="SAE Logo" 
+                    className="w-full h-full object-contain drop-shadow-2xl filter brightness-110"
+                  />
+                </div>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
+
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-wide">
               SAE - MONITOR
             </h1>
-            <p className="text-slate-400 text-sm">
+            <p className="text-slate-400 text-base">
               Sistema de Análisis Estratégico
             </p>
+            <div className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="w-12 h-px bg-slate-700"></div>
+              <span>ACCESO RESTRINGIDO</span>
+              <div className="w-12 h-px bg-slate-700"></div>
+            </div>
           </div>
 
           {/* Error Alert */}
