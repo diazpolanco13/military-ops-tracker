@@ -24,7 +24,7 @@ import './utils/loadTerrestrialBoundaries';
 
 function App() {
   const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
-  const { events, loading: eventsLoading, updateEvent, deleteEvent } = useEvents();
+  const { events, loading: eventsLoading, createEvent, updateEvent, deleteEvent } = useEvents();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
@@ -186,6 +186,7 @@ function App() {
             events={events}
             loading={eventsLoading}
             onClose={() => setShowCalendar(false)}
+            onCreateEvent={createEvent}
             onEditEvent={(event) => setEventToEdit(event)}
             onDeleteEvent={async (eventId) => {
               await deleteEvent(eventId);

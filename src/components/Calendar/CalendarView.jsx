@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter, Plus } from 'lucide-react';
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -14,17 +14,19 @@ import {
 } from 'date-fns';
 import CalendarDayCell from './CalendarDayCell';
 import EventDayModal from './EventDayModal';
+import AddEventModal from '../Timeline/AddEventModal';
 
 /**
  * Vista de Calendario Mensual con análisis de eventos
  * Muestra densidad de eventos por día con heatmap
  * Click en día → Modal con Kanban de eventos
  */
-export default function CalendarView({ events = [], loading, onClose, onEditEvent, onDeleteEvent }) {
+export default function CalendarView({ events = [], loading, onClose, onEditEvent, onDeleteEvent, onCreateEvent }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPriority, setFilterPriority] = useState('all'); // all, urgente, importante, normal
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Generar días del calendario (incluye días del mes anterior/siguiente para completar semanas)
   const calendarDays = useMemo(() => {
@@ -314,6 +316,34 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
           onClose={() => setSelectedDate(null)}
           onEditEvent={onEditEvent}
           onDeleteEvent={onDeleteEvent}
+        />
+      )}
+
+      {/* Botón flotante para crear evento */}
+      <button
+        onClick={() => setShowCreateModal(true)}
+        className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
+        title="Crear nuevo evento"
+      >
+        <Plus size={28} strokeWidth={2.5} />
+      </button>
+
+      {/* Modal de creación de evento */}
+      {showCreateModal && (
+        <AddEventModal
+          event={null}
+          onClose={() => setShowCreateModal(false)}
+          onCreate={async (_, data) => {
+            if (onCreateEvent) {
+              const result = await onCreateEvent(_, data);
+              if (result.success) {
+                setShowCreateModal(false);
+              }
+              return result;
+            }
+            return { success: false, error: 'No handler provided' };
+          }}
+          onUpdate={() => {}}
         />
       )}
     </div>
