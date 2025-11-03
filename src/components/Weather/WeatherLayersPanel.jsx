@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Cloud, CloudRain, Thermometer, Wind, Gauge, CloudSnow } from 'lucide-react';
 import { WEATHER_LAYERS, OPENWEATHER_API_KEY } from './WeatherLayers';
 
@@ -8,6 +8,9 @@ import { WEATHER_LAYERS, OPENWEATHER_API_KEY } from './WeatherLayers';
  */
 export default function WeatherLayersPanel({ map }) {
   const [isOpen, setIsOpen] = useState(false);
+  const panelRef = useRef(null);
+  const buttonRef = useRef(null);
+  
   const [activeLayers, setActiveLayers] = useState(() => {
     const saved = localStorage.getItem('activeWeatherLayers');
     return saved ? JSON.parse(saved) : {
@@ -18,6 +21,28 @@ export default function WeatherLayersPanel({ map }) {
       pressure: false
     };
   });
+
+  // Cerrar panel al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && 
+          buttonRef.current &&
+          !panelRef.current.contains(event.target) && 
+          !buttonRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Obtener icono según tipo de capa
   const getLayerIcon = (layerType) => {
@@ -75,9 +100,10 @@ export default function WeatherLayersPanel({ map }) {
   };
 
   return (
-    <div className="relative">
+    <div className="relative flex-shrink-0">
       {/* Botón principal */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all relative ${
           activeCount > 0
@@ -95,9 +121,19 @@ export default function WeatherLayersPanel({ map }) {
         )}
       </button>
 
-      {/* Panel desplegable */}
+      {/* Panel desplegable - FIXED para salir del navbar */}
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-slate-800/98 backdrop-blur-md rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+        <div 
+          ref={panelRef}
+          className="fixed bg-slate-800/98 backdrop-blur-md rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          style={{
+            top: '60px', // Justo debajo del navbar (altura 56px + margen)
+            right: '1rem',
+            width: '320px',
+            maxHeight: 'calc(100vh - 80px)',
+            zIndex: 100
+          }}
+        >
           {/* Header */}
           <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-sky-900/30 to-blue-900/30">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
