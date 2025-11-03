@@ -614,6 +614,7 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
                   isCurrentMonth={isCurrentMonth}
                   isToday={isTodayDate}
                   onClick={() => handleDayClick(day, dayEvents)}
+                  isWeekView={calendarView === 'week'}
                 />
               );
             })}

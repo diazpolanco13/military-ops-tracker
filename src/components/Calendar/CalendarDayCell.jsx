@@ -7,8 +7,9 @@ import { format } from 'date-fns';
  * - Heatmap de color según densidad
  * - Indicadores de prioridad (🔴 urgente, 🟡 importante)
  * - Preview del evento más importante del día
+ * - Modo extendido para vista semanal
  */
-export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, onClick }) {
+export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, onClick, isWeekView = false }) {
   const eventCount = events.length;
   const hasEvents = eventCount > 0;
 
@@ -119,9 +120,9 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
         </div>
       )}
 
-      {/* Lista de títulos de eventos con scroll */}
+      {/* Lista de eventos - Adaptativa según vista */}
       {hasEvents && (
-        <div className="absolute inset-x-1 top-9 bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1">
+        <div className="absolute inset-x-1 top-9 bottom-9 overflow-y-auto custom-scrollbar-transparent px-1 space-y-1.5">
           {events.map((event, idx) => {
             // Color según prioridad
             const getBadgeColor = () => {
@@ -132,12 +133,31 @@ export default function CalendarDayCell({ day, events, isCurrentMonth, isToday, 
               }
             };
 
+            const eventDate = new Date(event.event_date);
+
             return (
               <div
                 key={event.id}
-                className={`${getBadgeColor()} text-[9px] px-1.5 py-0.5 rounded border text-center line-clamp-2 leading-tight shadow-sm`}
+                className={`${getBadgeColor()} rounded-lg border shadow-sm hover:scale-105 transition-transform ${
+                  isWeekView 
+                    ? 'px-2 py-2 text-xs line-clamp-4' 
+                    : 'px-1.5 py-0.5 text-[9px] line-clamp-2'
+                } text-center leading-tight`}
               >
-                {event.title}
+                {/* En vista semanal, mostrar hora + título con más detalle */}
+                {isWeekView ? (
+                  <>
+                    <div className="text-[10px] opacity-75 mb-1">
+                      {format(eventDate, 'HH:mm')} hrs
+                    </div>
+                    <div className="font-medium">
+                      {event.title}
+                    </div>
+                  </>
+                ) : (
+                  /* En vista mensual, solo título compacto */
+                  event.title
+                )}
               </div>
             );
           })}
