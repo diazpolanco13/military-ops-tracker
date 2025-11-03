@@ -196,6 +196,31 @@ ESTILO:
       const personalityInstructions = personalityPrompts[aiPersonality] || personalityPrompts.profesional;
       const perspectiveInstructions = perspectivePrompts[aiPerspective] || perspectivePrompts.neutral;
 
+      // 📏 Instrucciones específicas según longitud de respuesta
+      let lengthInstructions = '';
+      if (aiMaxTokens <= 150) {
+        lengthInstructions = `
+⚡ MODO ULTRA-CORTO (${aiMaxTokens} tokens):
+- RESPONDE EN MÁXIMO 2-3 ORACIONES
+- SOLO HECHOS CLAVE (ubicación, tipo, amenaza)
+- SIN introducciones, análisis detallado ni conclusiones extensas
+- Formato TELEGRAMA: directo al grano
+- Ejemplo: "USS Iwo Jima: 13.18°N 66.31°W. Portaaviones EEUU con 5900 efectivos. 188km costas venezolanas. AMENAZA ALTA."`;
+      } else if (aiMaxTokens <= 300) {
+        lengthInstructions = `
+💬 MODO MUY BREVE (${aiMaxTokens} tokens):
+- RESPONDE EN UN SOLO PÁRRAFO (5-7 oraciones)
+- Incluye: ubicación, capacidades, evaluación de amenaza
+- SIN secciones numeradas ni análisis extenso
+- Conciso pero informativo`;
+      } else if (aiMaxTokens <= 500) {
+        lengthInstructions = `
+📝 MODO BREVE (${aiMaxTokens} tokens):
+- RESPONDE EN 2-3 PÁRRAFOS CORTOS
+- Información esencial sin detalles excesivos
+- Enfócate en lo más relevante`;
+      }
+
       // Preparar mensajes para la API (últimos 10 para no exceder tokens)
       const conversationHistory = messages.slice(-10).map(m => ({
         role: m.role,
@@ -218,6 +243,7 @@ ESTILO:
 
 🌎 PERSPECTIVA GEOPOLÍTICA:
 ${perspectiveInstructions}
+${lengthInstructions ? `\n${lengthInstructions}` : ''}
 
 ${systemContext}`
             },

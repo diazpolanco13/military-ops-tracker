@@ -617,29 +617,91 @@ export default function SettingsPanel({ onClose }) {
                       <div>
                         <span className="text-base text-slate-200 font-medium">Longitud de respuesta</span>
                         <span className="block text-xs text-slate-400 mt-1">
-                          {aiMaxTokens < 500 ? '📝 Breve' :
-                           aiMaxTokens < 1500 ? '📄 Media' :
-                           '📚 Detallada'}
+                          {aiMaxTokens <= 150 ? '⚡ Ultra-corto (tweet)' :
+                           aiMaxTokens <= 300 ? '💬 Muy breve (párrafo)' :
+                           aiMaxTokens < 500 ? '📝 Breve (2-3 párrafos)' :
+                           aiMaxTokens < 1500 ? '📄 Media (análisis completo)' :
+                           '📚 Detallada (informe extenso)'}
                         </span>
                       </div>
                       <span className="text-lg font-mono text-cyan-400 bg-slate-900 px-3 py-1 rounded">{aiMaxTokens}</span>
                     </label>
                     <input 
                       type="range"
-                      min="500"
+                      min="100"
                       max="4000"
-                      step="500"
+                      step="50"
                       value={aiMaxTokens}
                       onChange={(e) => setAiMaxTokens(parseInt(e.target.value))}
                       className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
                     />
                     <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>500 (Corto)</span>
-                      <span>1000 (Normal)</span>
-                      <span>4000 (Largo)</span>
+                      <span>100</span>
+                      <span>500</span>
+                      <span>1000</span>
+                      <span>2000</span>
+                      <span>4000</span>
                     </div>
+                    
+                    {/* Presets de respuesta rápida */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setAiMaxTokens(100)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          aiMaxTokens === 100 
+                            ? 'bg-cyan-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        ⚡ Ultra-corto (100)
+                      </button>
+                      <button
+                        onClick={() => setAiMaxTokens(200)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          aiMaxTokens === 200 
+                            ? 'bg-cyan-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        💬 Muy breve (200)
+                      </button>
+                      <button
+                        onClick={() => setAiMaxTokens(500)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          aiMaxTokens === 500 
+                            ? 'bg-cyan-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📝 Breve (500)
+                      </button>
+                      <button
+                        onClick={() => setAiMaxTokens(1000)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          aiMaxTokens === 1000 
+                            ? 'bg-cyan-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📄 Normal (1000)
+                      </button>
+                      <button
+                        onClick={() => setAiMaxTokens(2000)}
+                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                          aiMaxTokens === 2000 
+                            ? 'bg-cyan-600 text-white' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        📚 Detallado (2000)
+                      </button>
+                    </div>
+                    
                     <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      ℹ️ Controla cuánto texto puede generar SAE-IA por respuesta.
+                      <strong>Recomendaciones:</strong>
+                      <br/>• 100-200 tokens: Respuestas tipo "telegrama" (hechos clave solamente)
+                      <br/>• 500-1000 tokens: Balance ideal para análisis rápido pero completo
+                      <br/>• 2000+ tokens: Informes extensos con múltiples secciones
                     </p>
                   </div>
 
