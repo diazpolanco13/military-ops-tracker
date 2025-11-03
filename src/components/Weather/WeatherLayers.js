@@ -1,34 +1,69 @@
 /**
  * 🌦️ Configuración de Capas Climáticas
- * Integración con RainViewer API (GRATUITA - SIN API KEY)
+ * DOBLE INTEGRACIÓN: OpenWeatherMap + RainViewer
  */
+
+// API Key de OpenWeatherMap (opcional - si no está, se usa RainViewer)
+export const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY || '';
 
 /**
  * 🗺️ CAPAS DE CLIMA DISPONIBLES
- * RainViewer ofrece tiles GRATUITOS sin API key:
- * - Radar de precipitación (lluvia/nieve)
- * - Satélite de nubes
- * - Completamente gratis, sin límites
+ * Sistema híbrido: OpenWeatherMap (completo) + RainViewer (fallback gratuito)
  */
 export const WEATHER_LAYERS = {
-  // 🌧️ RADAR DE PRECIPITACIÓN (RainViewer - GRATIS, SIN API KEY)
-  precipitation: {
-    id: 'rainviewer-precipitation',
-    name: '🌧️ Radar de Precipitación',
-    description: 'Lluvia y nieve en tiempo real - Global',
-    source: 'rainviewer',
+  // ☁️ NUBES
+  clouds: {
+    id: 'weather-clouds',
+    name: '☁️ Cobertura de Nubes',
+    description: 'Nubes en tiempo real',
+    owmLayer: 'clouds_new', // OpenWeatherMap
+    rainviewerType: 'satellite', // RainViewer fallback
     opacity: 0.6,
+    color: '#FFFFFF'
+  },
+  
+  // 🌧️ PRECIPITACIÓN
+  precipitation: {
+    id: 'weather-precipitation',
+    name: '🌧️ Precipitación',
+    description: 'Lluvia y nieve en tiempo real',
+    owmLayer: 'precipitation_new', // OpenWeatherMap
+    rainviewerType: 'radar', // RainViewer fallback
+    opacity: 0.7,
     color: '#0099FF'
   },
   
-  // ☁️ SATÉLITE DE NUBES (RainViewer - GRATIS, SIN API KEY)
-  clouds: {
-    id: 'rainviewer-satellite',
-    name: '☁️ Satélite Infrarrojo',
-    description: 'Nubes vía satélite - Global',
-    source: 'rainviewer',
-    opacity: 0.5,
-    color: '#FFFFFF'
+  // 🌡️ TEMPERATURA (Solo OpenWeatherMap)
+  temperature: {
+    id: 'weather-temperature',
+    name: '🌡️ Temperatura',
+    description: 'Temperatura del aire',
+    owmLayer: 'temp_new', // Solo OpenWeatherMap
+    rainviewerType: null, // No disponible en RainViewer
+    opacity: 0.6,
+    color: '#FF6B35'
+  },
+  
+  // 💨 VIENTO (Solo OpenWeatherMap)
+  wind: {
+    id: 'weather-wind',
+    name: '💨 Viento',
+    description: 'Velocidad y dirección del viento',
+    owmLayer: 'wind_new', // Solo OpenWeatherMap
+    rainviewerType: null, // No disponible en RainViewer
+    opacity: 0.7,
+    color: '#00D9FF'
+  },
+  
+  // 📊 PRESIÓN (Solo OpenWeatherMap)
+  pressure: {
+    id: 'weather-pressure',
+    name: '📊 Presión Atmosférica',
+    description: 'Presión del aire',
+    owmLayer: 'pressure_new', // Solo OpenWeatherMap
+    rainviewerType: null, // No disponible en RainViewer
+    opacity: 0.6,
+    color: '#A8E6CF'
   }
 };
 
@@ -73,7 +108,15 @@ function getRainViewerSatelliteUrl(timestamp, size = 256) {
 }
 
 /**
- * Agregar capa de clima al mapa (RainViewer - SIN API KEY)
+ * Construir URL de OpenWeatherMap
+ */
+function getOpenWeatherMapUrl(layerName) {
+  return `https://tile.openweathermap.org/map/${layerName}/{z}/{x}/{y}.png?appid=${OPENWEATHER_API_KEY}`;
+}
+
+/**
+ * Agregar capa de clima al mapa
+ * Sistema híbrido: Intenta OpenWeatherMap primero, fallback a RainViewer
  */
 export async function addWeatherLayer(map, layerType) {
   const layer = WEATHER_LAYERS[layerType];
@@ -85,7 +128,6 @@ export async function addWeatherLayer(map, layerType) {
 
   // Verificar si la capa ya existe
   if (map.getSource(layer.id)) {
-    // Solo cambiar la visibilidad si ya existe
     try {
       map.setLayoutProperty(layer.id, 'visibility', 'visible');
       console.log(`👁️ Mostrando capa existente: ${layer.name}`);
@@ -97,32 +139,46 @@ export async function addWeatherLayer(map, layerType) {
   }
 
   try {
-    console.log(`🌦️ Obteniendo timestamp de RainViewer para ${layer.name}...`);
-    
-    // Obtener timestamp más reciente de RainViewer
-    const timestamp = await getRainViewerTimestamp();
-    console.log(`⏰ Timestamp obtenido: ${timestamp}`);
-    
-    // Construir URL según el tipo de capa
     let tileUrl;
-    if (layerType === 'precipitation') {
-      tileUrl = getRainViewerTileUrl(timestamp);
-    } else if (layerType === 'clouds') {
-      tileUrl = getRainViewerSatelliteUrl(timestamp);
+    let attribution;
+    let useOpenWeatherMap = false;
+    
+    // 🎯 ESTRATEGIA HÍBRIDA:
+    // 1. Si hay API key de OpenWeatherMap, úsala
+    // 2. Si no hay API key O la capa no está disponible en OWM, usa RainViewer
+    
+    if (OPENWEATHER_API_KEY && layer.owmLayer) {
+      // Intentar con OpenWeatherMap
+      tileUrl = getOpenWeatherMapUrl(layer.owmLayer);
+      attribution = '© <a href="https://openweathermap.org/">OpenWeatherMap</a>';
+      useOpenWeatherMap = true;
+      console.log(`🌐 Usando OpenWeatherMap para ${layer.name}`);
+    } else if (layer.rainviewerType) {
+      // Fallback a RainViewer (gratis, sin API key)
+      const timestamp = await getRainViewerTimestamp();
+      
+      if (layer.rainviewerType === 'radar') {
+        tileUrl = getRainViewerTileUrl(timestamp);
+      } else if (layer.rainviewerType === 'satellite') {
+        tileUrl = getRainViewerSatelliteUrl(timestamp);
+      }
+      
+      attribution = '© <a href="https://rainviewer.com/">RainViewer</a>';
+      console.log(`🌐 Usando RainViewer para ${layer.name} (sin API key)`);
     } else {
-      console.warn(`⚠️ Tipo de capa no soportado: ${layerType}`);
+      console.warn(`⚠️ ${layer.name} requiere API key de OpenWeatherMap`);
+      console.info(`💡 Configura VITE_OPENWEATHER_API_KEY en .env`);
+      console.info(`💡 Obtén tu API key gratis en: https://openweathermap.org/api`);
       return false;
     }
-    
-    console.log(`🔗 URL de tiles: ${tileUrl.replace(/{z}.*/, '...')}`);
     
     // Agregar source
     map.addSource(layer.id, {
       type: 'raster',
       tiles: [tileUrl],
       tileSize: 256,
-      attribution: '© <a href="https://rainviewer.com/">RainViewer</a>',
-      maxzoom: 12,
+      attribution: attribution,
+      maxzoom: 18,
       minzoom: 0
     });
 
@@ -137,8 +193,10 @@ export async function addWeatherLayer(map, layerType) {
       }
     });
 
-    console.log(`✅ Capa de clima "${layer.name}" agregada correctamente con RainViewer`);
+    const source = useOpenWeatherMap ? 'OpenWeatherMap' : 'RainViewer';
+    console.log(`✅ Capa "${layer.name}" agregada con ${source}`);
     return true;
+    
   } catch (error) {
     console.error(`❌ Error agregando capa de clima ${layerType}:`, error);
     return false;
@@ -190,13 +248,15 @@ export function setWeatherLayerOpacity(map, layerType, opacity) {
 
 /**
  * Obtener capas activas desde localStorage
- * NOTA: Solo precipitation y clouds están soportadas con RainViewer
  */
 export function getActiveWeatherLayers() {
   const saved = localStorage.getItem('activeWeatherLayers');
   return saved ? JSON.parse(saved) : {
+    clouds: false,
     precipitation: false,
-    clouds: false
+    temperature: false,
+    wind: false,
+    pressure: false
   };
 }
 

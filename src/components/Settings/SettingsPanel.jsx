@@ -84,7 +84,14 @@ export default function SettingsPanel({ onClose }) {
 
   // 🌦️ NUEVO: Capas de clima
   const [weatherLayers, setWeatherLayers] = useState(() => {
-    return getActiveWeatherLayers();
+    const saved = localStorage.getItem('activeWeatherLayers');
+    return saved ? JSON.parse(saved) : {
+      precipitation: false,
+      clouds: false,
+      temperature: false,
+      wind: false,
+      pressure: false
+    };
   });
 
   // Guardar en localStorage cuando cambian
@@ -149,8 +156,11 @@ export default function SettingsPanel({ onClose }) {
     setMapPitch(60);
     setMapBearing(0);
     setWeatherLayers({
+      clouds: false,
       precipitation: false,
-      clouds: false
+      temperature: false,
+      wind: false,
+      pressure: false
     });
   };
 
@@ -738,39 +748,14 @@ export default function SettingsPanel({ onClose }) {
                 </h3>
 
                 <div className="space-y-4">
-                  {/* Precipitación (Radar) */}
-                  <div className="bg-slate-900/50 p-4 rounded-lg border border-blue-700/50">
-                    <label className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <CloudRain className="w-6 h-6 text-blue-400" />
-                        <div>
-                          <span className="text-base text-slate-200 font-medium block">🌧️ Radar de Precipitación</span>
-                          <span className="text-xs text-slate-400">Lluvia y nieve en tiempo real - Global</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => toggleWeatherLayer('precipitation')}
-                        className={`relative w-14 h-7 rounded-full transition-colors ${
-                          weatherLayers.precipitation ? 'bg-blue-600' : 'bg-slate-600'
-                        }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
-                            weatherLayers.precipitation ? 'translate-x-7' : 'translate-x-0'
-                          }`}
-                        />
-                      </button>
-                    </label>
-                  </div>
-
-                  {/* Satélite de Nubes */}
+                  {/* Nubes */}
                   <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
                     <label className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <Cloud className="w-6 h-6 text-sky-300" />
+                        <Cloud className="w-5 h-5 text-blue-300" />
                         <div>
-                          <span className="text-base text-slate-200 font-medium block">☁️ Satélite Infrarrojo</span>
-                          <span className="text-xs text-slate-400">Nubes vía satélite - Global</span>
+                          <span className="text-base text-slate-200 font-medium block">☁️ Cobertura de Nubes</span>
+                          <span className="text-xs text-slate-400">OWM preferido / RainViewer fallback</span>
                         </div>
                       </div>
                       <button
@@ -788,32 +773,132 @@ export default function SettingsPanel({ onClose }) {
                     </label>
                   </div>
 
-                  {/* Información */}
-                  <div className="pt-6 border-t border-slate-700 bg-green-900/20 p-4 rounded-lg border border-green-700/30">
-                    <h4 className="text-sm font-semibold text-green-300 mb-3 flex items-center gap-2">
+                  {/* Precipitación */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CloudRain className="w-5 h-5 text-blue-400" />
+                        <div>
+                          <span className="text-base text-slate-200 font-medium block">🌧️ Precipitación</span>
+                          <span className="text-xs text-slate-400">OWM preferido / RainViewer fallback</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleWeatherLayer('precipitation')}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${
+                          weatherLayers.precipitation ? 'bg-blue-600' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                            weatherLayers.precipitation ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  </div>
+
+                  {/* Temperatura */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Thermometer className="w-5 h-5 text-orange-400" />
+                        <div>
+                          <span className="text-base text-slate-200 font-medium block">🌡️ Temperatura</span>
+                          <span className="text-xs text-slate-400">Solo OpenWeatherMap (requiere API key)</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleWeatherLayer('temperature')}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${
+                          weatherLayers.temperature ? 'bg-orange-600' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                            weatherLayers.temperature ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  </div>
+
+                  {/* Viento */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Wind className="w-5 h-5 text-cyan-400" />
+                        <div>
+                          <span className="text-base text-slate-200 font-medium block">💨 Viento</span>
+                          <span className="text-xs text-slate-400">Solo OpenWeatherMap (requiere API key)</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleWeatherLayer('wind')}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${
+                          weatherLayers.wind ? 'bg-cyan-600' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                            weatherLayers.wind ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  </div>
+
+                  {/* Presión */}
+                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
+                    <label className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Gauge className="w-5 h-5 text-green-400" />
+                        <div>
+                          <span className="text-base text-slate-200 font-medium block">📊 Presión Atmosférica</span>
+                          <span className="text-xs text-slate-400">Solo OpenWeatherMap (requiere API key)</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleWeatherLayer('pressure')}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${
+                          weatherLayers.pressure ? 'bg-green-600' : 'bg-slate-600'
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform ${
+                            weatherLayers.pressure ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </label>
+                  </div>
+
+                  {/* Información - Sistema Híbrido */}
+                  <div className="pt-6 border-t border-slate-700 bg-gradient-to-r from-blue-900/20 to-green-900/20 p-4 rounded-lg border border-blue-700/30">
+                    <h4 className="text-sm font-semibold text-sky-300 mb-3 flex items-center gap-2">
                       <Settings className="w-4 h-4" />
-                      Acerca de RainViewer
+                      Sistema Híbrido de Capas Meteorológicas
                     </h4>
                     <ul className="space-y-2 text-sm text-slate-300">
                       <li className="flex items-start gap-2">
-                        <span className="text-green-400">✅</span>
-                        <span><strong>100% Gratis:</strong> SIN API key, SIN límites, SIN registro</span>
+                        <span className="text-blue-400">🔵</span>
+                        <span><strong>CON API key:</strong> OpenWeatherMap (5 capas completas)</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-green-400">✅</span>
-                        <span><strong>Actualización:</strong> Cada 10 minutos (automático)</span>
+                        <span className="text-green-400">🟢</span>
+                        <span><strong>SIN API key:</strong> RainViewer (2 capas básicas gratis)</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-green-400">✅</span>
-                        <span><strong>Cobertura:</strong> Global (todo el mundo)</span>
+                        <span className="text-yellow-400">⚠️</span>
+                        <span><strong>API Key:</strong> VITE_OPENWEATHER_API_KEY en .env</span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-blue-400">ℹ️</span>
-                        <span><strong>Fuente:</strong> RainViewer API (datos meteorológicos públicos)</span>
+                        <span className="text-purple-400">🔗</span>
+                        <span>Obtén API key gratis: <strong>openweathermap.org/api</strong></span>
                       </li>
                       <li className="flex items-start gap-2">
-                        <span className="text-purple-400">🎖️</span>
-                        <span><strong>Uso militar:</strong> Planificar operaciones aéreas y anfibias según clima</span>
+                        <span className="text-cyan-400">ℹ️</span>
+                        <span><strong>Activación:</strong> La API key puede tardar hasta 2 horas</span>
                       </li>
                     </ul>
                   </div>
@@ -824,35 +909,47 @@ export default function SettingsPanel({ onClose }) {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setWeatherLayers({
+                          clouds: true,
                           precipitation: true,
-                          clouds: false
+                          temperature: false,
+                          wind: false,
+                          pressure: false
                         })}
                         className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-colors"
                       >
-                        🌧️ Solo Radar
+                        🌧️ Lluvia y Nubes
                       </button>
                       <button
                         onClick={() => setWeatherLayers({
+                          clouds: false,
                           precipitation: false,
-                          clouds: true
+                          temperature: true,
+                          wind: true,
+                          pressure: false
                         })}
-                        className="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded text-xs font-medium transition-colors"
+                        className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded text-xs font-medium transition-colors"
                       >
-                        ☁️ Solo Satélite
+                        🌡️ Temp + Viento
                       </button>
                       <button
                         onClick={() => setWeatherLayers({
+                          clouds: true,
                           precipitation: true,
-                          clouds: true
+                          temperature: true,
+                          wind: true,
+                          pressure: true
                         })}
                         className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors"
                       >
-                        ✅ Ambas Capas
+                        ✅ Todas (5)
                       </button>
                       <button
                         onClick={() => setWeatherLayers({
+                          clouds: false,
                           precipitation: false,
-                          clouds: false
+                          temperature: false,
+                          wind: false,
+                          pressure: false
                         })}
                         className="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded text-xs font-medium transition-colors"
                       >
