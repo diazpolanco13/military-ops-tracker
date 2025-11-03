@@ -148,7 +148,7 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
         </div>
 
         {/* Contenido */}
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar-transparent">
           {/* Metadata */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2 text-slate-300">
