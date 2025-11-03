@@ -173,7 +173,7 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate }) {
     <div 
       className="fixed left-0 w-80 bg-slate-900 border-r border-slate-700 flex flex-col palette-enter shadow-2xl" 
       style={{ 
-        zIndex: 40,
+        zIndex: 50, // ✅ Mayor que SearchBar (z-40) para evitar superposición en mobile
         top: '56px', // Después de TopNavbar
         height: 'calc(100vh - 56px)'
       }}
