@@ -148,7 +148,6 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             cache[t.id] = t;
           });
           setTemplatesCache(cache);
-          console.log('✅ Plantillas cargadas:', Object.keys(cache).length, '- Con sub_type:', data.map(t => `${t.name}(${t.sub_type})`));
         }
       } catch (err) {
         console.error('Error caching templates:', err);

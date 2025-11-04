@@ -123,16 +123,6 @@ export default function EntityMarker({ entity, template: templateProp, map, onPo
   
   useEffect(() => {
     async function loadTemplate() {
-      const isCrucero = entity?.name?.includes('Lake Erie') || entity?.name?.includes('Gettysburg');
-      
-      if (isCrucero) {
-        console.log(`🔍 [${entity.name}] INICIO loadTemplate:`, {
-          template_id: entity.template_id,
-          templateProp: templateProp ? `${templateProp.name} (${templateProp.sub_type})` : 'NULL',
-          templateState: template ? `${template.name} (${template.sub_type})` : 'NULL'
-        });
-      }
-      
       if (entity?.template_id && !templateProp) {
         try {
           const { data, error } = await supabase
@@ -143,26 +133,12 @@ export default function EntityMarker({ entity, template: templateProp, map, onPo
 
           if (!error && data) {
             setTemplate(data);
-            if (isCrucero) {
-              console.log(`✅ [${entity.name}] Template CARGADO desde Supabase:`, {
-                name: data.name,
-                sub_type: data.sub_type,
-                code: data.code
-              });
-            }
           }
         } catch (err) {
           console.error('Error loading template:', err);
         }
       } else if (templateProp) {
         setTemplate(templateProp);
-        if (isCrucero) {
-          console.log(`✅ [${entity.name}] Template recibido como PROP:`, {
-            name: templateProp.name,
-            sub_type: templateProp.sub_type,
-            code: templateProp.code
-          });
-        }
       }
     }
     loadTemplate();
@@ -215,27 +191,10 @@ export default function EntityMarker({ entity, template: templateProp, map, onPo
   useEffect(() => {
     if (!map || !entity) return;
     
-    const isCrucero = entity?.name?.includes('Lake Erie') || entity?.name?.includes('Gettysburg');
-    
     // ⚠️ CRÍTICO: Si la entidad tiene template_id, ESPERAR a que el template se cargue
     // Esto evita renderizar "Destructor" y luego cambiar a "Crucero"
     if (entity.template_id && !template) {
-      if (isCrucero) {
-        console.log(`⏳ [${entity.name}] ESPERANDO template`, {
-          template_id: entity.template_id,
-          template: 'NULL'
-        });
-      }
       return; // No crear el marcador hasta tener el template
-    }
-    
-    if (isCrucero) {
-      console.log(`🎨 [${entity.name}] CREANDO MARCADOR:`, {
-        entity_type: entity.type,
-        template_name: template?.name,
-        template_sub_type: template?.sub_type,
-        calculated_type: getEntityType(entity, template)
-      });
     }
 
     // Crear elemento del marcador (contenedor principal)
