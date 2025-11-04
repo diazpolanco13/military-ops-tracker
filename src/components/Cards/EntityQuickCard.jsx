@@ -1,4 +1,4 @@
-import { X, MapPin, Navigation, Gauge, Ship, Users, Shield, Settings, Eye, EyeOff, Edit2, Archive, Trash2, Swords } from 'lucide-react';
+import { X, MapPin, Navigation, Gauge, Ship, Users, Shield, Settings, Eye, EyeOff, Edit2, Archive, Trash2, Swords, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { supabase } from '../../lib/supabase';
@@ -51,7 +51,7 @@ const STATUS_CONFIG = {
  * 🎴 Card flotante futurista para quick info de entidades
  * Diseño traslúcido estilo juego AAA / C2 System
  */
-export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
+export default function EntityQuickCard({ entity, onClose, onOpenDetails, onViewTimeline }) {
   const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
   const [template, setTemplate] = useState(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
@@ -59,6 +59,7 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [eventCount, setEventCount] = useState(0);
 
   // Cargar plantilla si existe template_id
   useEffect(() => {
@@ -87,6 +88,28 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
 
     loadTemplate();
   }, [entity?.template_id]);
+
+  // Cargar contador de eventos para esta entidad
+  useEffect(() => {
+    async function loadEventCount() {
+      if (!entity?.id) return;
+
+      try {
+        const { count, error } = await supabase
+          .from('event_entities')
+          .select('*', { count: 'exact', head: true })
+          .eq('entity_id', entity.id);
+
+        if (!error) {
+          setEventCount(count || 0);
+        }
+      } catch (err) {
+        console.error('Error loading event count:', err);
+      }
+    }
+
+    loadEventCount();
+  }, [entity?.id]);
 
   // Handlers para las acciones
   const handleToggleVisibility = async () => {
@@ -392,6 +415,20 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails }) {
 
           {/* Acciones rápidas - MINI */}
           <div className="px-3 py-1.5 flex items-center justify-center gap-1 bg-slate-900/50 border-t border-slate-700/30">
+            {/* Botón Timeline - Solo si hay eventos */}
+            {eventCount > 0 && (
+              <button
+                onClick={() => onViewTimeline?.(entity.id)}
+                className="p-1.5 hover:bg-cyan-700/50 rounded transition-colors relative"
+                title={`Ver Timeline (${eventCount} eventos)`}
+              >
+                <Clock className="w-4 h-4 text-cyan-400" />
+                {/* Badge de contador */}
+                <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-[9px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                  {eventCount}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => setShowEditModal(true)}
               className="p-1.5 hover:bg-slate-700/50 rounded transition-colors"

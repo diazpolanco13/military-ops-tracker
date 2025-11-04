@@ -36,6 +36,7 @@ function App() {
   const [showCalendar, setShowCalendar] = useState(false); // Control del Calendario de Eventos
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
   const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar desde el calendario
+  const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
   const { createFromTemplate, creating } = useCreateEntity();
 
   const handleSelectTemplate = (template) => {
@@ -77,6 +78,12 @@ function App() {
   // Handler para detecciones del radar
   const handleRadarDetection = (detectedEntities) => {
     // Aquí puedes agregar sonidos, notificaciones, etc.
+  };
+
+  // Handler para ver timeline de una entidad específica
+  const handleViewEntityTimeline = (entityId) => {
+    setPreSelectedEntityId(entityId);
+    setShowEventTimeline(true);
   };
 
   // 🔐 Mostrar pantalla de carga mientras verifica autenticación
@@ -131,6 +138,7 @@ function App() {
           onTemplateDrop={handleTemplateDrop}
           showPalette={showPalette}
           onMapReady={setMapInstance}
+          onViewTimeline={handleViewEntityTimeline}
         />
         
         {/* Paleta como overlay (fixed) */}
@@ -176,7 +184,11 @@ function App() {
         {showEventTimeline && (
           <EventTimeline 
             isOpen={showEventTimeline}
-            onClose={() => setShowEventTimeline(false)}
+            onClose={() => {
+              setShowEventTimeline(false);
+              setPreSelectedEntityId(null); // Limpiar selección al cerrar
+            }}
+            preSelectedEntityId={preSelectedEntityId}
           />
         )}
 

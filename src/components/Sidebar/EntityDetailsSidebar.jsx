@@ -1,4 +1,4 @@
-import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship, Anchor, Plane, Users, Edit2, Eye, EyeOff, Archive, Trash2 } from 'lucide-react';
+import { X, MapPin, Navigation, Gauge, Crosshair, Shield, Swords, Calendar, Ship, Anchor, Plane, Users, Edit2, Eye, EyeOff, Archive, Trash2, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useEntityActions } from '../../hooks/useEntityActions';
 import { supabase } from '../../lib/supabase';
@@ -50,12 +50,13 @@ const STATUS_CONFIG = {
  * 📊 Sidebar de detalles de entidad (estilo VesselFinder)
  * Panel lateral profesional que muestra información completa
  */
-export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }) {
+export default function EntityDetailsSidebar({ entity, onClose, isOpen = false, onViewTimeline }) {
   const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
   const [template, setTemplate] = useState(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+  const [eventCount, setEventCount] = useState(0);
 
   // Cargar plantilla si existe template_id
   useEffect(() => {
@@ -84,6 +85,28 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
 
     loadTemplate();
   }, [entity?.template_id]);
+
+  // Cargar contador de eventos para esta entidad
+  useEffect(() => {
+    async function loadEventCount() {
+      if (!entity?.id) return;
+
+      try {
+        const { count, error } = await supabase
+          .from('event_entities')
+          .select('*', { count: 'exact', head: true })
+          .eq('entity_id', entity.id);
+
+        if (!error) {
+          setEventCount(count || 0);
+        }
+      } catch (err) {
+        console.error('Error loading event count:', err);
+      }
+    }
+
+    loadEventCount();
+  }, [entity?.id]);
 
   // Handlers para las acciones
   const handleToggleVisibility = async () => {
@@ -420,6 +443,18 @@ export default function EntityDetailsSidebar({ entity, onClose, isOpen = false }
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
               Acciones
             </h3>
+
+            {/* Fila 0: Ver Timeline (destacado si hay eventos) */}
+            {eventCount > 0 && (
+              <button
+                onClick={() => onViewTimeline?.(entity.id)}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-lg transition-all text-sm font-semibold shadow-lg"
+                title={`Ver ${eventCount} evento${eventCount !== 1 ? 's' : ''} relacionado${eventCount !== 1 ? 's' : ''}`}
+              >
+                <Clock size={16} />
+                Ver Timeline ({eventCount} evento{eventCount !== 1 ? 's' : ''})
+              </button>
+            )}
 
             {/* Fila 1: Editar y Visibilidad */}
             <div className="grid grid-cols-2 gap-2">

@@ -21,7 +21,7 @@ import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLa
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPalette, onMapReady }) {
+export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPalette, onMapReady, onViewTimeline }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -547,6 +547,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           entity={selectedEntity}
           onClose={() => setSelectedEntity(null)}
           isOpen={!!selectedEntity}
+          onViewTimeline={onViewTimeline}
         />
       ) : (
         selectedEntity && (
@@ -554,6 +555,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             entity={selectedEntity}
             onClose={() => setSelectedEntity(null)}
             onOpenDetails={() => setShowDetailedModal(true)}
+            onViewTimeline={onViewTimeline}
           />
         )
       )}

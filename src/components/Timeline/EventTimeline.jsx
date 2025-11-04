@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Calendar, Link as LinkIcon, Image as ImageIcon, MessageSquare, Filter, Search, Clock, MapPin, ExternalLink, Ship } from 'lucide-react';
+import { X, Plus, Calendar, Link as LinkIcon, Image as ImageIcon, MessageSquare, Filter, Search, Clock, MapPin, ExternalLink, Ship, FileDown } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
 import EventCard from './EventCard';
 import AddEventModal from './AddEventModal';
 import { supabase } from '../../lib/supabase';
+import { exportEventsToPDF } from '../../utils/pdfExport';
 
 /**
  * Timeline de Eventos - Sidebar Derecho
  * Registro cronológico de eventos con multimedia
  */
-export default function EventTimeline({ isOpen, onClose }) {
+export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = null }) {
   const { events, loading, createEvent, updateEvent, deleteEvent } = useEvents();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,6 +28,16 @@ export default function EventTimeline({ isOpen, onClose }) {
   useEffect(() => {
     loadEntitiesWithEvents();
   }, [events]);
+
+  // Pre-seleccionar entidad si se pasa como prop
+  useEffect(() => {
+    if (preSelectedEntityId && entitiesWithEvents.length > 0) {
+      const entity = entitiesWithEvents.find(e => e.id === preSelectedEntityId);
+      if (entity && !selectedFilterEntities.find(e => e.id === entity.id)) {
+        setSelectedFilterEntities([entity]);
+      }
+    }
+  }, [preSelectedEntityId, entitiesWithEvents]);
 
   const loadEntitiesWithEvents = async () => {
     try {
@@ -151,6 +162,30 @@ export default function EventTimeline({ isOpen, onClose }) {
     }
   };
 
+  const handleExportPDF = async () => {
+    // Obtener nombres de entidades filtradas para el header
+    const filterInfo = selectedFilterEntities.length > 0
+      ? selectedFilterEntities.map(e => e.name).join(', ')
+      : '';
+
+    // Preparar eventos con sus entidades relacionadas
+    const eventsWithEntities = await Promise.all(
+      filteredEvents.map(async (event) => {
+        const { data: relations } = await supabase
+          .from('event_entities')
+          .select('entity_id, entities:entity_id(id, name, type)')
+          .eq('event_id', event.id);
+
+        return {
+          ...event,
+          entities: relations?.map(r => r.entities).filter(Boolean) || []
+        };
+      })
+    );
+
+    await exportEventsToPDF(eventsWithEntities, filterInfo);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -164,12 +199,24 @@ export default function EventTimeline({ isOpen, onClose }) {
               <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
               <h2 className="text-base sm:text-lg font-bold text-white">Timeline de Eventos</h2>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
-            >
-              <X size={20} />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Botón Exportar PDF */}
+              <button
+                onClick={handleExportPDF}
+                disabled={filteredEvents.length === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-xs font-semibold"
+                title="Exportar a PDF estilo SEBIN"
+              >
+                <FileDown size={16} />
+                <span className="hidden sm:inline">Exportar PDF</span>
+              </button>
+              <button
+                onClick={onClose}
+                className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* Búsqueda */}
