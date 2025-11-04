@@ -166,7 +166,7 @@ export default function EntityDetailedModal({ entity, onClose }) {
             <div className="absolute top-4 left-4 flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700 z-20">
               <Icon className="w-4 h-4 text-blue-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-200">
-                {entity.type}
+                {template?.sub_type === 'crucero' ? 'crucero' : entity.type}
               </span>
             </div>
 
@@ -247,7 +247,9 @@ export default function EntityDetailedModal({ entity, onClose }) {
                   <div className="bg-gradient-to-br from-cyan-950/30 to-slate-800/30 rounded-lg p-4 border border-cyan-900/30">
                     <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wide mb-3">Tipo de Plataforma</h3>
                     <div className="text-2xl font-bold text-white mb-2">
-                      {entity.type === 'destructor' ? 'DESTRUCTOR' :
+                      {/* Detectar crucero por template */}
+                      {template?.sub_type === 'crucero' ? 'CRUCERO' :
+                       entity.type === 'destructor' ? 'DESTRUCTOR' :
                        entity.type === 'fragata' ? 'FRAGATA' :
                        entity.type === 'avion' ? 'AERONAVE' :
                        entity.type === 'submarino' ? 'SUBMARINO' :
@@ -262,6 +264,7 @@ export default function EntityDetailedModal({ entity, onClose }) {
                       </p>
                     ) : (
                       <p className="text-sm text-slate-300">
+                        {template?.sub_type === 'crucero' && 'Buque de guerra polivalente equipado con sistemas de combate avanzados para defensa de área y ataque multi-misión.'}
                         {entity.type === 'destructor' && 'Buque de guerra de superficie diseñado para escoltar flotas y proporcionar defensa antiaérea y antisubmarina.'}
                         {entity.type === 'fragata' && 'Buque de guerra versátil diseñado para operaciones de escolta y patrulla.'}
                         {entity.type === 'submarino' && 'Nave submarina de ataque diseñada para operaciones sigilosas y ataques de precisión.'}

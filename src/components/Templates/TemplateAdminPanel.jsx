@@ -269,7 +269,9 @@ export default function TemplateAdminPanel({ onClose }) {
         <div className="flex items-center justify-between text-[10px] mb-2 text-slate-400">
           <span>
             <span className="text-slate-500">Tipo:</span>{' '}
-            <span className="text-white">{template.entity_type}</span>
+            <span className="text-white">
+              {template.sub_type === 'crucero' ? 'crucero' : template.entity_type}
+            </span>
           </span>
           <span>
             <span className="text-slate-500">Usos:</span>{' '}

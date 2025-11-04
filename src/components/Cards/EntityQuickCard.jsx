@@ -289,7 +289,8 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails, onView
           <div className="px-4 py-2 bg-slate-800/30 border-b border-slate-700/30">
             <div className="text-center">
               <div className="text-base font-bold text-cyan-400 uppercase">
-                {entity.type === 'destructor' ? 'DESTRUCTOR' :
+                {template?.sub_type === 'crucero' ? 'CRUCERO' :
+                 entity.type === 'destructor' ? 'DESTRUCTOR' :
                  entity.type === 'fragata' ? 'FRAGATA' :
                  entity.type === 'avion' ? 'AERONAVE' :
                  entity.type === 'submarino' ? 'SUBMARINO' :

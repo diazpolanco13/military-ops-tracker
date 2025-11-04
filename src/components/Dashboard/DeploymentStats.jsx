@@ -45,6 +45,24 @@ export default function DeploymentStats() {
     tanque: '#fb923c',
   };
 
+  // Mapeo de labels personalizados por tipo
+  const labelMap = {
+    destructor: 'Buques de Combate', // Engloba destructores + cruceros
+    fragata: 'Fragata',
+    portaaviones: 'Portaaviones',
+    submarino: 'Submarino',
+    patrullero: 'Patrullero',
+    avion: 'Avión',
+    caza: 'Caza',
+    helicoptero: 'Helicóptero',
+    drone: 'Drone',
+    tropas: 'Tropas',
+    insurgente: 'Insurgente',
+    vehiculo: 'Vehículo',
+    tanque: 'Tanque',
+    lugar: 'Lugar',
+  };
+
   // Calcular estadísticas dinámicamente
   const stats = useMemo(() => {
     if (!entities || entities.length === 0) return null;
@@ -67,7 +85,7 @@ export default function DeploymentStats() {
           personnel: 0,
           icon: iconMap[type] || Package,
           color: colorMap[type] || '#64748b',
-          label: type.charAt(0).toUpperCase() + type.slice(1) // Capitalizar
+          label: labelMap[type] || type.charAt(0).toUpperCase() + type.slice(1) // Usar label personalizado
         };
       }
 

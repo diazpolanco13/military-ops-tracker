@@ -12,6 +12,7 @@ export const I2_ICONS_BASE_PATH = '/Icons/i2/';
 export const ENTITY_TYPE_ICONS = {
   // BUQUES DE GUERRA
   destructor: 'Destroyer.png',
+  crucero: 'Cruiser.png',
   fragata: 'Maritime.png',
   portaaviones: 'Aircraft Carrier.png',
   submarino: 'Submarine.png',
@@ -76,6 +77,7 @@ export const ENTITY_TYPE_ICONS = {
 export const TEMPLATE_CODE_ICONS = {
   // BUQUES
   'destructor-general': 'Destroyer.png',
+  'crucero-ticonderoga': 'Destroyer.png',
   'fragata-general': 'Maritime.png',
   'portaaviones-general': 'Aircraft Carrier.png',
   'portaaviones-anfibio-general': 'Aircraft Carrier.png',

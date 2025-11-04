@@ -109,27 +109,37 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // 📡 Obtener entidades desde Supabase
   const { entities, loading, error, refetch, addEntity, removeEntity } = useEntities();
   const [templatesCache, setTemplatesCache] = useState({});
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
 
   // Cachear plantillas para evitar recargas constantes
   useEffect(() => {
     async function loadTemplates() {
+      setTemplatesLoaded(false); // Marcar como cargando
+      
       // Si useImages está desactivado, limpiar el caché
       if (!useImages) {
         setTemplatesCache({});
+        setTemplatesLoaded(true); // Sin templates = loaded
         return;
       }
       
-      if (!entities || entities.length === 0) return;
+      if (!entities || entities.length === 0) {
+        setTemplatesLoaded(true);
+        return;
+      }
 
       // Obtener IDs únicos de plantillas
       const templateIds = [...new Set(entities.map(e => e.template_id).filter(Boolean))];
       
-      if (templateIds.length === 0) return;
+      if (templateIds.length === 0) {
+        setTemplatesLoaded(true);
+        return;
+      }
 
       try {
         const { data } = await supabase
           .from('entity_templates')
-          .select('id, icon_url, image_url')
+          .select('id, name, code, sub_type, icon_url, image_url')  // ✅ INCLUIR sub_type
           .in('id', templateIds);
 
         if (data) {
@@ -138,10 +148,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
             cache[t.id] = t;
           });
           setTemplatesCache(cache);
-          console.log('✅ Plantillas cargadas:', Object.keys(cache).length);
+          console.log('✅ Plantillas cargadas:', Object.keys(cache).length, '- Con sub_type:', data.map(t => `${t.name}(${t.sub_type})`));
         }
       } catch (err) {
         console.error('Error caching templates:', err);
+      } finally {
+        setTemplatesLoaded(true); // ✅ Marcar como cargado
       }
     }
 
@@ -596,19 +608,25 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* {mapLoaded && <MapStyleSelector map={map.current} />} */}
 
       {/* Marcadores de Entidades (cuando zoom >= umbral) */}
-      {mapLoaded && !loading && currentZoom >= clusterZoomThreshold && 
+      {mapLoaded && !loading && templatesLoaded && currentZoom >= clusterZoomThreshold && 
         entities
           .filter(e => e.is_visible !== false)
-          .map((entity) => (
-            <EntityMarker 
-              key={entity.id} 
-              entity={entity} 
-              template={templatesCache[entity.template_id]}
-              map={map.current}
-              onPositionChange={handlePositionChange}
-              onEntityClick={() => setSelectedEntity(entity)}
-            />
-          ))
+          .map((entity) => {
+            // ⚠️ CRÍTICO: Incluir template_id en la key para forzar recreación cuando cambia
+            const template = templatesCache[entity.template_id];
+            const markerKey = `${entity.id}-${entity.template_id || 'no-template'}-${template?.sub_type || ''}`;
+            
+            return (
+              <EntityMarker 
+                key={markerKey} 
+                entity={entity} 
+                template={template}
+                map={map.current}
+                onPositionChange={handlePositionChange}
+                onEntityClick={() => setSelectedEntity(entity)}
+              />
+            );
+          })
       }
 
       {/* Indicador de carga */}

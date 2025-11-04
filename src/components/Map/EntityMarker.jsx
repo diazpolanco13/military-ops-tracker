@@ -5,6 +5,7 @@ import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
 import { getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
 import { getFlagComponent } from '../Common/CountrySelector';
+import { supabase } from '../../lib/supabase';
 
 /**
  * 🎯 Componente de marcador de entidad militar
@@ -81,7 +82,12 @@ function getEntityLabel(entity) {
 }
 
 // Función para obtener el texto del tipo (traducido)
-function getEntityType(entity) {
+function getEntityType(entity, template) {
+  // Detectar crucero por template
+  if (template?.sub_type === 'crucero') {
+    return 'Crucero';
+  }
+  
   const typeLabels = {
     'destructor': 'Destructor',
     'portaaviones': 'Portaaviones',
@@ -105,12 +111,62 @@ function getEntityClass(entity) {
 /**
  * Componente de marcador individual
  */
-export default function EntityMarker({ entity, template, map, onPositionChange, onEntityClick }) {
+export default function EntityMarker({ entity, template: templateProp, map, onPositionChange, onEntityClick }) {
   const markerRef = useRef(null);
   const elementRef = useRef(null); // Referencia al elemento DOM
   const isDraggingRef = useRef(false);
   const [iconSize, setIconSize] = useState(() => parseInt(localStorage.getItem('iconSize') || '48'));
   const [useImages, setUseImages] = useState(() => localStorage.getItem('useImages') === 'true');
+  
+  // 🆕 Cargar template internamente si no viene como prop
+  const [template, setTemplate] = useState(templateProp);
+  
+  useEffect(() => {
+    async function loadTemplate() {
+      const isCrucero = entity?.name?.includes('Lake Erie') || entity?.name?.includes('Gettysburg');
+      
+      if (isCrucero) {
+        console.log(`🔍 [${entity.name}] INICIO loadTemplate:`, {
+          template_id: entity.template_id,
+          templateProp: templateProp ? `${templateProp.name} (${templateProp.sub_type})` : 'NULL',
+          templateState: template ? `${template.name} (${template.sub_type})` : 'NULL'
+        });
+      }
+      
+      if (entity?.template_id && !templateProp) {
+        try {
+          const { data, error } = await supabase
+            .from('entity_templates')
+            .select('*')
+            .eq('id', entity.template_id)
+            .single();
+
+          if (!error && data) {
+            setTemplate(data);
+            if (isCrucero) {
+              console.log(`✅ [${entity.name}] Template CARGADO desde Supabase:`, {
+                name: data.name,
+                sub_type: data.sub_type,
+                code: data.code
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error loading template:', err);
+        }
+      } else if (templateProp) {
+        setTemplate(templateProp);
+        if (isCrucero) {
+          console.log(`✅ [${entity.name}] Template recibido como PROP:`, {
+            name: templateProp.name,
+            sub_type: templateProp.sub_type,
+            code: templateProp.code
+          });
+        }
+      }
+    }
+    loadTemplate();
+  }, [entity?.template_id, templateProp]);
   
   // 🏷️ NUEVO: Configuración de etiquetas
   const [showLabelName, setShowLabelName] = useState(() => localStorage.getItem('showLabelName') !== 'false');
@@ -158,6 +214,29 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
   // 🎯 CREAR EL MARCADOR (solo una vez)
   useEffect(() => {
     if (!map || !entity) return;
+    
+    const isCrucero = entity?.name?.includes('Lake Erie') || entity?.name?.includes('Gettysburg');
+    
+    // ⚠️ CRÍTICO: Si la entidad tiene template_id, ESPERAR a que el template se cargue
+    // Esto evita renderizar "Destructor" y luego cambiar a "Crucero"
+    if (entity.template_id && !template) {
+      if (isCrucero) {
+        console.log(`⏳ [${entity.name}] ESPERANDO template`, {
+          template_id: entity.template_id,
+          template: 'NULL'
+        });
+      }
+      return; // No crear el marcador hasta tener el template
+    }
+    
+    if (isCrucero) {
+      console.log(`🎨 [${entity.name}] CREANDO MARCADOR:`, {
+        entity_type: entity.type,
+        template_name: template?.name,
+        template_sub_type: template?.sub_type,
+        calculated_type: getEntityType(entity, template)
+      });
+    }
 
     // Crear elemento del marcador (contenedor principal)
     const el = document.createElement('div');
@@ -167,6 +246,10 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
     el.style.flexDirection = 'column';
     el.style.alignItems = 'center';
     el.style.gap = '4px';
+    
+    // Tooltip HTML nativo - detectar tipo correcto
+    const entityTypeText = getEntityType(entity, template);
+    el.title = `${entity.name}\n${entityTypeText}`;
 
     // Renderizar icono o imagen del barco con etiqueta
     const color = getEntityColor(entity.type);
@@ -266,7 +349,7 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
                   textOverflow: 'ellipsis'
                 }}
               >
-                {getEntityType(entity)}
+                {getEntityType(entity, template)}
               </div>
             )}
             
@@ -381,7 +464,7 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
                   textOverflow: 'ellipsis'
                 }}
               >
-                {getEntityType(entity)}
+                {getEntityType(entity, template)}
               </div>
             )}
             
@@ -472,6 +555,10 @@ export default function EntityMarker({ entity, template, map, onPositionChange, 
 
     // CLEANUP: Remover marcador cuando el componente se desmonta
     return () => {
+      const isCrucero = entity?.name?.includes('Lake Erie') || entity?.name?.includes('Gettysburg');
+      if (isCrucero) {
+        console.log(`🧹 [${entity.name}] CLEANUP - Removiendo marcador viejo`);
+      }
       if (markerRef.current) {
         markerRef.current.remove();
       }

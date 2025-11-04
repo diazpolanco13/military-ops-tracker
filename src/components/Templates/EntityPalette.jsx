@@ -151,7 +151,14 @@ export default function EntityPalette({ onSelectTemplate, onDragTemplate, onClos
     'Buques de Guerra': {
       icon: '🚢',
       types: ['destructor', 'fragata', 'portaaviones', 'submarino'],
-      color: '#ef4444'
+      color: '#ef4444',
+      subgroups: {
+        'Destructores': ['destructor-general'],
+        'Cruceros': ['crucero-ticonderoga'],
+        'Fragatas': ['fragata-general'],
+        'Portaaviones': ['portaaviones-general', 'portaaviones-anfibio-general'],
+        'Submarinos': ['submarino-general']
+      }
     },
     'Aeronaves': {
       icon: '✈️',
