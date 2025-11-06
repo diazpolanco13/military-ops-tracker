@@ -99,6 +99,15 @@ export default function TopNavigationBar({
     }
   }, [showSettingsPanel, canAccessSettings]);
 
+  // Disparar eventos cuando el panel de configuración se abre/cierra
+  useEffect(() => {
+    if (showSettingsPanel) {
+      window.dispatchEvent(new CustomEvent('settingsPanelOpen'));
+    } else {
+      window.dispatchEvent(new CustomEvent('settingsPanelClose'));
+    }
+  }, [showSettingsPanel]);
+
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
   };

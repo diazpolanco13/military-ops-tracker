@@ -144,7 +144,7 @@ export default function SettingsPanel({ onClose }) {
   const resetToDefaults = () => {
     setClusterZoomThreshold(5); // ✅ Actualizado
     setClusterRadius(58); // ✅ Actualizado
-    setIconSize(48);
+    setIconSize(32);
     setUseImages(true);
     setShowLabelName(true);
     setShowLabelType(true);

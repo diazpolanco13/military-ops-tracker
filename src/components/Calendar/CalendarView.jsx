@@ -670,35 +670,9 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         />
       )}
 
-      {/* Botón flotante para crear evento - Solo visible si tiene permiso */}
-      {canCreateEvents() && (
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-8 left-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
-          title="Crear nuevo evento"
-        >
-          <Plus size={28} strokeWidth={2.5} />
-        </button>
-      )}
-
-      {/* Modal de creación de evento */}
-      {showCreateModal && (
-        <AddEventModal
-          event={null}
-          onClose={() => setShowCreateModal(false)}
-          onCreate={async (_, data) => {
-            if (onCreateEvent) {
-              const result = await onCreateEvent(_, data);
-              if (result.success) {
-                setShowCreateModal(false);
-              }
-              return result;
-            }
-            return { success: false, error: 'No handler provided' };
-          }}
-          onUpdate={() => {}}
-        />
-      )}
+      {/* Botón flotante para crear evento - Oculto porque ahora hay un botón global */}
+      {/* El botón global GlobalAddEventButton se muestra en todas las vistas */}
+      {/* El modal de creación se maneja desde el botón global */}
     </div>
   );
 }

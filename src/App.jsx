@@ -11,7 +11,8 @@ import CalendarView from './components/Calendar/CalendarView';
 import AddEventModal from './components/Timeline/AddEventModal';
 import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
-import { useState } from 'react';
+import GlobalAddEventButton from './components/Common/GlobalAddEventButton';
+import { useState, useEffect } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
 import { useEvents } from './hooks/useEvents';
@@ -37,7 +38,22 @@ function App() {
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
   const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar desde el calendario
   const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false); // Estado del panel de configuración
   const { createFromTemplate, creating } = useCreateEntity();
+
+  // Escuchar eventos para abrir/cerrar panel de configuración
+  useEffect(() => {
+    const handleSettingsPanelOpen = () => setShowSettingsPanel(true);
+    const handleSettingsPanelClose = () => setShowSettingsPanel(false);
+
+    window.addEventListener('settingsPanelOpen', handleSettingsPanelOpen);
+    window.addEventListener('settingsPanelClose', handleSettingsPanelClose);
+
+    return () => {
+      window.removeEventListener('settingsPanelOpen', handleSettingsPanelOpen);
+      window.removeEventListener('settingsPanelClose', handleSettingsPanelClose);
+    };
+  }, []);
 
   const handleSelectTemplate = (template) => {
     setSelectedTemplate(template);
@@ -226,6 +242,9 @@ function App() {
 
         {/* Chatbot de Inteligencia (Bottom-right) */}
         <IntelligenceChatbot />
+
+        {/* Botón global para añadir evento - Visible en todas las vistas excepto configuración */}
+        <GlobalAddEventButton settingsPanelOpen={showSettingsPanel} />
 
         {/* Indicador de creación */}
         {creating && (
