@@ -10,7 +10,6 @@ import { useMaritimeBoundariesCached } from '../../hooks/useMaritimeBoundariesCa
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
-import EntityDetailsSidebar from '../Sidebar/EntityDetailsSidebar';
 import DeploymentStats from '../Dashboard/DeploymentStats';
 import EntityQuickCard from '../Cards/EntityQuickCard';
 import EntityDetailedModal from '../Cards/EntityDetailedModal';
@@ -37,10 +36,8 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
   
-  // 🎴 Estado para vista de entidad: 'sidebar' o 'card'
-  const [viewMode, setViewMode] = useState(() => {
-    return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
-  });
+  // 🎴 Vista de entidad: siempre card futurista
+  const viewMode = 'card'; // Siempre card futurista
   const [showDetailedModal, setShowDetailedModal] = useState(false);
   
   // 🖼️ Estado para usar imágenes de plantillas
@@ -177,9 +174,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       if (e.detail.clusterRadius !== undefined) {
         setClusterRadius(e.detail.clusterRadius);
       }
-      if (e.detail.entityViewMode !== undefined) {
-        setViewMode(e.detail.entityViewMode);
-      }
+      // entityViewMode siempre es 'card', no necesita actualización
       // ✅ NUEVO: Escuchar cambios en useImages
       if (e.detail.useImages !== undefined) {
         console.log('🔄 Cambio detectado en useImages:', e.detail.useImages);
@@ -490,7 +485,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       }
     });
 
-    // Click en marcador individual → abrir sidebar
+    // Click en marcador individual → abrir card futurista
     map.current.on('click', unclusteredLayerId, (e) => {
       const feature = e.features[0];
       const entityId = feature.properties.id;
@@ -552,27 +547,18 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
-      {/* Vista de entidad: Sidebar o Card según configuración */}
-      {viewMode === 'sidebar' ? (
-        <EntityDetailsSidebar
+      {/* Vista de entidad: Card Futurista */}
+      {selectedEntity && (
+        <EntityQuickCard
           entity={selectedEntity}
           onClose={() => setSelectedEntity(null)}
-          isOpen={!!selectedEntity}
+          onOpenDetails={() => setShowDetailedModal(true)}
           onViewTimeline={onViewTimeline}
         />
-      ) : (
-        selectedEntity && (
-          <EntityQuickCard
-            entity={selectedEntity}
-            onClose={() => setSelectedEntity(null)}
-            onOpenDetails={() => setShowDetailedModal(true)}
-            onViewTimeline={onViewTimeline}
-          />
-        )
       )}
 
-      {/* Modal de detalles completos (solo con card) */}
-      {viewMode === 'card' && showDetailedModal && selectedEntity && (
+      {/* Modal de detalles completos */}
+      {showDetailedModal && selectedEntity && (
         <EntityDetailedModal
           entity={selectedEntity}
           onClose={() => setShowDetailedModal(false)}

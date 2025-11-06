@@ -42,10 +42,8 @@ export default function SettingsPanel({ onClose }) {
     return localStorage.getItem('showLabelClass') === 'true'; // Default: false
   });
 
-  // 🎴 NUEVO: Modo de vista de entidad (card vs sidebar)
-  const [entityViewMode, setEntityViewMode] = useState(() => {
-    return localStorage.getItem('entityViewMode') || 'card'; // Default: card futurista
-  });
+  // 🎴 Modo de vista de entidad (siempre card futurista)
+  const [entityViewMode] = useState('card'); // Siempre card futurista
 
   // 🎯 NUEVO: Mostrar/ocultar círculo de entidades
   const [showEntityCircle, setShowEntityCircle] = useState(() => {
@@ -105,7 +103,7 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('showLabelName', showLabelName);
     localStorage.setItem('showLabelType', showLabelType);
     localStorage.setItem('showLabelClass', showLabelClass);
-    localStorage.setItem('entityViewMode', entityViewMode);
+    localStorage.setItem('entityViewMode', 'card'); // Siempre card futurista
     localStorage.setItem('showEntityCircle', showEntityCircle);
     localStorage.setItem('aiModel', aiModel);
     localStorage.setItem('aiTemperature', aiTemperature);
@@ -126,7 +124,7 @@ export default function SettingsPanel({ onClose }) {
         showLabelName,
         showLabelType,
         showLabelClass,
-        entityViewMode,
+        entityViewMode: 'card', // Siempre card futurista
         showEntityCircle,
         aiModel,
         aiTemperature,
@@ -138,7 +136,7 @@ export default function SettingsPanel({ onClose }) {
         weatherLayers
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, entityViewMode, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective, mapPitch, mapBearing, weatherLayers]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective, mapPitch, mapBearing, weatherLayers]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(5); // ✅ Actualizado
@@ -148,7 +146,7 @@ export default function SettingsPanel({ onClose }) {
     setShowLabelName(true);
     setShowLabelType(true);
     setShowLabelClass(false);
-    setEntityViewMode('card');
+    // entityViewMode siempre es 'card', no necesita reset
     setShowEntityCircle(false); // ✅ Actualizado
     setAiModel('grok-4');
     setAiTemperature(0.7);
@@ -390,55 +388,22 @@ export default function SettingsPanel({ onClose }) {
                 <h3 className="text-lg font-semibold text-cyan-400 mb-4 flex items-center gap-2">
                   <Monitor className="w-5 h-5" />
                   Modo de Vista de Entidad
-            </h3>
+                </h3>
                 <p className="text-sm text-slate-400 mb-6">
-              Elige cómo mostrar los detalles cuando haces clic en una entidad del mapa.
-            </p>
+                  La aplicación utiliza la Card Futurista como modo de visualización por defecto.
+                </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Opción: Card Futurista */}
-              <button
-                onClick={() => setEntityViewMode('card')}
-                    className={`p-6 rounded-lg border-2 transition-all ${
-                  entityViewMode === 'card'
-                    ? 'border-cyan-500 bg-cyan-500/20'
-                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
-                }`}
-              >
-                <div className="text-center">
-                      <div className="text-5xl mb-3">🎴</div>
-                      <div className="text-base font-semibold text-white mb-2">Card Futurista</div>
-                      <div className="text-sm text-slate-400">
-                    Flotante, centrada, estilo juego
+                <div className="bg-gradient-to-br from-cyan-950/30 to-slate-800/30 rounded-lg p-6 border border-cyan-900/30">
+                  <div className="text-center">
+                    <div className="text-5xl mb-3">🎴</div>
+                    <div className="text-base font-semibold text-white mb-2">Card Futurista</div>
+                    <div className="text-sm text-slate-400 mb-3">
+                      Flotante, centrada, estilo juego
+                    </div>
+                    <div className="text-sm font-bold text-cyan-400">✓ ACTIVO</div>
                   </div>
-                  {entityViewMode === 'card' && (
-                        <div className="mt-3 text-sm font-bold text-cyan-400">✓ ACTIVO</div>
-                  )}
                 </div>
-              </button>
-
-              {/* Opción: Sidebar Clásico */}
-              <button
-                onClick={() => setEntityViewMode('sidebar')}
-                    className={`p-6 rounded-lg border-2 transition-all ${
-                  entityViewMode === 'sidebar'
-                    ? 'border-cyan-500 bg-cyan-500/20'
-                    : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
-                }`}
-              >
-                <div className="text-center">
-                      <div className="text-5xl mb-3">📊</div>
-                      <div className="text-base font-semibold text-white mb-2">Sidebar Clásico</div>
-                      <div className="text-sm text-slate-400">
-                    Panel lateral, más espacio
-                  </div>
-                  {entityViewMode === 'sidebar' && (
-                        <div className="mt-3 text-sm font-bold text-cyan-400">✓ ACTIVO</div>
-                  )}
-                </div>
-              </button>
-            </div>
-          </div>
+              </div>
             </div>
           )}
 
