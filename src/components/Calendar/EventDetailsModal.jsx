@@ -1,5 +1,6 @@
 import { X, Calendar, MapPin, Clock, ExternalLink, FileText, Tag, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useUserRole } from '../../hooks/useUserRole';
 import MarkdownRenderer from '../Common/MarkdownRenderer';
 
 /**
@@ -7,6 +8,8 @@ import MarkdownRenderer from '../Common/MarkdownRenderer';
  * Muestra toda la información sin truncar
  */
 export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) {
+  const { canEditEvents, canDeleteEvents } = useUserRole();
+  
   if (!event) return null;
 
   const handleEdit = () => {
@@ -341,28 +344,32 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
         {/* Footer con acciones */}
         <div className="bg-slate-800/50 border-t border-slate-700 p-4">
           <div className="flex gap-3">
-            {/* Botón Editar */}
-            <button
-              onClick={handleEdit}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-medium"
-            >
-              <Edit2 size={18} />
-              Editar Evento
-            </button>
+            {/* Botón Editar - Solo visible si tiene permiso */}
+            {canEditEvents() && (
+              <button
+                onClick={handleEdit}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-medium"
+              >
+                <Edit2 size={18} />
+                Editar Evento
+              </button>
+            )}
 
-            {/* Botón Borrar */}
-            <button
-              onClick={handleDelete}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
-            >
-              <Trash2 size={18} />
-              Eliminar
-            </button>
+            {/* Botón Borrar - Solo visible si tiene permiso */}
+            {canDeleteEvents() && (
+              <button
+                onClick={handleDelete}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+              >
+                <Trash2 size={18} />
+                Eliminar
+              </button>
+            )}
 
             {/* Botón Cerrar */}
             <button
               onClick={onClose}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium"
+              className={`flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium ${!(canEditEvents() || canDeleteEvents()) ? 'flex-1' : ''}`}
             >
               <X size={18} />
               Cerrar

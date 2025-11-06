@@ -37,6 +37,7 @@ import { useHiddenCount } from '../../hooks/useHiddenCount';
 import { useArchivedCount } from '../../hooks/useArchivedCount';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
+import { useUserRole } from '../../hooks/useUserRole';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
@@ -79,6 +80,7 @@ export default function TopNavigationBar({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
+  const { canAccessSettings, canCreate } = useUserRole();
 
   // 🌊 Escuchar evento para abrir panel de límites marítimos
   useEffect(() => {
@@ -89,6 +91,13 @@ export default function TopNavigationBar({
     window.addEventListener('openMaritimePanel', handleOpenMaritimePanel);
     return () => window.removeEventListener('openMaritimePanel', handleOpenMaritimePanel);
   }, []);
+
+  // Cerrar panel de configuración si no tiene permiso
+  useEffect(() => {
+    if (showSettingsPanel && !canAccessSettings()) {
+      setShowSettingsPanel(false);
+    }
+  }, [showSettingsPanel, canAccessSettings]);
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
@@ -119,14 +128,16 @@ export default function TopNavigationBar({
         {/* Separador - Oculto en móvil */}
         <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
-        {/* 🎨 Paleta de Plantillas */}
-        <NavButton
-          icon={<Layers className="w-5 h-5" />}
-          label="Plantillas"
-          active={paletteVisible}
-          onClick={onTogglePalette}
-          tooltip="Paleta de Plantillas"
-        />
+        {/* 🎨 Paleta de Plantillas - Solo visible si puede crear entidades */}
+        {canCreate() && (
+          <NavButton
+            icon={<Layers className="w-5 h-5" />}
+            label="Plantillas"
+            active={paletteVisible}
+            onClick={onTogglePalette}
+            tooltip="Paleta de Plantillas"
+          />
+        )}
 
         {/* 🗺️ Mapas */}
         <NavButton
@@ -187,14 +198,16 @@ export default function TopNavigationBar({
         {/* Spacer - Empuja configuración a la derecha */}
         <div className="flex-1"></div>
 
-        {/* ⚙️ Configuración */}
-        <NavButton
-          icon={<Settings className="w-5 h-5" />}
-          label="Config"
-          active={showSettingsPanel}
-          onClick={() => setShowSettingsPanel(true)}
-          tooltip="Configuración"
-        />
+        {/* ⚙️ Configuración - Solo visible si tiene permiso */}
+        {canAccessSettings() && (
+          <NavButton
+            icon={<Settings className="w-5 h-5" />}
+            label="Config"
+            active={showSettingsPanel}
+            onClick={() => setShowSettingsPanel(true)}
+            tooltip="Configuración"
+          />
+        )}
 
         {/* 👤 Usuario (extremo derecho) */}
         {user && onSignOut && (
@@ -285,8 +298,8 @@ export default function TopNavigationBar({
         />
       )}
 
-      {/* Panel de Configuración */}
-      {showSettingsPanel && (
+      {/* Panel de Configuración - Solo visible si tiene permiso */}
+      {showSettingsPanel && canAccessSettings() && (
         <SettingsPanel onClose={() => setShowSettingsPanel(false)} />
       )}
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Users, Trash2, Mail, Lock, Shield, AlertCircle, CheckCircle, Eye, EyeOff, User, Briefcase, Building2, Edit2, X } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Lock, Shield, AlertCircle, CheckCircle, Eye, EyeOff, User, Briefcase, Building2, Edit2, X, Crown, UserCheck, Eye as EyeIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -19,11 +19,19 @@ export default function UserManagement() {
   const [newUserApellido, setNewUserApellido] = useState('');
   const [newUserCargo, setNewUserCargo] = useState('');
   const [newUserOrganizacion, setNewUserOrganizacion] = useState('');
+  const [newUserRole, setNewUserRole] = useState('viewer');
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Roles disponibles
+  const ROLES = [
+    { value: 'admin', label: 'Administrador', icon: Crown, description: 'Acceso completo al sistema', color: 'text-red-400' },
+    { value: 'colaborador', label: 'Colaborador', icon: UserCheck, description: 'Puede añadir y editar información', color: 'text-blue-400' },
+    { value: 'viewer', label: 'Solo Lectura', icon: EyeIcon, description: 'Solo puede ver el mapa', color: 'text-slate-400' }
+  ];
 
   // Cargar usuarios usando Edge Function
   const loadUsers = async () => {
@@ -61,7 +69,7 @@ export default function UserManagement() {
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('user_profiles')
-          .select('id, nombre, apellido, cargo, organizacion')
+          .select('id, nombre, apellido, cargo, organizacion, role')
           .in('id', userIds);
         
         if (!profilesError && profiles) {
@@ -79,6 +87,7 @@ export default function UserManagement() {
         apellido: profilesMap[user.id]?.apellido || null,
         cargo: profilesMap[user.id]?.cargo || null,
         organizacion: profilesMap[user.id]?.organizacion || null,
+        role: profilesMap[user.id]?.role || 'viewer',
       }));
       
       setUsers(usersWithProfiles);
@@ -157,7 +166,7 @@ export default function UserManagement() {
             apellido: newUserApellido || null,
             cargo: newUserCargo || null,
             organizacion: newUserOrganizacion || null,
-            role: 'operator',
+            role: newUserRole || 'viewer',
             is_active: true,
             updated_at: new Date().toISOString()
           }, {
@@ -181,6 +190,7 @@ export default function UserManagement() {
       setNewUserApellido('');
       setNewUserCargo('');
       setNewUserOrganizacion('');
+      setNewUserRole('viewer');
       setShowCreateForm(false);
       
       // Recargar lista
@@ -194,8 +204,23 @@ export default function UserManagement() {
   };
 
   // Abrir modal de edición
-  const handleEditUser = (user) => {
-    setEditingUser(user);
+  const handleEditUser = async (user) => {
+    // Asegurar que el rol esté cargado
+    if (!user.role) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile) {
+        user.role = profile.role || 'viewer';
+      } else {
+        user.role = 'viewer';
+      }
+    }
+    
+    setEditingUser({ ...user, role: user.role || 'viewer' });
     setError(null);
     setSuccess(null);
   };
@@ -229,6 +254,7 @@ export default function UserManagement() {
       const username = currentProfile?.username || editingUser.email?.split('@')[0] || `user_${editingUser.id.slice(0, 8)}`;
       const fullName = currentProfile?.full_name || nombreCompleto;
       const email = editingUser.email;
+      const role = editingUser.role || currentProfile?.role || 'viewer';
 
       // Actualizar perfil en user_profiles
       const { error: profileError } = await supabase
@@ -242,7 +268,7 @@ export default function UserManagement() {
           apellido: editingUser.apellido || null,
           cargo: editingUser.cargo || null,
           organizacion: editingUser.organizacion || null,
-          role: currentProfile?.role || 'operator',
+          role: role,
           is_active: currentProfile?.is_active !== undefined ? currentProfile.is_active : true,
           updated_at: new Date().toISOString()
         }, {
@@ -489,6 +515,46 @@ export default function UserManagement() {
               </div>
             </div>
 
+            {/* Rol */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Rol del Usuario
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {ROLES.map((roleOption) => {
+                  const Icon = roleOption.icon;
+                  return (
+                    <button
+                      key={roleOption.value}
+                      type="button"
+                      onClick={() => setNewUserRole(roleOption.value)}
+                      disabled={creating}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        newUserRole === roleOption.value
+                          ? 'border-purple-500 bg-purple-500/20'
+                          : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                      } ${creating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Icon className={`w-5 h-5 ${roleOption.color} flex-shrink-0 mt-0.5`} />
+                        <div className="flex-1">
+                          <div className={`font-semibold text-sm ${roleOption.color}`}>
+                            {roleOption.label}
+                          </div>
+                          <div className="text-xs text-slate-400 mt-1">
+                            {roleOption.description}
+                          </div>
+                        </div>
+                        {newUserRole === roleOption.value && (
+                          <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Botón crear */}
             <button
               type="submit"
@@ -620,6 +686,47 @@ export default function UserManagement() {
                 </div>
               </div>
 
+              {/* Rol */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Rol del Usuario
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {ROLES.map((roleOption) => {
+                    const Icon = roleOption.icon;
+                    const isSelected = editingUser.role === roleOption.value;
+                    return (
+                      <button
+                        key={roleOption.value}
+                        type="button"
+                        onClick={() => setEditingUser({ ...editingUser, role: roleOption.value })}
+                        disabled={updating}
+                        className={`p-4 rounded-lg border-2 transition-all text-left ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-500/20'
+                            : 'border-slate-600 bg-slate-700/30 hover:border-slate-500'
+                        } ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Icon className={`w-5 h-5 ${roleOption.color} flex-shrink-0 mt-0.5`} />
+                          <div className="flex-1">
+                            <div className={`font-semibold text-sm ${roleOption.color}`}>
+                              {roleOption.label}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {roleOption.description}
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Mensajes de error/éxito dentro del modal */}
               {error && (
                 <div className="p-3 bg-red-900/20 border border-red-700/50 rounded-lg flex items-start gap-2">
@@ -726,11 +833,24 @@ export default function UserManagement() {
                           </>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <span>ID: {user.id.slice(0, 8)}...</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Badge de rol */}
+                        {user.role && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'admin' ? 'bg-red-900/30 text-red-400 border border-red-700/50' :
+                            user.role === 'colaborador' ? 'bg-blue-900/30 text-blue-400 border border-blue-700/50' :
+                            'bg-slate-700/30 text-slate-400 border border-slate-600/50'
+                          }`}>
+                            {user.role === 'admin' && <Crown className="w-3 h-3" />}
+                            {user.role === 'colaborador' && <UserCheck className="w-3 h-3" />}
+                            {user.role === 'viewer' && <EyeIcon className="w-3 h-3" />}
+                            {ROLES.find(r => r.value === user.role)?.label || user.role}
+                          </span>
+                        )}
+                        <span className="text-slate-500">ID: {user.id.slice(0, 8)}...</span>
                         {user.last_sign_in_at && (
                           <>
-                            <span>•</span>
+                            <span className="text-slate-600">•</span>
                             <span>
                               Último acceso: {new Date(user.last_sign_in_at).toLocaleDateString()}
                             </span>

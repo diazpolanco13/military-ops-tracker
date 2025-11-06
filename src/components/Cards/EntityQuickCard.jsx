@@ -1,6 +1,7 @@
 import { X, MapPin, Navigation, Gauge, Ship, Users, Shield, Settings, Eye, EyeOff, Edit2, Archive, Trash2, Swords, Clock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useEntityActions } from '../../hooks/useEntityActions';
+import { useUserRole } from '../../hooks/useUserRole';
 import { supabase } from '../../lib/supabase';
 import ConfirmDialog from '../Common/ConfirmDialog';
 import EditEntityModal from './EditEntityModal';
@@ -53,6 +54,7 @@ const STATUS_CONFIG = {
  */
 export default function EntityQuickCard({ entity, onClose, onOpenDetails, onViewTimeline }) {
   const { toggleVisibility, archiveEntity, deleteEntity, processing } = useEntityActions();
+  const { canEdit, canDelete } = useUserRole();
   const [template, setTemplate] = useState(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -430,41 +432,47 @@ export default function EntityQuickCard({ entity, onClose, onOpenDetails, onView
                 </span>
               </button>
             )}
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="p-1.5 hover:bg-slate-700/50 rounded transition-colors"
-              title="Editar"
-            >
-              <Edit2 className="w-4 h-4 text-blue-400" />
-            </button>
-            <button
-              onClick={handleToggleVisibility}
-              disabled={processing}
-              className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
-              title={entity.is_visible ? 'Ocultar' : 'Mostrar'}
-            >
-              {entity.is_visible ? (
-                <EyeOff className="w-4 h-4 text-slate-400" />
-              ) : (
-                <Eye className="w-4 h-4 text-green-400" />
-              )}
-            </button>
-            <button
-              onClick={() => setShowArchiveConfirm(true)}
-              disabled={processing}
-              className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
-              title="Archivar"
-            >
-              <Archive className="w-4 h-4 text-yellow-400" />
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={processing}
-              className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
-              title="Eliminar"
-            >
-              <Trash2 className="w-4 h-4 text-red-400" />
-            </button>
+            {canEdit() && (
+              <>
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="p-1.5 hover:bg-slate-700/50 rounded transition-colors"
+                  title="Editar"
+                >
+                  <Edit2 className="w-4 h-4 text-blue-400" />
+                </button>
+                <button
+                  onClick={handleToggleVisibility}
+                  disabled={processing}
+                  className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
+                  title={entity.is_visible ? 'Ocultar' : 'Mostrar'}
+                >
+                  {entity.is_visible ? (
+                    <EyeOff className="w-4 h-4 text-slate-400" />
+                  ) : (
+                    <Eye className="w-4 h-4 text-green-400" />
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowArchiveConfirm(true)}
+                  disabled={processing}
+                  className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
+                  title="Archivar"
+                >
+                  <Archive className="w-4 h-4 text-yellow-400" />
+                </button>
+              </>
+            )}
+            {canDelete() && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={processing}
+                className="p-1.5 hover:bg-slate-700/50 rounded transition-colors disabled:opacity-50"
+                title="Eliminar"
+              >
+                <Trash2 className="w-4 h-4 text-red-400" />
+              </button>
+            )}
           </div>
           
           </div>

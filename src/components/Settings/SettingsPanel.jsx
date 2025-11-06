@@ -1,7 +1,8 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
 import UserManagement from '../Auth/UserManagement';
+import RolePermissionsEditor from './RolePermissionsEditor';
 
 /**
  * ⚙️ Panel de Configuración
@@ -10,6 +11,8 @@ import UserManagement from '../Auth/UserManagement';
 export default function SettingsPanel({ onClose }) {
   // 📑 Estado de tabs
   const [activeTab, setActiveTab] = useState('clustering');
+  // 📱 Estado para sidebar móvil
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Cargar configuración desde localStorage con valores por defecto actualizados
   const [clusterZoomThreshold, setClusterZoomThreshold] = useState(() => {
@@ -181,43 +184,80 @@ export default function SettingsPanel({ onClose }) {
     { id: 'mapa', label: 'Cámara Mapa', icon: Video },
     { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
     { id: 'usuarios', label: 'Usuarios', icon: Users },
+    { id: 'permisos', label: 'Permisos', icon: Shield },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-      {/* Modal más ancho y responsivo */}
-      <div className="relative w-full max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-700 rounded-lg shadow-xl flex flex-col">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <Settings className="w-6 h-6 text-blue-400" />
-            <h2 className="text-xl font-bold text-white">Configuración del Mapa</h2>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors"
+    <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col" style={{ top: '56px' }}>
+      {/* Header fijo */}
+      <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-700 bg-slate-800/50">
+        <div className="flex items-center gap-3">
+          {/* Botón menú móvil */}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden text-slate-400 hover:text-white transition-colors p-2 -ml-2"
+            aria-label="Toggle menu"
           >
-            <X className="w-6 h-6" />
+            <Menu className="w-6 h-6" />
           </button>
+          <Settings className="w-6 h-6 text-blue-400 hidden sm:block" />
+          <h2 className="text-lg sm:text-xl font-bold text-white">Configuración del Mapa</h2>
         </div>
+        <button 
+          onClick={onClose}
+          className="text-slate-400 hover:text-white transition-colors p-2 -mr-2"
+        >
+          <X className="w-6 h-6" />
+        </button>
+      </div>
 
-        {/* Tabs de navegación */}
-        <div className="border-b border-slate-700 bg-slate-800/30">
-          <div className="flex overflow-x-auto custom-scrollbar">
+      {/* Overlay para móvil cuando sidebar está abierto */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+          style={{ top: '56px' }}
+        />
+      )}
+
+      {/* Contenedor principal: Sidebar + Contenido */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar lateral derecho - Responsive */}
+        <div className={`
+          fixed lg:static inset-y-0 right-0 z-50
+          w-64 lg:w-64
+          border-l border-slate-700 bg-slate-800/95 lg:bg-slate-800/30 backdrop-blur-sm lg:backdrop-blur-none
+          flex flex-col
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+        `} style={{ top: '56px', maxHeight: 'calc(100vh - 56px)' }}>
+          <div className="p-4 border-b border-slate-700 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Menú</h3>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 border-b-2 transition-all whitespace-nowrap ${
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    // Cerrar sidebar en móvil al seleccionar un tab
+                    setSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 transition-all ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400 bg-blue-500/10'
-                      : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      ? 'bg-blue-600/20 text-blue-400 border-r-2 border-blue-500'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-5 h-5 flex-shrink-0" />
                   <span className="text-sm font-medium">{tab.label}</span>
                 </button>
               );
@@ -225,9 +265,9 @@ export default function SettingsPanel({ onClose }) {
           </div>
         </div>
 
-        {/* Contenido según tab activo */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          
+        {/* Contenido principal */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-900 w-full lg:w-auto">
+          <div className="p-4 sm:p-6">
           {/* TAB: Clustering */}
           {activeTab === 'clustering' && (
             <div className="space-y-6">
@@ -1181,42 +1221,50 @@ export default function SettingsPanel({ onClose }) {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Footer con resumen y botones */}
-        <div className="border-t border-slate-700 bg-slate-800/50">
-          {/* Resumen de configuración actual */}
-          <div className="px-6 py-3 border-b border-slate-700">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-slate-900/50 rounded p-2">
-                <div className="text-xl font-bold text-blue-400">{clusterZoomThreshold}</div>
-                <div className="text-xs text-slate-400">Zoom cluster</div>
-              </div>
-              <div className="bg-slate-900/50 rounded p-2">
-                <div className="text-xl font-bold text-blue-400">{clusterRadius}px</div>
-                <div className="text-xs text-slate-400">Radio agrupación</div>
-              </div>
-              <div className="bg-slate-900/50 rounded p-2">
-                <div className="text-xl font-bold text-green-400">{iconSize}px</div>
-                <div className="text-xs text-slate-400">Tamaño icono</div>
+          {/* TAB: Editor de Permisos */}
+          {activeTab === 'permisos' && (
+            <div className="space-y-6">
+              <RolePermissionsEditor />
+            </div>
+          )}
+          
+          {/* Footer con resumen y botones */}
+          <div className="mt-8 border-t border-slate-700 bg-slate-800/50">
+            {/* Resumen de configuración actual */}
+            <div className="px-4 sm:px-6 py-3 border-b border-slate-700">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+                <div className="bg-slate-900/50 rounded p-2">
+                  <div className="text-lg sm:text-xl font-bold text-blue-400">{clusterZoomThreshold}</div>
+                  <div className="text-xs text-slate-400">Zoom cluster</div>
+                </div>
+                <div className="bg-slate-900/50 rounded p-2">
+                  <div className="text-lg sm:text-xl font-bold text-blue-400">{clusterRadius}px</div>
+                  <div className="text-xs text-slate-400">Radio agrupación</div>
+                </div>
+                <div className="bg-slate-900/50 rounded p-2">
+                  <div className="text-lg sm:text-xl font-bold text-green-400">{iconSize}px</div>
+                  <div className="text-xs text-slate-400">Tamaño icono</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Botones de acción */}
-          <div className="p-4 flex justify-between">
-          <button
-            onClick={resetToDefaults}
-              className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Restablecer Valores
-          </button>
-          <button
-            onClick={onClose}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
-          >
-            Aplicar y Cerrar
-          </button>
+            {/* Botones de acción */}
+            <div className="p-4 flex flex-col sm:flex-row gap-3 sm:gap-0 sm:justify-between">
+              <button
+                onClick={resetToDefaults}
+                className="w-full sm:w-auto px-5 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Restablecer Valores
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-blue-500/30"
+              >
+                Aplicar y Cerrar
+              </button>
+            </div>
+          </div>
           </div>
         </div>
       </div>

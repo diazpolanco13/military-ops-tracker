@@ -15,6 +15,7 @@ import {
   addDays,
   subDays
 } from 'date-fns';
+import { useUserRole } from '../../hooks/useUserRole';
 import CalendarDayCell from './CalendarDayCell';
 import EventDayModal from './EventDayModal';
 import AddEventModal from '../Timeline/AddEventModal';
@@ -25,6 +26,7 @@ import AddEventModal from '../Timeline/AddEventModal';
  * Click en día → Modal con Kanban de eventos
  */
 export default function CalendarView({ events = [], loading, onClose, onEditEvent, onDeleteEvent, onCreateEvent }) {
+  const { canCreateEvents } = useUserRole();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -668,14 +670,16 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
         />
       )}
 
-      {/* Botón flotante para crear evento - Esquina inferior IZQUIERDA */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-8 left-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
-        title="Crear nuevo evento"
-      >
-        <Plus size={28} strokeWidth={2.5} />
-      </button>
+      {/* Botón flotante para crear evento - Solo visible si tiene permiso */}
+      {canCreateEvents() && (
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="fixed bottom-8 left-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-50 border-2 border-blue-400"
+          title="Crear nuevo evento"
+        >
+          <Plus size={28} strokeWidth={2.5} />
+        </button>
+      )}
 
       {/* Modal de creación de evento */}
       {showCreateModal && (

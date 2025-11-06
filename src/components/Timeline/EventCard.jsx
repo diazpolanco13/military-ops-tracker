@@ -1,5 +1,6 @@
 import { Edit2, Trash2, ExternalLink, MapPin, Clock, Shield, Ship } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useUserRole } from '../../hooks/useUserRole';
 import { supabase } from '../../lib/supabase';
 import { getClassificationCode, getClassificationColor, PRIORITY_LEVELS } from '../../config/intelligenceClassification';
 
@@ -7,6 +8,7 @@ import { getClassificationCode, getClassificationColor, PRIORITY_LEVELS } from '
  * Tarjeta individual de evento en el timeline
  */
 export default function EventCard({ event, onEdit, onDelete, isLast }) {
+  const { canEditEvents, canDeleteEvents } = useUserRole();
   const [relatedEntities, setRelatedEntities] = useState([]);
 
   useEffect(() => {
@@ -143,22 +145,28 @@ export default function EventCard({ event, onEdit, onDelete, isLast }) {
             </div>
 
             {/* Acciones - Visible en móvil, con hover en desktop */}
-            <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => onEdit(event)}
-                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-blue-400 transition-colors"
-                title="Editar"
-              >
-                <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
-              </button>
-              <button
-                onClick={() => onDelete(event.id)}
-                className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
-                title="Eliminar"
-              >
-                <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
-              </button>
-            </div>
+            {(canEditEvents() || canDeleteEvents()) && (
+              <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                {canEditEvents() && (
+                  <button
+                    onClick={() => onEdit(event)}
+                    className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-blue-400 transition-colors"
+                    title="Editar"
+                  >
+                    <Edit2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                  </button>
+                )}
+                {canDeleteEvents() && (
+                  <button
+                    onClick={() => onDelete(event.id)}
+                    className="p-1 hover:bg-slate-700 rounded text-slate-400 hover:text-red-400 transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 size={13} className="sm:w-3.5 sm:h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Descripción */}

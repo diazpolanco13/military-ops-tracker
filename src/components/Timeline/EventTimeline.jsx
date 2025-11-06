@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Calendar, Link as LinkIcon, Image as ImageIcon, MessageSquare, Filter, Search, Clock, MapPin, ExternalLink, Ship, FileDown } from 'lucide-react';
 import { useEvents } from '../../hooks/useEvents';
+import { useUserRole } from '../../hooks/useUserRole';
 import EventCard from './EventCard';
 import AddEventModal from './AddEventModal';
 import { supabase } from '../../lib/supabase';
@@ -12,6 +13,7 @@ import { exportEventsToPDF } from '../../utils/pdfExport';
  */
 export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = null }) {
   const { events, loading, createEvent, updateEvent, deleteEvent } = useEvents();
+  const { canCreateEvents, canEditEvents, canDeleteEvents } = useUserRole();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, evento, noticia, informe
@@ -407,16 +409,18 @@ export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = n
           ))}
         </div>
 
-        {/* Botón agregar evento */}
-        <div className="p-3 sm:p-4 border-t border-slate-700 bg-slate-800/50">
-          <button
-            onClick={handleAddEvent}
-            className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
-          >
-            <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
-            <span>Agregar Evento</span>
-          </button>
-        </div>
+        {/* Botón agregar evento - Solo visible si tiene permiso */}
+        {canCreateEvents() && (
+          <div className="p-3 sm:p-4 border-t border-slate-700 bg-slate-800/50">
+            <button
+              onClick={handleAddEvent}
+              className="w-full flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm sm:text-base"
+            >
+              <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span>Agregar Evento</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal agregar/editar evento */}
