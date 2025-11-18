@@ -11,8 +11,9 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
  * - Crear círculos de alcance (radio de acción)
  * - Visualización en tiempo real con Turf.js
  * - Panel minimizable (los dibujos persisten en el mapa)
+ * - Botón de cierre rápido
  */
-export default function MeasurementTools({ map }) {
+export default function MeasurementTools({ map, onClose }) {
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
@@ -213,15 +214,28 @@ export default function MeasurementTools({ map }) {
     <div className="fixed top-20 left-4 z-30 pointer-events-auto">
       {/* Panel minimizado */}
       {isMinimized ? (
-        <button
-          onClick={() => setIsMinimized(false)}
-          className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 px-4 py-3 flex items-center gap-2 hover:bg-slate-800/95 transition-colors group"
-          title="Abrir herramientas de medición"
-        >
-          <Ruler className="w-5 h-5 text-green-400" />
-          <span className="text-green-400 font-bold text-sm">Medición</span>
-          <Maximize2 className="w-4 h-4 text-green-400/60 group-hover:text-green-400" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMinimized(false)}
+            className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 px-4 py-3 flex items-center gap-2 hover:bg-slate-800/95 transition-colors group"
+            title="Abrir herramientas de medición"
+          >
+            <Ruler className="w-5 h-5 text-green-400" />
+            <span className="text-green-400 font-bold text-sm">Medición</span>
+            <Maximize2 className="w-4 h-4 text-green-400/60 group-hover:text-green-400" />
+          </button>
+          
+          {/* Botón de cierre rápido */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="bg-slate-900/95 border-2 border-red-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-red-500/20 p-3 hover:bg-red-500/20 hover:border-red-500 transition-colors group"
+              title="Cerrar herramientas"
+            >
+              <X className="w-5 h-5 text-red-400 group-hover:text-red-300" />
+            </button>
+          )}
+        </div>
       ) : (
         /* Panel de herramientas completo */
         <div className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 min-w-[280px]">
@@ -233,13 +247,24 @@ export default function MeasurementTools({ map }) {
                 Herramientas de Medición
               </h3>
             </div>
-            <button
-              onClick={() => setIsMinimized(true)}
-              className="p-1.5 hover:bg-green-500/20 rounded-lg transition-colors"
-              title="Minimizar (los dibujos se mantienen)"
-            >
-              <Minimize2 className="w-4 h-4 text-green-400/60 hover:text-green-400" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMinimized(true)}
+                className="p-1.5 hover:bg-green-500/20 rounded-lg transition-colors"
+                title="Minimizar (los dibujos se mantienen)"
+              >
+                <Minimize2 className="w-4 h-4 text-green-400/60 hover:text-green-400" />
+              </button>
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
+                  title="Cerrar herramientas"
+                >
+                  <X className="w-4 h-4 text-red-400/60 hover:text-red-400" />
+                </button>
+              )}
+            </div>
           </div>
 
         {/* Botones de herramientas */}

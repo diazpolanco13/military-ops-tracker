@@ -189,7 +189,10 @@ function App() {
 
         {/* Herramientas de Medición */}
         {showMeasurementTools && mapInstance && (
-          <MeasurementTools map={mapInstance} />
+          <MeasurementTools 
+            map={mapInstance} 
+            onClose={() => setShowMeasurementTools(false)}
+          />
         )}
 
         {/* Barra de Búsqueda - Siempre visible (controlable desde Ver) */}
