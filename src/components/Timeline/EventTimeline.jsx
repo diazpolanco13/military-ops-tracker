@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X, Plus, Calendar, Link as LinkIcon, Image as ImageIcon, MessageSquare, Filter, Search, Clock, MapPin, ExternalLink, Ship, FileDown } from 'lucide-react';
-import { useEvents } from '../../hooks/useEvents';
+import { useEventsContext } from '../../stores/EventsContext';
 import { useUserRole } from '../../hooks/useUserRole';
 import EventCard from './EventCard';
 import AddEventModal from './AddEventModal';
+import ConfirmDialog from '../Common/ConfirmDialog';
 import { supabase } from '../../lib/supabase';
 import { exportEventsToPDF } from '../../utils/pdfExport';
 
@@ -12,13 +13,14 @@ import { exportEventsToPDF } from '../../utils/pdfExport';
  * Registro cronológico de eventos con multimedia
  */
 export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = null }) {
-  const { events, loading, createEvent, updateEvent, deleteEvent } = useEvents();
+  const { events, loading, createEvent, updateEvent, deleteEvent } = useEventsContext();
   const { canCreateEvents, canEditEvents, canDeleteEvents } = useUserRole();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, evento, noticia, informe
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [eventToDelete, setEventToDelete] = useState(null); // Evento a eliminar (para confirmación)
 
   // Estados para filtro por entidades (multi-selección)
   const [selectedFilterEntities, setSelectedFilterEntities] = useState([]);
@@ -158,9 +160,10 @@ export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = n
     setShowAddModal(true);
   };
 
-  const handleDeleteEvent = async (eventId) => {
-    if (confirm('¿Eliminar este evento?')) {
-      await deleteEvent(eventId);
+  const handleDeleteEvent = async () => {
+    if (eventToDelete) {
+      await deleteEvent(eventToDelete);
+      setEventToDelete(null);
     }
   };
 
@@ -400,7 +403,7 @@ export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = n
                     key={event.id}
                     event={event}
                     onEdit={handleEditEvent}
-                    onDelete={handleDeleteEvent}
+                    onDelete={(eventId) => setEventToDelete(eventId)}
                     isLast={index === dayEvents.length - 1}
                   />
                 ))}
@@ -432,6 +435,18 @@ export default function EventTimeline({ isOpen, onClose, preSelectedEntityId = n
           onUpdate={updateEvent}
         />
       )}
+
+      {/* Diálogo de confirmación de eliminación */}
+      <ConfirmDialog
+        isOpen={!!eventToDelete}
+        onClose={() => setEventToDelete(null)}
+        onConfirm={handleDeleteEvent}
+        title="¿Eliminar este evento?"
+        message="Esta acción no se puede deshacer. Se perderán todos los datos del evento, incluyendo entidades asociadas, archivos y multimedia."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </>
   );
 }

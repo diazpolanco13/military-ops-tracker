@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { useUserRole } from '../../hooks/useUserRole';
-import { useEvents } from '../../hooks/useEvents';
+import { useEventsContext } from '../../stores/EventsContext';
 import AddEventModal from '../Timeline/AddEventModal';
 
 /**
  * Botón flotante global para crear eventos
  * Visible en todas las vistas excepto cuando el panel de configuración está abierto
+ * USA CONTEXTO GLOBAL: Todos los componentes ven el evento creado inmediatamente
  */
 export default function GlobalAddEventButton({ settingsPanelOpen = false }) {
   const { canCreateEvents } = useUserRole();
-  const { createEvent } = useEvents();
+  const { createEvent } = useEventsContext();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // No mostrar si no tiene permiso o si el panel de configuración está abierto

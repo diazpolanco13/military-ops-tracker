@@ -16,6 +16,7 @@ import {
   subDays
 } from 'date-fns';
 import { useUserRole } from '../../hooks/useUserRole';
+import { useEventsContext } from '../../stores/EventsContext';
 import CalendarDayCell from './CalendarDayCell';
 import EventDayModal from './EventDayModal';
 import AddEventModal from '../Timeline/AddEventModal';
@@ -24,8 +25,11 @@ import AddEventModal from '../Timeline/AddEventModal';
  * Vista de Calendario Mensual con análisis de eventos
  * Muestra densidad de eventos por día con heatmap
  * Click en día → Modal con Kanban de eventos
+ * ACTUALIZACIÓN AUTOMÁTICA: Usa EventsContext con estado compartido globalmente
  */
-export default function CalendarView({ events = [], loading, onClose, onEditEvent, onDeleteEvent, onCreateEvent }) {
+export default function CalendarView({ onClose }) {
+  // Context global con eventos en tiempo real
+  const { events, loading, createEvent, updateEvent, deleteEvent } = useEventsContext();
   const { canCreateEvents } = useUserRole();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
@@ -35,6 +39,7 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' o 'search-results'
   const [calendarView, setCalendarView] = useState('month'); // 'month', 'week', 'semester'
   const [selectedEventFromSemester, setSelectedEventFromSemester] = useState(null);
+  const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar
 
   // Generar días/meses del calendario según el tipo de vista
   const calendarDays = useMemo(() => {
@@ -665,8 +670,23 @@ export default function CalendarView({ events = [], loading, onClose, onEditEven
           date={selectedDate}
           events={getEventsForDay(selectedDate)}
           onClose={() => setSelectedDate(null)}
-          onEditEvent={onEditEvent}
-          onDeleteEvent={onDeleteEvent}
+          onEditEvent={(event) => {
+            setEventToEdit(event);
+            setSelectedDate(null);
+          }}
+          onDeleteEvent={async (eventId) => {
+            await deleteEvent(eventId);
+          }}
+        />
+      )}
+
+      {/* Modal de edición de evento */}
+      {eventToEdit && (
+        <AddEventModal
+          event={eventToEdit}
+          onClose={() => setEventToEdit(null)}
+          onCreate={createEvent}
+          onUpdate={updateEvent}
         />
       )}
 

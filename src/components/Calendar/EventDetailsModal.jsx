@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { X, Calendar, MapPin, Clock, ExternalLink, FileText, Tag, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserRole } from '../../hooks/useUserRole';
 import MarkdownRenderer from '../Common/MarkdownRenderer';
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 /**
  * Modal de detalles COMPLETOS de un evento
@@ -9,6 +11,7 @@ import MarkdownRenderer from '../Common/MarkdownRenderer';
  */
 export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) {
   const { canEditEvents, canDeleteEvents } = useUserRole();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   if (!event) return null;
 
@@ -19,12 +22,10 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
   };
 
   const handleDelete = () => {
-    if (confirm('¿Estás seguro de eliminar este evento? Esta acción no se puede deshacer.')) {
-      if (onDelete) {
-        onDelete(event.id);
-      }
-      onClose();
+    if (onDelete) {
+      onDelete(event.id);
     }
+    onClose();
   };
 
   // Icono y color según tipo
@@ -358,7 +359,7 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
             {/* Botón Borrar - Solo visible si tiene permiso */}
             {canDeleteEvents() && (
               <button
-                onClick={handleDelete}
+                onClick={() => setShowDeleteConfirm(true)}
                 className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
               >
                 <Trash2 size={18} />
@@ -377,6 +378,18 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
           </div>
         </div>
       </div>
+
+      {/* Diálogo de confirmación de eliminación */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="¿Eliminar este evento?"
+        message="Esta acción no se puede deshacer. Se perderán todos los datos del evento, incluyendo entidades asociadas, archivos y multimedia."
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        type="danger"
+      />
     </div>
   );
 }

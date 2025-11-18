@@ -15,17 +15,16 @@ import GlobalAddEventButton from './components/Common/GlobalAddEventButton';
 import { useState, useEffect } from 'react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
-import { useEvents } from './hooks/useEvents';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
+import { EventsProvider } from './stores/EventsContext';
 // Importar utils para exponer en window
 import './utils/loadGADMBoundaries';
 import './utils/loadTerrestrialBoundaries';
 
 function App() {
   const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
-  const { events, loading: eventsLoading, createEvent, updateEvent, deleteEvent } = useEvents();
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
@@ -36,7 +35,6 @@ function App() {
   const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
   const [showCalendar, setShowCalendar] = useState(false); // Control del Calendario de Eventos
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
-  const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar desde el calendario
   const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
   const [showSettingsPanel, setShowSettingsPanel] = useState(false); // Estado del panel de configuración
   const { createFromTemplate, creating } = useCreateEntity();
@@ -121,9 +119,10 @@ function App() {
   }
 
   return (
-    <LockProvider>
-      <SelectionProvider>
-        <MaritimeBoundariesProvider>
+    <EventsProvider>
+      <LockProvider>
+        <SelectionProvider>
+          <MaritimeBoundariesProvider>
           {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
           <TopNavigationBar 
           onTogglePalette={() => setShowPalette(!showPalette)}
@@ -211,34 +210,11 @@ function App() {
         {/* Calendario de Eventos - Vista completa */}
         {showCalendar && (
           <CalendarView
-            events={events}
-            loading={eventsLoading}
             onClose={() => setShowCalendar(false)}
-            onCreateEvent={createEvent}
-            onEditEvent={(event) => setEventToEdit(event)}
-            onDeleteEvent={async (eventId) => {
-              await deleteEvent(eventId);
-            }}
           />
         )}
 
-        {/* Modal de edición de evento desde calendario */}
-        {eventToEdit && (
-          <AddEventModal
-            event={eventToEdit}
-            onClose={() => setEventToEdit(null)}
-            onCreate={async (_, data) => {
-              return { success: false, error: 'Usar el timeline para crear eventos' };
-            }}
-            onUpdate={async (id, data) => {
-              const result = await updateEvent(id, data);
-              if (result.success) {
-                setEventToEdit(null);
-              }
-              return result;
-            }}
-          />
-        )}
+        {/* Modal de edición de evento desde calendario - AHORA SE MANEJA DENTRO DE CalendarView */}
 
         {/* Chatbot de Inteligencia (Bottom-right) */}
         <IntelligenceChatbot />
@@ -254,9 +230,10 @@ function App() {
           </div>
         )}
       </div>
-        </MaritimeBoundariesProvider>
-      </SelectionProvider>
-    </LockProvider>
+          </MaritimeBoundariesProvider>
+        </SelectionProvider>
+      </LockProvider>
+    </EventsProvider>
   );
 }
 
