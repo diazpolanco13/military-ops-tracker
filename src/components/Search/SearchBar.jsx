@@ -103,7 +103,7 @@ export default function SearchBar({ map, isVisible }) {
 
   return (
     <div 
-      className="fixed left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 transition-all duration-300"
+      className="fixed left-1/2 -translate-x-1/2 z-35 w-full max-w-2xl px-4 transition-all duration-300"
       style={{ top: '72px' }}
     >
       {/* Barra de búsqueda */}

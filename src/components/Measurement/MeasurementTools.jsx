@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
-import { Ruler, Circle, Pentagon, Trash2, X } from 'lucide-react';
+import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2 } from 'lucide-react';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 /**
@@ -10,16 +10,19 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
  * - Calcular áreas de polígonos
  * - Crear círculos de alcance (radio de acción)
  * - Visualización en tiempo real con Turf.js
+ * - Panel minimizable (los dibujos persisten en el mapa)
  */
 export default function MeasurementTools({ map }) {
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
+  const [isMinimized, setIsMinimized] = useState(false); // Estado de minimización
   const drawRef = useRef(null);
+  const drawInitializedRef = useRef(false); // Evitar reinicializar Draw
 
-  // Inicializar Mapbox Draw
+  // Inicializar Mapbox Draw SOLO UNA VEZ (persiste incluso al minimizar)
   useEffect(() => {
-    if (!map) return;
+    if (!map || drawInitializedRef.current) return;
 
     // Estilos militares personalizados para Draw
     const drawStyles = [
@@ -97,6 +100,7 @@ export default function MeasurementTools({ map }) {
 
     map.addControl(draw, 'top-left');
     drawRef.current = draw;
+    drawInitializedRef.current = true; // Marcar como inicializado
 
     // Eventos de dibujo
     const handleCreate = (e) => {
@@ -115,14 +119,12 @@ export default function MeasurementTools({ map }) {
     map.on('draw.update', handleUpdate);
     map.on('draw.delete', handleDelete);
 
+    // NO removemos el control al desmontar, queremos que persista
+    // Solo limpiamos los event listeners
     return () => {
       map.off('draw.create', handleCreate);
       map.off('draw.update', handleUpdate);
       map.off('draw.delete', handleDelete);
-      
-      if (drawRef.current) {
-        map.removeControl(drawRef.current);
-      }
     };
   }, [map]);
 
@@ -208,18 +210,37 @@ export default function MeasurementTools({ map }) {
   };
 
   return (
-    <div className="fixed top-20 left-4 z-20 pointer-events-auto">
-      {/* Panel de herramientas */}
-      <div className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 min-w-[280px]">
-        {/* Header */}
-        <div className="px-4 py-3 border-b border-green-500/30 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Ruler className="w-5 h-5 text-green-400" />
-            <h3 className="text-green-400 font-bold uppercase tracking-wider text-sm">
-              Herramientas de Medición
-            </h3>
+    <div className="fixed top-20 left-4 z-30 pointer-events-auto">
+      {/* Panel minimizado */}
+      {isMinimized ? (
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 px-4 py-3 flex items-center gap-2 hover:bg-slate-800/95 transition-colors group"
+          title="Abrir herramientas de medición"
+        >
+          <Ruler className="w-5 h-5 text-green-400" />
+          <span className="text-green-400 font-bold text-sm">Medición</span>
+          <Maximize2 className="w-4 h-4 text-green-400/60 group-hover:text-green-400" />
+        </button>
+      ) : (
+        /* Panel de herramientas completo */
+        <div className="bg-slate-900/95 border-2 border-green-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-green-500/20 min-w-[280px]">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-green-500/30 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Ruler className="w-5 h-5 text-green-400" />
+              <h3 className="text-green-400 font-bold uppercase tracking-wider text-sm">
+                Herramientas de Medición
+              </h3>
+            </div>
+            <button
+              onClick={() => setIsMinimized(true)}
+              className="p-1.5 hover:bg-green-500/20 rounded-lg transition-colors"
+              title="Minimizar (los dibujos se mantienen)"
+            >
+              <Minimize2 className="w-4 h-4 text-green-400/60 hover:text-green-400" />
+            </button>
           </div>
-        </div>
 
         {/* Botones de herramientas */}
         <div className="p-3 space-y-2">
@@ -359,9 +380,11 @@ export default function MeasurementTools({ map }) {
             <div>💡 <strong>Enter:</strong> Finalizar dibujo</div>
             <div>💡 <strong>Esc:</strong> Cancelar</div>
             <div>💡 <strong>Delete:</strong> Borrar seleccionado</div>
+            <div>💡 <strong>Minimizar:</strong> Oculta panel, mantiene dibujos</div>
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
