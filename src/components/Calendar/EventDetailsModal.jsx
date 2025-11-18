@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, Clock, ExternalLink, FileText, Tag, Shield, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useUserRole } from '../../hooks/useUserRole';
@@ -12,6 +12,17 @@ import ConfirmDialog from '../Common/ConfirmDialog';
 export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) {
   const { canEditEvents, canDeleteEvents } = useUserRole();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Notificar que el modal está abierto (para ocultar botones flotantes en móvil)
+  useEffect(() => {
+    // Dispatch evento cuando el modal se monta
+    window.dispatchEvent(new CustomEvent('detailsModalOpen'));
+    
+    // Cleanup cuando se desmonta
+    return () => {
+      window.dispatchEvent(new CustomEvent('detailsModalClose'));
+    };
+  }, []);
   
   if (!event) return null;
 
@@ -103,10 +114,10 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[300] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl my-8">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto pt-16 sm:pt-6">
+      <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl mt-2 sm:my-8 mb-24 sm:mb-8 relative z-10">
         {/* Header con imagen de fondo si existe */}
-        <div className="relative">
+        <div className="relative z-10">
           {event.image_url ? (
             <div className="relative h-64 overflow-hidden rounded-t-xl">
               <img 
@@ -143,12 +154,13 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
             </div>
           )}
 
-          {/* Botón cerrar */}
+          {/* Botón cerrar - Mejorado para móvil */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-slate-900/90 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white border border-slate-700"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 sm:p-2.5 bg-slate-900/90 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white border border-slate-700 z-10"
+            title="Cerrar"
           >
-            <X size={20} />
+            <X size={18} className="sm:w-5 sm:h-5" />
           </button>
         </div>
 
@@ -305,14 +317,14 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
                     href={event.link_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600/30 rounded-lg p-3 transition-colors group"
+                    className="flex items-start gap-3 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-600/30 rounded-lg p-3 transition-colors group"
                   >
-                    <ExternalLink size={20} className="text-blue-400" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-blue-300 group-hover:text-blue-200">
+                    <ExternalLink size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-blue-300 group-hover:text-blue-200 break-words">
                         {event.link_title || 'Link externo'}
                       </div>
-                      <div className="text-xs text-slate-500 truncate">{event.link_url}</div>
+                      <div className="text-xs text-slate-500 break-all leading-relaxed">{event.link_url}</div>
                     </div>
                   </a>
                 )}
@@ -342,17 +354,17 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
           )}
         </div>
 
-        {/* Footer con acciones */}
-        <div className="bg-slate-800/50 border-t border-slate-700 p-4">
-          <div className="flex gap-3">
+        {/* Footer con acciones - Responsive mejorado */}
+        <div className="bg-slate-800/50 border-t border-slate-700 p-2.5 sm:p-4 pb-safe">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             {/* Botón Editar - Solo visible si tiene permiso */}
             {canEditEvents() && (
               <button
                 onClick={handleEdit}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-medium"
+                className="w-full sm:flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg transition-colors font-medium text-xs sm:text-base"
               >
-                <Edit2 size={18} />
-                Editar Evento
+                <Edit2 size={14} className="sm:w-[18px] sm:h-[18px]" />
+                <span>Editar</span>
               </button>
             )}
 
@@ -360,20 +372,20 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
             {canDeleteEvents() && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium"
+                className="w-full sm:w-auto flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-xs sm:text-base"
               >
-                <Trash2 size={18} />
-                Eliminar
+                <Trash2 size={14} className="sm:w-[18px] sm:h-[18px]" />
+                <span>Eliminar</span>
               </button>
             )}
 
             {/* Botón Cerrar */}
             <button
               onClick={onClose}
-              className={`flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium ${!(canEditEvents() || canDeleteEvents()) ? 'flex-1' : ''}`}
+              className={`w-full ${!(canEditEvents() || canDeleteEvents()) ? 'sm:flex-1' : 'sm:w-auto'} flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors font-medium text-xs sm:text-base`}
             >
-              <X size={18} />
-              Cerrar
+              <X size={14} className="sm:w-[18px] sm:h-[18px]" />
+              <span>Cerrar</span>
             </button>
           </div>
         </div>

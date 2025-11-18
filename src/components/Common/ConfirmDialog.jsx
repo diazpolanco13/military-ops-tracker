@@ -45,7 +45,7 @@ export default function ConfirmDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
       <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-lg shadow-2xl animate-in zoom-in-95 duration-200">
         
         {/* Icono de alerta */}

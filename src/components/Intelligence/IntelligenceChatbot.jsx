@@ -11,6 +11,7 @@ export default function IntelligenceChatbot() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null); // Ref para auto-resize del textarea
   
@@ -21,6 +22,20 @@ export default function IntelligenceChatbot() {
     sendMessage,
     clearChat
   } = useGrokChat();
+
+  // Escuchar eventos de apertura/cierre del modal de detalles
+  useEffect(() => {
+    const handleModalOpen = () => setDetailsModalOpen(true);
+    const handleModalClose = () => setDetailsModalOpen(false);
+
+    window.addEventListener('detailsModalOpen', handleModalOpen);
+    window.addEventListener('detailsModalClose', handleModalClose);
+
+    return () => {
+      window.removeEventListener('detailsModalOpen', handleModalOpen);
+      window.removeEventListener('detailsModalClose', handleModalClose);
+    };
+  }, []);
 
   // Auto-scroll al final cuando hay mensajes nuevos
   useEffect(() => {
@@ -74,7 +89,7 @@ export default function IntelligenceChatbot() {
   // ========================================================================
   if (!isExpanded) {
     return (
-      <div className="fixed bottom-4 right-4 z-50">
+      <div className={`fixed bottom-4 right-4 z-50 ${detailsModalOpen ? 'sm:block hidden' : 'block'}`}>
         <button
           onClick={() => setIsExpanded(true)}
           className="relative w-16 h-16 bg-gradient-to-br from-red-600 to-orange-600 rounded-full shadow-2xl shadow-red-500/50 flex items-center justify-center hover:scale-110 transition-transform group overflow-hidden border-2 border-red-500/50"

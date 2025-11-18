@@ -3,13 +3,16 @@ import { useState, useEffect } from 'react';
 import { useUserRole } from '../../hooks/useUserRole';
 import { supabase } from '../../lib/supabase';
 import { getClassificationCode, getClassificationColor, PRIORITY_LEVELS } from '../../config/intelligenceClassification';
+import EventDetailsModal from '../Calendar/EventDetailsModal';
 
 /**
  * Tarjeta individual de evento en el timeline
+ * Click en el card → Abre modal de detalles completos
  */
 export default function EventCard({ event, onEdit, onDelete, isLast }) {
   const { canEditEvents, canDeleteEvents } = useUserRole();
   const [relatedEntities, setRelatedEntities] = useState([]);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     loadRelatedEntities();
@@ -75,13 +78,24 @@ export default function EventCard({ event, onEdit, onDelete, isLast }) {
     return date || '00:00';
   };
 
+  // Abrir modal de detalles al hacer clic en el card
+  const handleCardClick = (e) => {
+    // No abrir modal si se hace clic en botones de acción
+    if (e.target.closest('button')) return;
+    setShowDetailsModal(true);
+  };
+
   return (
     <div className="relative group">
       {/* Punto del timeline */}
       <div className={`absolute -left-4 sm:-left-6 top-2 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-slate-900 ${getEventColor(event.type)} z-10`}></div>
 
-      {/* Card del evento */}
-      <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden hover:border-blue-500 transition-all">
+      {/* Card del evento - Clickeable para abrir detalles */}
+      <div 
+        onClick={handleCardClick}
+        className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 transition-all cursor-pointer"
+        title="Clic para ver detalles completos"
+      >
         {/* Imagen principal si existe */}
         {event.image_url && (
           <div className="relative h-32 sm:h-40 bg-slate-900 overflow-hidden">
@@ -248,6 +262,22 @@ export default function EventCard({ event, onEdit, onDelete, isLast }) {
           )}
         </div>
       </div>
+
+      {/* Modal de detalles completos del evento */}
+      {showDetailsModal && (
+        <EventDetailsModal
+          event={event}
+          onClose={() => setShowDetailsModal(false)}
+          onEdit={(eventToEdit) => {
+            setShowDetailsModal(false);
+            onEdit(eventToEdit);
+          }}
+          onDelete={(eventId) => {
+            setShowDetailsModal(false);
+            onDelete(eventId);
+          }}
+        />
+      )}
     </div>
   );
 }
