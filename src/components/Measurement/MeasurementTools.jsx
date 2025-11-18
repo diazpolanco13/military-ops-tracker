@@ -210,6 +210,16 @@ export default function MeasurementTools({ map, onClose }) {
     setActiveTool(null);
   };
 
+  // Manejar cierre del componente
+  const handleClose = () => {
+    // Limpiar todos los gráficos antes de cerrar
+    clearAll();
+    // Llamar al callback de cierre
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed top-20 left-4 z-30 pointer-events-auto">
       {/* Panel minimizado */}
@@ -228,9 +238,9 @@ export default function MeasurementTools({ map, onClose }) {
           {/* Botón de cierre rápido */}
           {onClose && (
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="bg-slate-900/95 border-2 border-red-500/50 rounded-lg backdrop-blur-md shadow-2xl shadow-red-500/20 p-3 hover:bg-red-500/20 hover:border-red-500 transition-colors group"
-              title="Cerrar herramientas"
+              title="Cerrar herramientas (borra dibujos)"
             >
               <X className="w-5 h-5 text-red-400 group-hover:text-red-300" />
             </button>
@@ -257,9 +267,9 @@ export default function MeasurementTools({ map, onClose }) {
               </button>
               {onClose && (
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-1.5 hover:bg-red-500/20 rounded-lg transition-colors"
-                  title="Cerrar herramientas"
+                  title="Cerrar herramientas (borra dibujos)"
                 >
                   <X className="w-4 h-4 text-red-400/60 hover:text-red-400" />
                 </button>
@@ -405,7 +415,8 @@ export default function MeasurementTools({ map, onClose }) {
             <div>💡 <strong>Enter:</strong> Finalizar dibujo</div>
             <div>💡 <strong>Esc:</strong> Cancelar</div>
             <div>💡 <strong>Delete:</strong> Borrar seleccionado</div>
-            <div>💡 <strong>Minimizar:</strong> Oculta panel, mantiene dibujos</div>
+            <div>💡 <strong>Minimizar (−):</strong> Oculta panel, mantiene dibujos</div>
+            <div>💡 <strong>Cerrar (X):</strong> Cierra panel y borra dibujos</div>
           </div>
         </div>
         </div>
