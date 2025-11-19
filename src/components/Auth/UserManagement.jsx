@@ -27,9 +27,10 @@ export default function UserManagement() {
   const [success, setSuccess] = useState(null);
 
   // Roles disponibles (valores deben coincidir con constraint de BD)
+  // Constraint: CHECK (role IN ('admin', 'operator', 'analyst', 'viewer'))
   const ROLES = [
     { value: 'admin', label: 'Administrador', icon: Crown, description: 'Acceso completo al sistema', color: 'text-red-400' },
-    { value: 'editor', label: 'Colaborador', icon: UserCheck, description: 'Puede añadir y editar información', color: 'text-blue-400' },
+    { value: 'operator', label: 'Colaborador', icon: UserCheck, description: 'Puede añadir y editar información', color: 'text-blue-400' },
     { value: 'viewer', label: 'Solo Lectura', icon: EyeIcon, description: 'Solo puede ver el mapa', color: 'text-slate-400' }
   ];
 
@@ -838,11 +839,13 @@ export default function UserManagement() {
                         {user.role && (
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                             user.role === 'admin' ? 'bg-red-900/30 text-red-400 border border-red-700/50' :
-                            user.role === 'editor' ? 'bg-blue-900/30 text-blue-400 border border-blue-700/50' :
+                            user.role === 'operator' ? 'bg-blue-900/30 text-blue-400 border border-blue-700/50' :
+                            user.role === 'analyst' ? 'bg-purple-900/30 text-purple-400 border border-purple-700/50' :
                             'bg-slate-700/30 text-slate-400 border border-slate-600/50'
                           }`}>
                             {user.role === 'admin' && <Crown className="w-3 h-3" />}
-                            {user.role === 'editor' && <UserCheck className="w-3 h-3" />}
+                            {user.role === 'operator' && <UserCheck className="w-3 h-3" />}
+                            {user.role === 'analyst' && <UserCheck className="w-3 h-3" />}
                             {user.role === 'viewer' && <EyeIcon className="w-3 h-3" />}
                             {ROLES.find(r => r.value === user.role)?.label || user.role}
                           </span>

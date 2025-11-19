@@ -105,7 +105,22 @@ export function useUserRole() {
         manage_users: true,
         access_settings: true
       },
-      colaborador: {
+      operator: {
+        view_entities: true,
+        create_entities: true,
+        edit_entities: true,
+        delete_entities: false,
+        view_events: true,
+        create_events: true,
+        edit_events: true,
+        delete_events: false,
+        view_templates: true,
+        create_templates: false,
+        manage_templates: false,
+        manage_users: false,
+        access_settings: false
+      },
+      analyst: {
         view_entities: true,
         create_entities: true,
         edit_entities: true,
@@ -146,7 +161,7 @@ export function useUserRole() {
 
   // Funciones helper basadas en rol (retrocompatibilidad)
   const isAdmin = () => userRole === 'admin';
-  const isCollaborator = () => userRole === 'colaborador' || userRole === 'admin';
+  const isCollaborator = () => userRole === 'operator' || userRole === 'analyst' || userRole === 'admin';
   const isViewer = () => userRole === 'viewer';
 
   // Funciones helper basadas en permisos
