@@ -224,90 +224,89 @@ export default function TopNavigationBar({
         {/* Spacer - Empuja menú de usuario a la derecha */}
         <div className="flex-1"></div>
 
-        {/* 👤 Menú de Usuario Desplegable (extremo derecho) */}
+        {/* 👤 Menú de Usuario Desplegable - Minimalista */}
         {user && onSignOut && (
-          <div className="relative" ref={userMenuRef}>
+          <div className="relative flex-shrink-0" ref={userMenuRef}>
+            {/* Botón Avatar Minimalista */}
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg transition-all border border-slate-700 hover:border-blue-500 ml-2"
+              className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center hover:ring-2 hover:ring-blue-500/50 transition-all shadow-lg ml-2"
+              title={user.email}
             >
-              <div className="w-7 h-7 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xs">
-                  {user.email?.charAt(0).toUpperCase() || '?'}
-                </span>
-              </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-white text-xs font-medium">
-                  {user.email?.split('@')[0]}
-                </div>
-                <div className="text-slate-400 text-[10px]">
-                  {user.email?.split('@')[1]}
-                </div>
-              </div>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+              <span className="text-white font-bold text-sm">
+                {user.email?.charAt(0).toUpperCase() || '?'}
+              </span>
             </button>
-
-            {/* Menú desplegable */}
-            {showUserMenu && (
-              <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden">
-                {/* Info del usuario */}
-                <div className="p-4 border-b border-slate-700 bg-slate-800/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">
-                        {user.email?.charAt(0).toUpperCase() || '?'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-medium truncate">
-                        {user.email}
-                      </div>
-                      <div className="text-slate-400 text-xs">
-                        Usuario activo
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Opciones del menú */}
-                <div className="py-2">
-                  {/* Configuración */}
-                  {canAccessSettings() && (
-                    <button
-                      onClick={() => {
-                        setShowSettingsPanel(true);
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 transition-colors text-left"
-                    >
-                      <Settings className="w-4 h-4 text-blue-400" />
-                      <div className="flex-1">
-                        <div className="text-white text-sm">Configuración</div>
-                        <div className="text-slate-500 text-xs">Ajustes del sistema</div>
-                      </div>
-                    </button>
-                  )}
-
-                  {/* Cerrar Sesión */}
-                  <button
-                    onClick={() => {
-                      setShowLogoutModal(true);
-                      setShowUserMenu(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-900/20 transition-colors text-left border-t border-slate-800"
-                  >
-                    <LogOut className="w-4 h-4 text-red-400" />
-                    <div className="flex-1">
-                      <div className="text-red-400 text-sm font-medium">Cerrar Sesión</div>
-                      <div className="text-red-400/60 text-xs">Salir del sistema</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
+
+      {/* Menú desplegable del usuario - FUERA del navbar para evitar overflow */}
+      {showUserMenu && user && (
+        <div 
+          ref={userMenuRef}
+          className="fixed right-4 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden"
+          style={{ top: '60px', width: '260px' }}
+        >
+          {/* Info del usuario */}
+          <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-purple-900/30">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center ring-2 ring-blue-500/30">
+                <span className="text-white font-bold text-sm">
+                  {user.email?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-sm font-medium truncate">
+                  {user.email}
+                </div>
+                <div className="text-slate-400 text-xs">
+                  Usuario activo
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Opciones del menú */}
+          <div className="py-1">
+            {/* Configuración */}
+            {canAccessSettings() && (
+              <button
+                onClick={() => {
+                  setShowSettingsPanel(true);
+                  setShowUserMenu(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-left group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center group-hover:bg-blue-600/30 transition-colors">
+                  <Settings className="w-4 h-4 text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-white text-sm font-medium">Configuración</div>
+                  <div className="text-slate-500 text-xs">Ajustes del sistema</div>
+                </div>
+              </button>
+            )}
+
+            {/* Cerrar Sesión */}
+            <button
+              onClick={() => {
+                setShowLogoutModal(true);
+                setShowUserMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-900/20 transition-colors text-left border-t border-slate-800 group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-red-600/20 flex items-center justify-center group-hover:bg-red-600/30 transition-colors">
+                <LogOut className="w-4 h-4 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <div className="text-red-400 text-sm font-medium">Cerrar Sesión</div>
+                <div className="text-red-400/60 text-xs">Salir del sistema</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* PANELES DESPLEGABLES (se expanden hacia abajo desde la navbar) */}
       {activePanel && (
