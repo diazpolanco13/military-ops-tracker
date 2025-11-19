@@ -303,8 +303,8 @@ export default function MeasurementTools({ map, onClose }) {
         const line = turf.lineString(m.coordinates);
         const midpoint = turf.along(line, turf.length(line) / 2, { units: 'kilometers' });
         coordinates = midpoint.geometry.coordinates;
-      } else if (m.type === 'area') {
-        // Label en el centroide del polígono
+      } else if (m.type === 'area' || m.type === 'circle') {
+        // Label en el centroide del polígono (incluye círculos)
         const polygon = turf.polygon(m.coordinates);
         const centroid = turf.centroid(polygon);
         coordinates = centroid.geometry.coordinates;
