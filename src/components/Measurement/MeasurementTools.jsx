@@ -141,19 +141,28 @@ export default function MeasurementTools({ map, onClose }) {
 
   // Listener para crear círculo al hacer clic en el mapa
   useEffect(() => {
-    if (!map || activeTool !== 'circle') return;
+    if (!map || activeTool !== 'circle' || !drawRef.current) return;
+
+    // Cambiar a modo simple_select para permitir clicks en el mapa
+    drawRef.current.changeMode('simple_select');
 
     const handleMapClick = (e) => {
+      // Prevenir que el evento se propague
+      e.preventDefault();
+      
       createCircleAtLocation(e.lngLat);
       setActiveTool(null); // Desactivar herramienta después de crear
     };
 
-    map.on('click', handleMapClick);
-
-    // Cambiar cursor para indicar que está en modo círculo
-    map.getCanvas().style.cursor = 'crosshair';
+    // Usar setTimeout para asegurar que el listener se agrega DESPUÉS de MapboxDraw
+    const timeoutId = setTimeout(() => {
+      map.on('click', handleMapClick);
+      // Cambiar cursor para indicar que está en modo círculo
+      map.getCanvas().style.cursor = 'crosshair';
+    }, 100);
 
     return () => {
+      clearTimeout(timeoutId);
       map.off('click', handleMapClick);
       map.getCanvas().style.cursor = '';
     };
