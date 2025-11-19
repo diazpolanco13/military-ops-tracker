@@ -19,7 +19,22 @@ export function useUserRole() {
       loadUserRole();
     });
 
-    return () => subscription.unsubscribe();
+    // Escuchar cambios en role_permissions (cuando admin edita permisos)
+    const rolePermissionsChannel = supabase
+      .channel('role_permissions_changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'role_permissions' },
+        (payload) => {
+          console.log('🔄 Permisos actualizados en BD:', payload);
+          loadUserRole(); // Recargar permisos
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      rolePermissionsChannel.unsubscribe();
+    };
   }, []);
 
   const loadUserRole = async () => {

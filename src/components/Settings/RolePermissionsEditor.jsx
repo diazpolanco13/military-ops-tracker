@@ -12,7 +12,7 @@ export default function RolePermissionsEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [selectedRole, setSelectedRole] = useState('admin');
+  const [selectedRole, setSelectedRole] = useState('operator'); // ✅ Inicia con Colaborador
 
   // Definición de permisos disponibles
   const PERMISSION_GROUPS = [
@@ -55,9 +55,10 @@ export default function RolePermissionsEditor() {
     }
   ];
 
+  // Roles (valores deben coincidir con constraint de BD y useUserRole)
   const ROLES = [
     { value: 'admin', label: 'Administrador', icon: Crown, color: 'text-red-400' },
-    { value: 'colaborador', label: 'Colaborador', icon: UserCheck, color: 'text-blue-400' },
+    { value: 'operator', label: 'Colaborador', icon: UserCheck, color: 'text-blue-400' },
     { value: 'viewer', label: 'Solo Lectura', icon: EyeIcon, color: 'text-slate-400' }
   ];
 
@@ -113,7 +114,7 @@ export default function RolePermissionsEditor() {
         manage_users: true,
         access_settings: true
       },
-      colaborador: {
+      operator: {
         view_entities: true,
         create_entities: true,
         edit_entities: true,
@@ -126,7 +127,22 @@ export default function RolePermissionsEditor() {
         create_templates: false,
         manage_templates: false,
         manage_users: false,
-        access_settings: false
+        access_settings: true  // ✅ Por defecto tienen acceso
+      },
+      analyst: {
+        view_entities: true,
+        create_entities: true,
+        edit_entities: true,
+        delete_entities: false,
+        view_events: true,
+        create_events: true,
+        edit_events: true,
+        delete_events: false,
+        view_templates: true,
+        create_templates: false,
+        manage_templates: false,
+        manage_users: false,
+        access_settings: true  // ✅ Por defecto tienen acceso
       },
       viewer: {
         view_entities: true,
