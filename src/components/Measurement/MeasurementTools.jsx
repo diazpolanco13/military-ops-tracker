@@ -192,6 +192,7 @@ export default function MeasurementTools({ map, onClose }) {
     const results = [];
 
     features.forEach(feature => {
+      // LÍNEAS: Mostrar distancia
       if (feature.geometry.type === 'LineString') {
         const line = turf.lineString(feature.geometry.coordinates);
         const length = turf.length(line, { units: 'kilometers' });
@@ -201,26 +202,44 @@ export default function MeasurementTools({ map, onClose }) {
           type: 'distance',
           value: length,
           unit: 'km',
-          label: `${length.toFixed(2)} km`,
+          label: `${length.toFixed(1)} km`,
           coordinates: feature.geometry.coordinates
         });
       }
 
+      // POLÍGONOS (incluye círculos)
       if (feature.geometry.type === 'Polygon') {
-        const polygon = turf.polygon(feature.geometry.coordinates);
-        const area = turf.area(polygon) / 1000000; // Convertir m² a km²
-        const perimeter = turf.length(turf.polygonToLine(polygon), { units: 'kilometers' });
+        // Verificar si es un círculo (tiene propiedad custom)
+        const isCircle = feature.properties?.isCircle;
         
-        results.push({
-          id: feature.id,
-          type: 'area',
-          value: area,
-          perimeter: perimeter,
-          unit: 'km²',
-          label: `${area.toFixed(2)} km²`,
-          perimeterLabel: `${perimeter.toFixed(2)} km`,
-          coordinates: feature.geometry.coordinates
-        });
+        if (isCircle) {
+          // CÍRCULO: Mostrar radio (no área)
+          const radius = feature.properties.radius;
+          results.push({
+            id: feature.id,
+            type: 'circle',
+            value: radius,
+            unit: 'km',
+            label: `Radio: ${radius} km`,
+            coordinates: feature.geometry.coordinates
+          });
+        } else {
+          // POLÍGONO NORMAL: Mostrar área
+          const polygon = turf.polygon(feature.geometry.coordinates);
+          const area = turf.area(polygon) / 1000000; // Convertir m² a km²
+          const perimeter = turf.length(turf.polygonToLine(polygon), { units: 'kilometers' });
+          
+          results.push({
+            id: feature.id,
+            type: 'area',
+            value: area,
+            perimeter: perimeter,
+            unit: 'km²',
+            label: `${area.toFixed(1)} km²`,
+            perimeterLabel: `${perimeter.toFixed(1)} km`,
+            coordinates: feature.geometry.coordinates
+          });
+        }
       }
     });
 
@@ -332,13 +351,21 @@ export default function MeasurementTools({ map, onClose }) {
     const options = { steps: 64, units: 'kilometers' };
     const circle = turf.circle([lngLat.lng, lngLat.lat], circleRadius, options);
 
+    // Marcar como círculo con propiedad custom
+    circle.properties = { 
+      ...circle.properties,
+      isCircle: true,
+      radius: circleRadius
+    };
+
     // Agregar como polígono
     const ids = drawRef.current.add(circle);
     
-    // Calcular mediciones
+    // Calcular mediciones para el círculo
     calculateMeasurements([{
       id: ids[0],
-      geometry: circle.geometry
+      geometry: circle.geometry,
+      properties: circle.properties
     }]);
   };
 
