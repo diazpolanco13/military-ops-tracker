@@ -151,89 +151,99 @@ export default function DeploymentStats() {
 
   return (
     <>
-      {/* Badge compacto (siempre visible) - Centrado en la parte inferior */}
+      {/* Badge compacto (siempre visible) - Esquina inferior derecha */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl transition-all hover:scale-105 hover:border-blue-500"
+        className="fixed bottom-4 right-4 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl transition-all hover:scale-105 hover:border-blue-500 z-40"
       >
-        <div className="px-4 py-2 flex items-center gap-3">
-          <Activity className="w-5 h-5 text-blue-400" />
+        <div className="px-3 py-2 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-blue-400" />
           <div className="text-left">
-            <div className="text-white font-bold text-sm">
+            <div className="text-white font-bold text-xs">
               {stats.totalMarkers} marcadores • {stats.totalUnits} unidades
             </div>
-            <div className="text-slate-400 text-xs">
+            <div className="text-slate-400 text-[10px]">
               {stats.totalPersonnel.toLocaleString()} efectivos
             </div>
           </div>
         </div>
       </button>
 
-      {/* Panel expandido (al hacer click) - Centrado en la parte inferior */}
+      {/* Panel expandido (al hacer click) - Esquina inferior derecha */}
       {isExpanded && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-96 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-16 right-4 w-80 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl animate-in slide-in-from-bottom duration-300 z-40 max-h-[70vh] overflow-y-auto custom-scrollbar-transparent">
           
-          {/* Header */}
-          <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-900">
-            <h3 className="text-white font-bold text-lg flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400" />
-              ESTADO DEL DESPLIEGUE
-            </h3>
-            <p className="text-slate-400 text-xs mt-1">SOUTHCOM - Caribe - Octubre 2025</p>
-          </div>
-
-          {/* Estadísticas Generales */}
-          <div className="p-4 grid grid-cols-3 gap-3 border-b border-slate-800">
-            <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50 text-center">
-              <div className="text-2xl font-bold text-white">{stats.totalMarkers}</div>
-              <div className="text-xs text-slate-400 font-semibold">MARCADORES</div>
-            </div>
-            <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-900/30 text-center">
-              <div className="text-2xl font-bold text-white">{stats.totalUnits}</div>
-              <div className="text-xs text-blue-400 font-semibold">UNIDADES</div>
-            </div>
-            <div className="bg-green-900/20 rounded-lg p-3 border border-green-900/30 text-center">
-              <div className="text-2xl font-bold text-white">{stats.totalPersonnel.toLocaleString()}</div>
-              <div className="text-xs text-green-400 font-semibold">EFECTIVOS</div>
+          {/* Header compacto */}
+          <div className="p-3 border-b border-slate-700 bg-gradient-to-r from-blue-900/30 to-slate-900">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-bold text-sm flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-blue-400" />
+                  DESPLIEGUE
+                </h3>
+                <p className="text-slate-500 text-[10px] mt-0.5">Caribe • Nov 2025</p>
+              </div>
+              <button
+                onClick={() => setIsExpanded(false)}
+                className="text-slate-500 hover:text-white transition-colors"
+              >
+                ✕
+              </button>
             </div>
           </div>
 
-          {/* Desglose por tipo */}
-          <div className="p-4 space-y-2">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+          {/* Estadísticas Generales - Compactas */}
+          <div className="p-3 grid grid-cols-3 gap-2 border-b border-slate-800">
+            <div className="bg-slate-800/50 rounded p-2 border border-slate-700/50 text-center">
+              <div className="text-lg font-bold text-white">{stats.totalMarkers}</div>
+              <div className="text-[9px] text-slate-400 font-semibold uppercase">Marcadores</div>
+            </div>
+            <div className="bg-blue-900/20 rounded p-2 border border-blue-900/30 text-center">
+              <div className="text-lg font-bold text-white">{stats.totalUnits}</div>
+              <div className="text-[9px] text-blue-400 font-semibold uppercase">Unidades</div>
+            </div>
+            <div className="bg-green-900/20 rounded p-2 border border-green-900/30 text-center">
+              <div className="text-lg font-bold text-white">{stats.totalPersonnel.toLocaleString()}</div>
+              <div className="text-[9px] text-green-400 font-semibold uppercase">Efectivos</div>
+            </div>
+          </div>
+
+          {/* Desglose por tipo - Compacto */}
+          <div className="p-3 space-y-1.5">
+            <h4 className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
               Desglose por Tipo
             </h4>
             
             {Object.entries(stats.byType)
               .filter(([_, data]) => data.totalUnits > 0)
-              .sort((a, b) => b[1].totalUnits - a[1].totalUnits)
+              .sort((a, b) => b[1].personnel - a[1].personnel)  // Ordenar por efectivos
               .map(([type, data]) => {
                 const Icon = data.icon;
                 return (
                   <div
                     key={type}
-                    className="flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-800 rounded-lg border border-slate-700/50 transition-all group"
+                    className="flex items-center justify-between px-2.5 py-2 bg-slate-800/30 hover:bg-slate-800/50 rounded-md border border-slate-700/30 transition-all group"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${data.color}20`, borderColor: data.color, borderWidth: '2px' }}
+                        className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${data.color}20`, borderColor: data.color, borderWidth: '1px' }}
                       >
-                        <Icon size={20} style={{ color: data.color }} strokeWidth={2.5} />
+                        <Icon size={14} style={{ color: data.color }} strokeWidth={2.5} />
                       </div>
-                      <div>
-                        <div className="text-white font-semibold text-sm">{data.label}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-medium text-xs truncate">{data.label}</div>
                         {data.personnel > 0 && (
-                          <div className="text-slate-400 text-xs">
+                          <div className="text-slate-500 text-[10px]">
                             {data.personnel.toLocaleString()} efectivos
                           </div>
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-white font-bold text-xl">{data.totalUnits}</div>
-                      <div className="text-slate-500 text-xs">
-                        {data.count > 1 ? `${data.count} grupos` : 'unidades'}
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-white font-bold text-base">{data.totalUnits}</div>
+                      <div className="text-slate-500 text-[9px]">
+                        {data.count} {data.count > 1 ? 'grupos' : 'unidad'}
                       </div>
                     </div>
                   </div>
