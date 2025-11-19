@@ -139,6 +139,26 @@ export default function MeasurementTools({ map, onClose }) {
     };
   }, [map]);
 
+  // Listener para crear círculo al hacer clic en el mapa
+  useEffect(() => {
+    if (!map || activeTool !== 'circle') return;
+
+    const handleMapClick = (e) => {
+      createCircleAtLocation(e.lngLat);
+      setActiveTool(null); // Desactivar herramienta después de crear
+    };
+
+    map.on('click', handleMapClick);
+
+    // Cambiar cursor para indicar que está en modo círculo
+    map.getCanvas().style.cursor = 'crosshair';
+
+    return () => {
+      map.off('click', handleMapClick);
+      map.getCanvas().style.cursor = '';
+    };
+  }, [map, activeTool, circleRadius]);
+
   // Calcular mediciones con Turf.js
   const calculateMeasurements = (features) => {
     const results = [];
@@ -193,17 +213,21 @@ export default function MeasurementTools({ map, onClose }) {
     setActiveTool('polygon');
   };
 
-  // Crear círculo de alcance
-  const createCircle = () => {
-    if (!drawRef.current || !map) return;
+  // Activar modo círculo (no crea círculo aún, espera click en mapa)
+  const activateCircleTool = () => {
+    setActiveTool('circle');
+    // No crear círculo aquí, esperar a que usuario haga clic en el mapa
+  };
 
-    const center = map.getCenter();
+  // Crear círculo en la ubicación donde el usuario hace clic
+  const createCircleAtLocation = (lngLat) => {
+    if (!drawRef.current) return;
+
     const options = { steps: 64, units: 'kilometers' };
-    const circle = turf.circle([center.lng, center.lat], circleRadius, options);
+    const circle = turf.circle([lngLat.lng, lngLat.lat], circleRadius, options);
 
     // Agregar como polígono
     const ids = drawRef.current.add(circle);
-    setActiveTool('circle');
     
     // Calcular mediciones
     calculateMeasurements([{
@@ -262,13 +286,13 @@ export default function MeasurementTools({ map, onClose }) {
 
         {/* Círculo de alcance */}
         <button
-          onClick={createCircle}
+          onClick={activateCircleTool}
           className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
             activeTool === 'circle'
               ? 'bg-cyan-500 border-2 border-cyan-400'
               : 'bg-slate-900/95 border-2 border-slate-700 hover:border-cyan-500'
           }`}
-          title={`Círculo de Alcance (${circleRadius} km)`}
+          title={activeTool === 'circle' ? `Click en el mapa para crear círculo de ${circleRadius} km` : `Círculo de Alcance (${circleRadius} km)`}
         >
           <Circle className={`w-5 h-5 ${activeTool === 'circle' ? 'text-white' : 'text-cyan-400'}`} />
         </button>
