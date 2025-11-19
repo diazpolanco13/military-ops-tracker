@@ -118,7 +118,7 @@ export function useUserRole() {
         create_templates: false,
         manage_templates: false,
         manage_users: false,
-        access_settings: false
+        access_settings: true  // ✅ Colaboradores pueden acceder a configuración básica
       },
       analyst: {
         view_entities: true,
@@ -133,7 +133,7 @@ export function useUserRole() {
         create_templates: false,
         manage_templates: false,
         manage_users: false,
-        access_settings: false
+        access_settings: true  // ✅ Analistas también pueden acceder a configuración
       },
       viewer: {
         view_entities: true,

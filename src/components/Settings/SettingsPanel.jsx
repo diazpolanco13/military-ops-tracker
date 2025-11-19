@@ -1,14 +1,19 @@
 import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
+import { useUserRole } from '../../hooks/useUserRole';
 import UserManagement from '../Auth/UserManagement';
 import RolePermissionsEditor from './RolePermissionsEditor';
 
 /**
  * ⚙️ Panel de Configuración
  * Ajustes dinámicos para visualización del mapa
+ * Tabs "Usuarios" y "Permisos" solo visibles para Administradores
  */
 export default function SettingsPanel({ onClose }) {
+  // 🔐 Permisos del usuario
+  const { canManageUsers } = useUserRole();
+  
   // 📑 Estado de tabs
   const [activeTab, setActiveTab] = useState('clustering');
   // 📱 Estado para sidebar móvil
@@ -175,17 +180,20 @@ export default function SettingsPanel({ onClose }) {
     }));
   };
 
-  // 📑 Definición de tabs
-  const tabs = [
-    { id: 'clustering', label: 'Clustering', icon: Layers },
-    { id: 'visualizacion', label: 'Visualización', icon: Eye },
-    { id: 'vista', label: 'Modo Vista', icon: Monitor },
-    { id: 'etiquetas', label: 'Etiquetas', icon: Tag },
-    { id: 'mapa', label: 'Cámara Mapa', icon: Video },
-    { id: 'ia', label: 'IA (Grok 4)', icon: Bot },
-    { id: 'usuarios', label: 'Usuarios', icon: Users },
-    { id: 'permisos', label: 'Permisos', icon: Shield },
+  // 📑 Definición de tabs - Filtrados según permisos
+  const allTabs = [
+    { id: 'clustering', label: 'Clustering', icon: Layers, adminOnly: false },
+    { id: 'visualizacion', label: 'Visualización', icon: Eye, adminOnly: false },
+    { id: 'vista', label: 'Modo Vista', icon: Monitor, adminOnly: false },
+    { id: 'etiquetas', label: 'Etiquetas', icon: Tag, adminOnly: false },
+    { id: 'mapa', label: 'Cámara Mapa', icon: Video, adminOnly: false },
+    { id: 'ia', label: 'IA (Grok 4)', icon: Bot, adminOnly: false },
+    { id: 'usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
+    { id: 'permisos', label: 'Permisos', icon: Shield, adminOnly: true },
   ];
+
+  // Filtrar tabs según permisos
+  const tabs = allTabs.filter(tab => !tab.adminOnly || canManageUsers());
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col" style={{ top: '56px' }}>
