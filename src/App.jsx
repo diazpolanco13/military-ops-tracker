@@ -5,7 +5,6 @@ import TopNavigationBar from './components/Navigation/TopNavigationBar';
 import RadarOverlay from './components/Radar/RadarOverlay';
 import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
-import IntelligenceChatbot from './components/Intelligence/IntelligenceChatbot';
 import EventTimeline from './components/Timeline/EventTimeline';
 import CalendarView from './components/Calendar/CalendarView';
 import AddEventModal from './components/Timeline/AddEventModal';
@@ -218,9 +217,6 @@ function App() {
         )}
 
         {/* Modal de edición de evento desde calendario - AHORA SE MANEJA DENTRO DE CalendarView */}
-
-        {/* Chatbot de Inteligencia (Bottom-right) */}
-        <IntelligenceChatbot />
 
         {/* Botón global para añadir evento - Visible en todas las vistas excepto configuración */}
         <GlobalAddEventButton settingsPanelOpen={showSettingsPanel} />

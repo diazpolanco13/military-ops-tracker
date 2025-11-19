@@ -59,27 +59,6 @@ export default function SettingsPanel({ onClose }) {
     return stored === null ? false : stored === 'true'; // ✅ Default false, respeta valor guardado
   });
 
-  // 🤖 NUEVO: Configuración de IA (Grok)
-  const [aiModel, setAiModel] = useState(() => {
-    return localStorage.getItem('aiModel') || 'grok-4';
-  });
-
-  const [aiTemperature, setAiTemperature] = useState(() => {
-    return parseFloat(localStorage.getItem('aiTemperature') || '0.7');
-  });
-
-  const [aiMaxTokens, setAiMaxTokens] = useState(() => {
-    return parseInt(localStorage.getItem('aiMaxTokens') || '1000');
-  });
-
-  const [aiPersonality, setAiPersonality] = useState(() => {
-    return localStorage.getItem('aiPersonality') || 'profesional';
-  });
-
-  // 🌎 NUEVO: Perspectiva geopolítica
-  const [aiPerspective, setAiPerspective] = useState(() => {
-    return localStorage.getItem('aiPerspective') || 'neutral';
-  });
 
   // 🎥 NUEVO: Configuración de cámara del mapa
   const [mapPitch, setMapPitch] = useState(() => {
@@ -113,11 +92,6 @@ export default function SettingsPanel({ onClose }) {
     localStorage.setItem('showLabelClass', showLabelClass);
     localStorage.setItem('entityViewMode', 'card'); // Siempre card futurista
     localStorage.setItem('showEntityCircle', showEntityCircle);
-    localStorage.setItem('aiModel', aiModel);
-    localStorage.setItem('aiTemperature', aiTemperature);
-    localStorage.setItem('aiMaxTokens', aiMaxTokens);
-    localStorage.setItem('aiPersonality', aiPersonality);
-    localStorage.setItem('aiPerspective', aiPerspective);
     localStorage.setItem('mapPitch', mapPitch);
     localStorage.setItem('mapBearing', mapBearing);
     saveActiveWeatherLayers(weatherLayers);
@@ -134,17 +108,12 @@ export default function SettingsPanel({ onClose }) {
         showLabelClass,
         entityViewMode: 'card', // Siempre card futurista
         showEntityCircle,
-        aiModel,
-        aiTemperature,
-        aiMaxTokens,
-        aiPersonality,
-        aiPerspective,
         mapPitch,
         mapBearing,
         weatherLayers
       }
     }));
-  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, showEntityCircle, aiModel, aiTemperature, aiMaxTokens, aiPersonality, aiPerspective, mapPitch, mapBearing, weatherLayers]);
+  }, [clusterZoomThreshold, clusterRadius, iconSize, useImages, showLabelName, showLabelType, showLabelClass, showEntityCircle, mapPitch, mapBearing, weatherLayers]);
 
   const resetToDefaults = () => {
     setClusterZoomThreshold(5); // ✅ Actualizado
@@ -156,11 +125,6 @@ export default function SettingsPanel({ onClose }) {
     setShowLabelClass(false);
     // entityViewMode siempre es 'card', no necesita reset
     setShowEntityCircle(false); // ✅ Actualizado
-    setAiModel('grok-4');
-    setAiTemperature(0.7);
-    setAiMaxTokens(1000);
-    setAiPersonality('profesional');
-    setAiPerspective('neutral');
     setMapPitch(45);
     setMapBearing(0);
     setWeatherLayers({
@@ -187,7 +151,6 @@ export default function SettingsPanel({ onClose }) {
     { id: 'vista', label: 'Modo Vista', icon: Monitor, adminOnly: false },
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag, adminOnly: false },
     { id: 'mapa', label: 'Cámara Mapa', icon: Video, adminOnly: false },
-    { id: 'ia', label: 'IA (Grok 4)', icon: Bot, adminOnly: false },
     { id: 'usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
     { id: 'permisos', label: 'Permisos', icon: Shield, adminOnly: true },
   ];
@@ -971,250 +934,6 @@ export default function SettingsPanel({ onClose }) {
                         ❌ Ninguna
                       </button>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: Configuración de IA (Grok 4) */}
-          {activeTab === 'ia' && (
-            <div className="space-y-6">
-              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700">
-                <h3 className="text-lg font-semibold text-cyan-400 mb-6 flex items-center gap-2">
-                  <Bot className="w-5 h-5" />
-                  Configuración de SAE-IA (Grok 4)
-                </h3>
-
-                <div className="space-y-6">
-                  {/* Modelo de IA */}
-                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                    <label className="block mb-3">
-                      <span className="text-base text-slate-200 font-medium block mb-2">Modelo de IA</span>
-                      <select
-                        value={aiModel}
-                        onChange={(e) => setAiModel(e.target.value)}
-                        className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
-                      >
-                        <option value="grok-4">Grok 4 (Recomendado - Más reciente)</option>
-                        <option value="grok-2-1212">Grok 2 (Diciembre 2024)</option>
-                        <option value="grok-2-latest">Grok 2 Latest (Siempre última versión)</option>
-                        <option value="grok-beta">Grok Beta (Experimental)</option>
-                      </select>
-                    </label>
-                    <p className="text-sm text-slate-400 bg-slate-900/50 p-3 rounded">
-                      🚀 <strong>Grok 4:</strong> Lanzado en julio 2025. Mayor precisión en razonamiento y análisis militar.
-                    </p>
-                  </div>
-
-                  {/* Personalidad de la IA */}
-                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                    <label className="block mb-3">
-                      <span className="text-base text-slate-200 font-medium block mb-2">Personalidad de la IA</span>
-                      <select
-                        value={aiPersonality}
-                        onChange={(e) => setAiPersonality(e.target.value)}
-                        className="w-full px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-cyan-500"
-                      >
-                        <option value="profesional">🎖️ Profesional Militar</option>
-                        <option value="tecnico">🔧 Técnico/Analítico</option>
-                        <option value="casual">💬 Conversacional</option>
-                        <option value="conciso">⚡ Conciso y Directo</option>
-                      </select>
-                    </label>
-                    <p className="text-sm text-slate-400 bg-slate-900/50 p-3 rounded">
-                      ℹ️ Define el tono y estilo de las respuestas de SAE-IA.
-                    </p>
-                  </div>
-
-                  {/* Perspectiva Geopolítica */}
-                  <div className="bg-slate-900/50 p-4 rounded-lg border border-amber-700/50">
-                    <label className="block mb-3">
-                      <span className="text-base text-slate-200 font-medium block mb-2 flex items-center gap-2">
-                        🌎 Perspectiva Geopolítica
-                        <span className="text-xs text-amber-400 bg-amber-900/30 px-2 py-0.5 rounded">IMPORTANTE</span>
-                      </span>
-                      <select
-                        value={aiPerspective}
-                        onChange={(e) => setAiPerspective(e.target.value)}
-                        className="w-full px-4 py-2 bg-slate-800 border border-amber-600 rounded-lg text-white focus:outline-none focus:border-amber-500"
-                      >
-                        <option value="neutral">⚖️ Neutral / Observador Internacional</option>
-                        <option value="venezuela">🇻🇪 Venezuela (Defensa Nacional)</option>
-                        <option value="eeuu">🇺🇸 Estados Unidos</option>
-                        <option value="regional">🌎 América Latina</option>
-                        <option value="rusia">🇷🇺 Rusia</option>
-                        <option value="china">🇨🇳 China</option>
-                        <option value="iran">🇮🇷 Irán</option>
-                      </select>
-                    </label>
-                    <div className="bg-amber-900/20 p-3 rounded border border-amber-800/30">
-                      <p className="text-sm text-amber-200 font-semibold mb-2">
-                        ⚠️ Esto cambia COMPLETAMENTE el análisis:
-                      </p>
-                      <ul className="text-xs text-slate-300 space-y-1">
-                        <li><strong>Neutral:</strong> Análisis objetivo sin afiliación</li>
-                        <li><strong>Venezuela:</strong> Análisis desde defensa nacional venezolana</li>
-                        <li><strong>EEUU:</strong> Perspectiva de comando militar estadounidense</li>
-                        <li><strong>Regional:</strong> Enfoque latinoamericano</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Temperature */}
-                  <div className="pt-6 border-t border-slate-700">
-                    <label className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-base text-slate-200 font-medium">Creatividad (Temperature)</span>
-                        <span className="block text-xs text-slate-400 mt-1">
-                          {aiTemperature < 0.4 ? '🔒 Muy preciso y factual' :
-                           aiTemperature < 0.7 ? '⚖️ Balanceado' :
-                           '🎨 Más creativo'}
-                        </span>
-                      </div>
-                      <span className="text-lg font-mono text-cyan-400 bg-slate-900 px-3 py-1 rounded">{aiTemperature.toFixed(2)}</span>
-                    </label>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={aiTemperature}
-                      onChange={(e) => setAiTemperature(parseFloat(e.target.value))}
-                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                    />
-                    <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>0.0 (Preciso)</span>
-                      <span>0.5 (Equilibrado)</span>
-                      <span>1.0 (Creativo)</span>
-                    </div>
-                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      ℹ️ <strong>Recomendado: 0.7</strong> - Balance entre precisión y fluidez en respuestas.
-                    </p>
-                  </div>
-
-                  {/* Max Tokens */}
-                  <div className="pt-6 border-t border-slate-700">
-                    <label className="flex items-center justify-between mb-3">
-                      <div>
-                        <span className="text-base text-slate-200 font-medium">Longitud de respuesta</span>
-                        <span className="block text-xs text-slate-400 mt-1">
-                          {aiMaxTokens <= 150 ? '⚡ Ultra-corto (tweet)' :
-                           aiMaxTokens <= 300 ? '💬 Muy breve (párrafo)' :
-                           aiMaxTokens < 500 ? '📝 Breve (2-3 párrafos)' :
-                           aiMaxTokens < 1500 ? '📄 Media (análisis completo)' :
-                           '📚 Detallada (informe extenso)'}
-                        </span>
-                      </div>
-                      <span className="text-lg font-mono text-cyan-400 bg-slate-900 px-3 py-1 rounded">{aiMaxTokens}</span>
-                    </label>
-                    <input 
-                      type="range"
-                      min="100"
-                      max="4000"
-                      step="50"
-                      value={aiMaxTokens}
-                      onChange={(e) => setAiMaxTokens(parseInt(e.target.value))}
-                      className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                    />
-                    <div className="flex justify-between text-sm text-slate-500 mt-2">
-                      <span>100</span>
-                      <span>500</span>
-                      <span>1000</span>
-                      <span>2000</span>
-                      <span>4000</span>
-                    </div>
-                    
-                    {/* Presets de respuesta rápida */}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        onClick={() => setAiMaxTokens(100)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                          aiMaxTokens === 100 
-                            ? 'bg-cyan-600 text-white' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        ⚡ Ultra-corto (100)
-                      </button>
-                      <button
-                        onClick={() => setAiMaxTokens(200)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                          aiMaxTokens === 200 
-                            ? 'bg-cyan-600 text-white' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        💬 Muy breve (200)
-                      </button>
-                      <button
-                        onClick={() => setAiMaxTokens(500)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                          aiMaxTokens === 500 
-                            ? 'bg-cyan-600 text-white' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        📝 Breve (500)
-                      </button>
-                      <button
-                        onClick={() => setAiMaxTokens(1000)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                          aiMaxTokens === 1000 
-                            ? 'bg-cyan-600 text-white' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        📄 Normal (1000)
-                      </button>
-                      <button
-                        onClick={() => setAiMaxTokens(2000)}
-                        className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                          aiMaxTokens === 2000 
-                            ? 'bg-cyan-600 text-white' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
-                      >
-                        📚 Detallado (2000)
-                      </button>
-                    </div>
-                    
-                    <p className="text-sm text-slate-400 mt-3 bg-slate-900/50 p-3 rounded">
-                      <strong>Recomendaciones:</strong>
-                      <br/>• 100-200 tokens: Respuestas tipo "telegrama" (hechos clave solamente)
-                      <br/>• 500-1000 tokens: Balance ideal para análisis rápido pero completo
-                      <br/>• 2000+ tokens: Informes extensos con múltiples secciones
-                    </p>
-                  </div>
-
-                  {/* Información del sistema */}
-                  <div className="pt-6 border-t border-slate-700 bg-cyan-900/20 p-4 rounded-lg">
-                    <h4 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
-                      <Sliders className="w-4 h-4" />
-                      Capacidades de SAE-IA
-                    </h4>
-                    <ul className="space-y-2 text-sm text-slate-300">
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-400">✓</span>
-                        <span>Consulta en tiempo real a la base de datos Supabase</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-400">✓</span>
-                        <span>Acceso a todas las entidades desplegadas (ubicación, tripulación, estado)</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-400">✓</span>
-                        <span>Análisis del Timeline de eventos militares</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-400">✓</span>
-                        <span>Cálculo automático de efectivos totales</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-yellow-400">⚠</span>
-                        <span>No inventa datos - solo usa información verificada del sistema</span>
-                      </li>
-                    </ul>
                   </div>
                 </div>
               </div>
