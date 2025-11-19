@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Layers, 
   Map as MapIcon, 
@@ -28,7 +28,8 @@ import {
   Clock,
   Calendar,
   User,
-  LogOut
+  LogOut,
+  UserCircle2
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -78,6 +79,8 @@ export default function TopNavigationBar({
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
   const { canAccessSettings, canCreate } = useUserRole();
@@ -107,6 +110,20 @@ export default function TopNavigationBar({
       window.dispatchEvent(new CustomEvent('settingsPanelClose'));
     }
   }, [showSettingsPanel]);
+
+  // Cerrar menú de usuario al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showUserMenu]);
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
@@ -204,37 +221,90 @@ export default function TopNavigationBar({
         {/* Separador - Oculto en móvil */}
         <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
-        {/* Spacer - Empuja configuración a la derecha */}
+        {/* Spacer - Empuja menú de usuario a la derecha */}
         <div className="flex-1"></div>
 
-        {/* ⚙️ Configuración - Solo visible si tiene permiso */}
-        {canAccessSettings() && (
-          <NavButton
-            icon={<Settings className="w-5 h-5" />}
-            label="Config"
-            active={showSettingsPanel}
-            onClick={() => setShowSettingsPanel(true)}
-            tooltip="Configuración"
-          />
-        )}
-
-        {/* 👤 Usuario (extremo derecho) */}
+        {/* 👤 Menú de Usuario Desplegable (extremo derecho) */}
         {user && onSignOut && (
-          <div className="ml-auto flex items-center gap-2 pl-4 border-l border-slate-700">
-            <div className="hidden sm:flex items-center gap-2 text-xs">
-              <div className="text-slate-400">
-                <User className="w-4 h-4" />
-              </div>
-              <span className="text-slate-300">{user.email}</span>
-            </div>
+          <div className="relative" ref={userMenuRef}>
             <button
-              onClick={() => setShowLogoutModal(true)}
-              className="flex items-center gap-1 px-3 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 hover:text-red-300 rounded-lg transition-all border border-red-900/30 hover:border-red-700/50"
-              title="Cerrar Sesión"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg transition-all border border-slate-700 hover:border-blue-500 ml-2"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="text-xs font-medium hidden sm:inline">Salir</span>
+              <div className="w-7 h-7 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xs">
+                  {user.email?.charAt(0).toUpperCase() || '?'}
+                </span>
+              </div>
+              <div className="hidden sm:block text-left">
+                <div className="text-white text-xs font-medium">
+                  {user.email?.split('@')[0]}
+                </div>
+                <div className="text-slate-400 text-[10px]">
+                  {user.email?.split('@')[1]}
+                </div>
+              </div>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
             </button>
+
+            {/* Menú desplegable */}
+            {showUserMenu && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden">
+                {/* Info del usuario */}
+                <div className="p-4 border-b border-slate-700 bg-slate-800/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">
+                        {user.email?.charAt(0).toUpperCase() || '?'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm font-medium truncate">
+                        {user.email}
+                      </div>
+                      <div className="text-slate-400 text-xs">
+                        Usuario activo
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opciones del menú */}
+                <div className="py-2">
+                  {/* Configuración */}
+                  {canAccessSettings() && (
+                    <button
+                      onClick={() => {
+                        setShowSettingsPanel(true);
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 transition-colors text-left"
+                    >
+                      <Settings className="w-4 h-4 text-blue-400" />
+                      <div className="flex-1">
+                        <div className="text-white text-sm">Configuración</div>
+                        <div className="text-slate-500 text-xs">Ajustes del sistema</div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Cerrar Sesión */}
+                  <button
+                    onClick={() => {
+                      setShowLogoutModal(true);
+                      setShowUserMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-900/20 transition-colors text-left border-t border-slate-800"
+                  >
+                    <LogOut className="w-4 h-4 text-red-400" />
+                    <div className="flex-1">
+                      <div className="text-red-400 text-sm font-medium">Cerrar Sesión</div>
+                      <div className="text-red-400/60 text-xs">Salir del sistema</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
