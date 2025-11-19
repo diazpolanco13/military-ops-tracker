@@ -18,6 +18,7 @@ export default function MeasurementTools({ map, onClose }) {
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
   const drawRef = useRef(null);
+  const labelsAddedRef = useRef(false); // Para evitar agregar source/layer múltiples veces
 
   // Inicializar Mapbox Draw cada vez que se monta el componente
   useEffect(() => {
@@ -114,6 +115,15 @@ export default function MeasurementTools({ map, onClose }) {
 
     const handleDelete = () => {
       setMeasurements([]);
+      
+      // Limpiar labels cuando se eliminan figuras
+      const source = map.getSource('measurement-labels');
+      if (source) {
+        source.setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
     };
 
     map.on('draw.create', handleCreate);
@@ -136,26 +146,26 @@ export default function MeasurementTools({ map, onClose }) {
           console.warn('Control already removed:', err);
         }
       }
+
+      // Limpiar labels del mapa
+      if (map.getLayer('measurement-labels')) {
+        map.removeLayer('measurement-labels');
+      }
+      if (map.getSource('measurement-labels')) {
+        map.removeSource('measurement-labels');
+      }
+      labelsAddedRef.current = false;
     };
   }, [map]);
 
   // Listener para crear círculo al hacer clic en el mapa
   useEffect(() => {
-    console.log('🔄 useEffect círculo - activeTool:', activeTool, 'map:', !!map, 'drawRef:', !!drawRef.current);
-    
-    if (!map || activeTool !== 'circle' || !drawRef.current) {
-      console.log('⏭️ Saliendo de useEffect - condiciones no cumplidas');
-      return;
-    }
-
-    console.log('✅ Configurando listener de círculo');
+    if (!map || activeTool !== 'circle' || !drawRef.current) return;
 
     // Cambiar a modo simple_select para permitir clicks en el mapa
     drawRef.current.changeMode('simple_select');
 
     const handleMapClick = (e) => {
-      console.log('🖱️ CLICK EN MAPA DETECTADO:', e.lngLat);
-      
       // Prevenir que el evento se propague
       e.preventDefault();
       
@@ -165,14 +175,12 @@ export default function MeasurementTools({ map, onClose }) {
 
     // Usar setTimeout para asegurar que el listener se agrega DESPUÉS de MapboxDraw
     const timeoutId = setTimeout(() => {
-      console.log('➕ Agregando listener de click al mapa');
       map.on('click', handleMapClick);
       // Cambiar cursor para indicar que está en modo círculo
       map.getCanvas().style.cursor = 'crosshair';
     }, 100);
 
     return () => {
-      console.log('🧹 Limpiando listener de círculo');
       clearTimeout(timeoutId);
       map.off('click', handleMapClick);
       map.getCanvas().style.cursor = '';
@@ -217,6 +225,84 @@ export default function MeasurementTools({ map, onClose }) {
     });
 
     setMeasurements(results);
+    addLabelsToMap(results); // ✅ Agregar labels visuales al mapa
+  };
+
+  // Agregar labels al mapa mostrando mediciones directamente en las figuras
+  const addLabelsToMap = (measurementsData) => {
+    if (!map) return;
+
+    // Agregar source y layer solo una vez
+    if (!labelsAddedRef.current) {
+      if (!map.getSource('measurement-labels')) {
+        map.addSource('measurement-labels', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+      }
+
+      if (!map.getLayer('measurement-labels')) {
+        map.addLayer({
+          id: 'measurement-labels',
+          type: 'symbol',
+          source: 'measurement-labels',
+          layout: {
+            'text-field': ['get', 'label'],
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 14,
+            'text-anchor': 'center'
+          },
+          paint: {
+            'text-color': '#22c55e',
+            'text-halo-color': '#000000',
+            'text-halo-width': 2,
+            'text-halo-blur': 1
+          }
+        });
+      }
+      labelsAddedRef.current = true;
+    }
+
+    // Crear features para los labels
+    const labelFeatures = measurementsData.map(m => {
+      let coordinates;
+      
+      if (m.type === 'distance') {
+        // Label en el punto medio de la línea
+        const line = turf.lineString(m.coordinates);
+        const midpoint = turf.along(line, turf.length(line) / 2, { units: 'kilometers' });
+        coordinates = midpoint.geometry.coordinates;
+      } else if (m.type === 'area') {
+        // Label en el centroide del polígono
+        const polygon = turf.polygon(m.coordinates);
+        const centroid = turf.centroid(polygon);
+        coordinates = centroid.geometry.coordinates;
+      }
+
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: coordinates
+        },
+        properties: {
+          label: m.label,
+          id: m.id
+        }
+      };
+    }).filter(f => f.geometry.coordinates);
+
+    // Actualizar source con los labels
+    const source = map.getSource('measurement-labels');
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: labelFeatures
+      });
+    }
   };
 
   // Activar herramienta de línea
@@ -262,6 +348,15 @@ export default function MeasurementTools({ map, onClose }) {
     drawRef.current.deleteAll();
     setMeasurements([]);
     setActiveTool(null);
+    
+    // Limpiar labels del mapa
+    const source = map?.getSource('measurement-labels');
+    if (source) {
+      source.setData({
+        type: 'FeatureCollection',
+        features: []
+      });
+    }
   };
 
   // Manejar cierre del componente
