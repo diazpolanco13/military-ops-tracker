@@ -16,6 +16,7 @@ export default function DeploymentStats() {
     destructor: Ship,
     fragata: Ship,
     portaaviones: Anchor,
+    anfibio: Ship,  // Buques de asalto anfibio (LHD/LHA)
     submarino: Target,
     patrullero: Ship,
     avion: Plane,
@@ -33,6 +34,7 @@ export default function DeploymentStats() {
     destructor: '#ef4444',
     fragata: '#3b82f6',
     portaaviones: '#f59e0b',
+    anfibio: '#14b8a6',  // Teal para diferenciar de portaaviones
     submarino: '#8b5cf6',
     patrullero: '#06b6d4',
     avion: '#6b7280',
@@ -50,6 +52,7 @@ export default function DeploymentStats() {
     destructor: 'Buques de Combate', // Engloba destructores + cruceros
     fragata: 'Fragata',
     portaaviones: 'Portaaviones',
+    anfibio: 'Buque Anfibio',  // LHD/LHA - Asalto anfibio
     submarino: 'Submarino',
     patrullero: 'Patrullero',
     avion: 'Avión',
@@ -105,7 +108,7 @@ export default function DeploymentStats() {
       
       // EMBARCACIONES (Únicas, con identidad propia)
       // quantity siempre es 1, cada barco tiene nombre
-      if (['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(type)) {
+      if (['portaaviones', 'anfibio', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(type)) {
         // Tripulación + Personal embarcado (marines, tropas)
         byType[type].personnel += (crewCount + embarkedPersonnel);
       }

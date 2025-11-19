@@ -556,7 +556,7 @@ export default function EntityDetailedModal({ entity, onClose }) {
                       )}
                       
                       {/* Efectivos Totales (Resumen para embarcaciones) */}
-                      {['portaaviones', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && 
+                      {['portaaviones', 'anfibio', 'destructor', 'fragata', 'submarino', 'patrullero'].includes(entity.type) && 
                        (getValue('crew_count') || getValue('embarked_personnel')) && (
                         <div className="bg-green-900/20 rounded-lg p-3 border-2 border-green-900/40">
                           <div className="text-xs text-green-400 mb-1 font-semibold uppercase">
