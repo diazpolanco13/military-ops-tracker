@@ -105,24 +105,33 @@ export default function MeasurementTools({ map, onClose }) {
     drawRef.current = draw;
 
     // Eventos de dibujo
-    const handleCreate = (e) => {
-      calculateMeasurements(e.features);
+    const handleCreate = () => {
+      // Obtener TODAS las features, no solo las nuevas
+      const allFeatures = drawRef.current.getAll();
+      calculateMeasurements(allFeatures.features);
     };
 
-    const handleUpdate = (e) => {
-      calculateMeasurements(e.features);
+    const handleUpdate = () => {
+      // Obtener TODAS las features, no solo las actualizadas
+      const allFeatures = drawRef.current.getAll();
+      calculateMeasurements(allFeatures.features);
     };
 
     const handleDelete = () => {
-      setMeasurements([]);
-      
-      // Limpiar labels cuando se eliminan figuras
-      const source = map.getSource('measurement-labels');
-      if (source) {
-        source.setData({
-          type: 'FeatureCollection',
-          features: []
-        });
+      // Recalcular con las features restantes
+      const allFeatures = drawRef.current.getAll();
+      if (allFeatures.features.length > 0) {
+        calculateMeasurements(allFeatures.features);
+      } else {
+        // Si no quedan features, limpiar todo
+        setMeasurements([]);
+        const source = map.getSource('measurement-labels');
+        if (source) {
+          source.setData({
+            type: 'FeatureCollection',
+            features: []
+          });
+        }
       }
     };
 
@@ -359,14 +368,11 @@ export default function MeasurementTools({ map, onClose }) {
     };
 
     // Agregar como polígono
-    const ids = drawRef.current.add(circle);
+    drawRef.current.add(circle);
     
-    // Calcular mediciones para el círculo
-    calculateMeasurements([{
-      id: ids[0],
-      geometry: circle.geometry,
-      properties: circle.properties
-    }]);
+    // Recalcular TODAS las mediciones (incluido el nuevo círculo)
+    const allFeatures = drawRef.current.getAll();
+    calculateMeasurements(allFeatures.features);
   };
 
   // Limpiar todo
