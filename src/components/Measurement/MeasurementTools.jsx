@@ -231,166 +231,94 @@ export default function MeasurementTools({ map, onClose }) {
   };
 
   return (
-    <div className="fixed top-20 left-4 z-30 pointer-events-auto max-w-[320px]">
-      {/* Panel de herramientas SIEMPRE expandido - Más profesional */}
-      <div className="bg-slate-900/98 border border-slate-700 rounded-lg backdrop-blur-md shadow-2xl w-80">
-        {/* Header compacto */}
-        <div className="px-3 py-2 border-b border-slate-700/50 bg-gradient-to-r from-green-900/20 to-slate-900 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Ruler className="w-4 h-4 text-green-400" />
-            <h3 className="text-green-400 font-semibold text-xs uppercase tracking-wide">
-              Medición
-            </h3>
-          </div>
-          {onClose && (
-            <button
-              onClick={handleClose}
-              className="p-1 hover:bg-red-500/20 rounded transition-colors"
-              title="Cerrar (borra dibujos)"
-            >
-              <X className="w-3.5 h-3.5 text-red-400/60 hover:text-red-400" />
-            </button>
-          )}
-        </div>
+    <>
+      {/* Mini menú flotante de iconos - MINIMALISTA */}
+      <div className="fixed left-4 z-30 pointer-events-auto flex flex-col gap-2" style={{ top: '140px' }}>
+        {/* Medir distancia */}
+        <button
+          onClick={activateLineTool}
+          className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
+            activeTool === 'line'
+              ? 'bg-green-500 border-2 border-green-400'
+              : 'bg-slate-900/95 border-2 border-slate-700 hover:border-green-500'
+          }`}
+          title="Medir Distancia (Click para agregar puntos)"
+        >
+          <Ruler className={`w-5 h-5 ${activeTool === 'line' ? 'text-white' : 'text-green-400'}`} />
+        </button>
 
-        {/* Herramientas - Diseño compacto */}
-        <div className="p-2.5 space-y-1.5">
-          {/* Medir distancia */}
-          <button
-            onClick={activateLineTool}
-            className={`w-full px-3 py-2 rounded-md border transition-all flex items-center gap-2.5 ${
-              activeTool === 'line'
-                ? 'bg-green-500/20 border-green-500/70 text-green-400'
-                : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:border-green-500/50 hover:bg-slate-800/50'
-            }`}
-          >
-            <Ruler className="w-4 h-4 flex-shrink-0" />
-            <div className="text-left flex-1 min-w-0">
-              <div className="font-semibold text-xs">Medir Distancia</div>
-              <div className="text-[10px] opacity-60">Click para puntos</div>
-            </div>
-          </button>
+        {/* Medir área */}
+        <button
+          onClick={activatePolygonTool}
+          className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
+            activeTool === 'polygon'
+              ? 'bg-blue-500 border-2 border-blue-400'
+              : 'bg-slate-900/95 border-2 border-slate-700 hover:border-blue-500'
+          }`}
+          title="Medir Área (Dibujar polígono)"
+        >
+          <Pentagon className={`w-5 h-5 ${activeTool === 'polygon' ? 'text-white' : 'text-blue-400'}`} />
+        </button>
 
-          {/* Medir área */}
-          <button
-            onClick={activatePolygonTool}
-            className={`w-full px-3 py-2 rounded-md border transition-all flex items-center gap-2.5 ${
-              activeTool === 'polygon'
-                ? 'bg-blue-500/20 border-blue-500/70 text-blue-400'
-                : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:border-blue-500/50 hover:bg-slate-800/50'
-            }`}
-          >
-            <Pentagon className="w-4 h-4 flex-shrink-0" />
-            <div className="text-left flex-1 min-w-0">
-              <div className="font-semibold text-xs">Medir Área</div>
-              <div className="text-[10px] opacity-60">Dibujar polígono</div>
-            </div>
-          </button>
-
-          {/* Círculo de alcance - Compacto */}
-          <div className={`border rounded-md transition-all ${
+        {/* Círculo de alcance */}
+        <button
+          onClick={createCircle}
+          className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
             activeTool === 'circle'
-              ? 'bg-cyan-500/20 border-cyan-500/70'
-              : 'bg-slate-800/30 border-slate-700/50'
-          }`}>
-            <button
-              onClick={createCircle}
-              className="w-full px-3 py-2 flex items-center gap-2.5 text-left hover:bg-slate-800/30 transition-colors"
-            >
-              <Circle className={`w-4 h-4 flex-shrink-0 ${activeTool === 'circle' ? 'text-cyan-400' : 'text-slate-300'}`} />
-              <div className="flex-1 min-w-0">
-                <div className={`font-semibold text-xs ${activeTool === 'circle' ? 'text-cyan-400' : 'text-slate-300'}`}>
-                  Círculo de Alcance
-                </div>
-                <div className={`text-[10px] ${activeTool === 'circle' ? 'text-cyan-400/60' : 'text-slate-500'}`}>
-                  {circleRadius} km • 
-                  {circleRadius < 500 ? ' Corto' : 
-                   circleRadius < 1500 ? ' Medio' : 
-                   circleRadius < 3500 ? ' Largo' : 
-                   ' Intercontinental'}
-                </div>
-              </div>
-            </button>
-            
-            {/* Control de radio - Más compacto */}
-            <div className="px-3 pb-2 space-y-1">
-              <input
-                type="range"
-                min="10"
-                max="6000"
-                step="50"
-                value={circleRadius}
-                onChange={(e) => setCircleRadius(parseInt(e.target.value))}
-                className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-              />
-              <div className="flex justify-between text-[9px] text-slate-500 font-mono">
-                <span>10</span>
-                <span>6000 km</span>
-              </div>
-            </div>
-          </div>
+              ? 'bg-cyan-500 border-2 border-cyan-400'
+              : 'bg-slate-900/95 border-2 border-slate-700 hover:border-cyan-500'
+          }`}
+          title={`Círculo de Alcance (${circleRadius} km)`}
+        >
+          <Circle className={`w-5 h-5 ${activeTool === 'circle' ? 'text-white' : 'text-cyan-400'}`} />
+        </button>
 
-          {/* Limpiar todo - Compacto */}
-          <button
-            onClick={clearAll}
-            className="w-full px-3 py-2 rounded-md border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all flex items-center gap-2.5"
-          >
-            <Trash2 className="w-4 h-4 flex-shrink-0" />
-            <div className="text-left flex-1 min-w-0">
-              <div className="font-semibold text-xs">Limpiar Todo</div>
-              <div className="text-[10px] opacity-60">Borrar mediciones</div>
+        {/* Control de radio del círculo - Solo visible cuando círculo está activo */}
+        {activeTool === 'circle' && (
+          <div className="bg-slate-900/98 border border-cyan-500/50 rounded-lg backdrop-blur-md shadow-xl p-2 w-48">
+            <div className="text-cyan-400 text-xs font-semibold mb-1.5">
+              Radio: {circleRadius} km
             </div>
-          </button>
-        </div>
-
-        {/* Panel de resultados - Compacto */}
-        {measurements.length > 0 && (
-          <div className="border-t border-slate-700/50 p-2.5">
-            <div className="text-green-400 text-[10px] font-bold uppercase tracking-wider mb-1.5">
-              📊 Resultados
-            </div>
-            <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar-transparent">
-              {measurements.map((m, idx) => (
-                <div
-                  key={m.id || idx}
-                  className="bg-slate-800/30 rounded-md p-2 border border-slate-700/30"
-                >
-                  {m.type === 'distance' && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-green-400 text-[10px] font-semibold">📏 Distancia</span>
-                      <span className="text-green-400 font-mono font-bold text-xs">{m.label}</span>
-                    </div>
-                  )}
-                  
-                  {m.type === 'area' && (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <span className="text-blue-400 text-[10px] font-semibold">📐 Área</span>
-                        <span className="text-blue-400 font-mono font-bold text-xs">{m.label}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-blue-400/50 text-[9px]">Perímetro</span>
-                        <span className="text-blue-400/70 font-mono text-[10px]">{m.perimeterLabel}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ))}
+            <input
+              type="range"
+              min="10"
+              max="6000"
+              step="50"
+              value={circleRadius}
+              onChange={(e) => setCircleRadius(parseInt(e.target.value))}
+              className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            />
+            <div className="flex justify-between text-[9px] text-slate-500 mt-1">
+              <span>10</span>
+              <span>6000 km</span>
             </div>
           </div>
         )}
 
-        {/* Ayuda - Compacta */}
-        <div className="border-t border-slate-700/50 p-2.5 bg-slate-800/20">
-          <div className="text-slate-500 text-[10px] space-y-0.5">
-            <div><strong className="text-green-400">Enter:</strong> Finalizar</div>
-            <div><strong className="text-yellow-400">Esc:</strong> Cancelar</div>
-            <div><strong className="text-red-400">Delete:</strong> Borrar seleccionado</div>
-            <div><strong className="text-red-400">Cerrar (X):</strong> Borra todos los dibujos</div>
-          </div>
-        </div>
+        {/* Separador */}
+        <div className="h-px bg-slate-700 my-1"></div>
+
+        {/* Limpiar todo */}
+        <button
+          onClick={clearAll}
+          className="w-10 h-10 bg-slate-900/95 border-2 border-red-500/50 hover:border-red-500 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center hover:bg-red-500/20"
+          title="Limpiar Todo (Borrar mediciones)"
+        >
+          <Trash2 className="w-5 h-5 text-red-400" />
+        </button>
+
+        {/* Cerrar */}
+        {onClose && (
+          <button
+            onClick={handleClose}
+            className="w-10 h-10 bg-slate-900/95 border-2 border-slate-600 hover:border-red-500 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center hover:bg-red-500/20"
+            title="Cerrar herramientas (borra dibujos)"
+          >
+            <X className="w-5 h-5 text-slate-400 hover:text-red-400" />
+          </button>
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
