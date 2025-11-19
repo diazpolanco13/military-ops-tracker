@@ -187,11 +187,12 @@ function App() {
           />
         )}
 
-        {/* Botón flotante para herramientas de medición */}
+        {/* Botón flotante para herramientas de medición - Posición adaptativa */}
         {!showMeasurementTools && mapInstance && (
           <button
             onClick={() => setShowMeasurementTools(true)}
-            className="fixed top-20 left-4 w-10 h-10 bg-slate-900/95 hover:bg-slate-800 border-2 border-green-500/50 hover:border-green-500 rounded-lg backdrop-blur-md shadow-xl hover:shadow-green-500/30 flex items-center justify-center transition-all hover:scale-110 z-30 group"
+            className="fixed left-4 w-10 h-10 bg-slate-900/95 hover:bg-slate-800 border-2 border-green-500/50 hover:border-green-500 rounded-lg backdrop-blur-md shadow-xl hover:shadow-green-500/30 flex items-center justify-center transition-all hover:scale-110 z-30 group"
+            style={{ top: showSearch ? '140px' : '72px' }}
             title="Herramientas de Medición"
           >
             <Ruler className="w-5 h-5 text-green-400 group-hover:text-green-300" />

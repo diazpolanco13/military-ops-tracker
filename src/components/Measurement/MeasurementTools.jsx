@@ -10,20 +10,21 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
  * - Calcular áreas de polígonos
  * - Crear círculos de alcance (radio de acción)
  * - Visualización en tiempo real con Turf.js
- * - Panel minimizable (los dibujos persisten en el mapa)
  * - Botón de cierre rápido
+ * - Cleanup correcto al cerrar/abrir
  */
 export default function MeasurementTools({ map, onClose }) {
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
-  const [isMinimized, setIsMinimized] = useState(false); // Estado de minimización
   const drawRef = useRef(null);
-  const drawInitializedRef = useRef(false); // Evitar reinicializar Draw
 
-  // Inicializar Mapbox Draw SOLO UNA VEZ (persiste incluso al minimizar)
+  // Inicializar Mapbox Draw cada vez que se monta el componente
   useEffect(() => {
-    if (!map || drawInitializedRef.current) return;
+    if (!map) return;
+
+    // Si ya existe un draw, no crear otro
+    if (drawRef.current) return;
 
     // Estilos militares personalizados para Draw
     const drawStyles = [
@@ -101,7 +102,6 @@ export default function MeasurementTools({ map, onClose }) {
 
     map.addControl(draw, 'top-left');
     drawRef.current = draw;
-    drawInitializedRef.current = true; // Marcar como inicializado
 
     // Eventos de dibujo
     const handleCreate = (e) => {
@@ -120,12 +120,22 @@ export default function MeasurementTools({ map, onClose }) {
     map.on('draw.update', handleUpdate);
     map.on('draw.delete', handleDelete);
 
-    // NO removemos el control al desmontar, queremos que persista
-    // Solo limpiamos los event listeners
+    // Cleanup: Remover control y listeners al desmontar
     return () => {
       map.off('draw.create', handleCreate);
       map.off('draw.update', handleUpdate);
       map.off('draw.delete', handleDelete);
+      
+      // Remover el control del mapa si existe
+      if (drawRef.current) {
+        try {
+          map.removeControl(drawRef.current);
+          drawRef.current = null; // Limpiar referencia
+        } catch (err) {
+          // Ignorar errores si el control ya fue removido
+          console.warn('Control already removed:', err);
+        }
+      }
     };
   }, [map]);
 
