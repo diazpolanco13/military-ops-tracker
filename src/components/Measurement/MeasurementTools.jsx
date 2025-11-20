@@ -167,14 +167,14 @@ export default function MeasurementTools({ map, onClose }) {
     };
   }, [map]);
 
-  // Listener para crear círculo al hacer clic en el mapa
+  // Listener para crear círculo al hacer clic/tap en el mapa (desktop + móvil)
   useEffect(() => {
     if (!map || activeTool !== 'circle' || !drawRef.current) return;
 
     // Cambiar a modo simple_select para permitir clicks en el mapa
     drawRef.current.changeMode('simple_select');
 
-    const handleMapClick = (e) => {
+    const handleMapInteraction = (e) => {
       // Prevenir que el evento se propague
       e.preventDefault();
       
@@ -184,14 +184,19 @@ export default function MeasurementTools({ map, onClose }) {
 
     // Usar setTimeout para asegurar que el listener se agrega DESPUÉS de MapboxDraw
     const timeoutId = setTimeout(() => {
-      map.on('click', handleMapClick);
+      // Eventos para desktop (mouse)
+      map.on('click', handleMapInteraction);
+      // Eventos para móvil (touch)
+      map.on('touchend', handleMapInteraction);
+      
       // Cambiar cursor para indicar que está en modo círculo
       map.getCanvas().style.cursor = 'crosshair';
     }, 100);
 
     return () => {
       clearTimeout(timeoutId);
-      map.off('click', handleMapClick);
+      map.off('click', handleMapInteraction);
+      map.off('touchend', handleMapInteraction);
       map.getCanvas().style.cursor = '';
     };
   }, [map, activeTool, circleRadius]);
