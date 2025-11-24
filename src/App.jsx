@@ -12,7 +12,7 @@ import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
 import GlobalAddEventButton from './components/Common/GlobalAddEventButton';
 import { useState, useEffect } from 'react';
-import { Ruler } from 'lucide-react';
+import { Shapes } from 'lucide-react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
 import { SelectionProvider } from './stores/SelectionContext';
@@ -195,7 +195,7 @@ function App() {
             style={{ top: showSearch ? '140px' : '72px' }}
             title="Herramientas de Medición"
           >
-            <Ruler className="w-5 h-5 text-green-400 group-hover:text-green-300" />
+            <Shapes className="w-5 h-5 text-green-400 group-hover:text-green-300" />
           </button>
         )}
 
