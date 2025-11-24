@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
-import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus, ArrowRight } from 'lucide-react';
+import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus, ArrowRight, Undo2 } from 'lucide-react';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 /**
@@ -24,6 +24,7 @@ export default function MeasurementTools({ map, onClose }) {
   const labelsAddedRef = useRef(false); // Para evitar agregar source/layer múltiples veces
   const arrowIdsRef = useRef(new Set()); // Set de IDs de features que son flechas
   const currentToolRef = useRef(null); // Guardar el tool actual para handleCreate
+  const historyRef = useRef([]); // Historial de features para deshacer (max 20)
 
   // Inicializar Mapbox Draw cada vez que se monta el componente
   useEffect(() => {
@@ -292,6 +293,19 @@ export default function MeasurementTools({ map, onClose }) {
       console.error('❌ Error actualizando estilo:', err);
     }
   }, [map, lineStyle]);
+
+  // Atajo de teclado: Ctrl+Z para deshacer
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undoLast();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Listener para crear círculo al hacer clic/tap en el mapa (desktop + móvil)
   useEffect(() => {
@@ -607,6 +621,30 @@ export default function MeasurementTools({ map, onClose }) {
     calculateMeasurements(allFeatures.features);
   };
 
+  // Deshacer última acción
+  const undoLast = () => {
+    if (!drawRef.current) return;
+    
+    try {
+      const allFeatures = drawRef.current.getAll();
+      
+      if (allFeatures.features.length === 0) return;
+      
+      // Eliminar la última feature creada
+      const lastFeature = allFeatures.features[allFeatures.features.length - 1];
+      drawRef.current.delete(lastFeature.id);
+      
+      // Eliminar del set de flechas si es una flecha
+      arrowIdsRef.current.delete(lastFeature.id);
+      
+      // Recalcular mediciones
+      const updatedFeatures = drawRef.current.getAll();
+      calculateMeasurements(updatedFeatures.features);
+    } catch (err) {
+      console.error('Error en undo:', err);
+    }
+  };
+
   // Limpiar todo
   const clearAll = () => {
     if (!drawRef.current) return;
@@ -867,6 +905,15 @@ export default function MeasurementTools({ map, onClose }) {
 
         {/* Separador */}
         <div className="h-px bg-slate-700 my-1"></div>
+
+        {/* Deshacer última acción */}
+        <button
+          onClick={undoLast}
+          className="w-10 h-10 bg-slate-900/95 border-2 border-yellow-500/50 hover:border-yellow-500 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center hover:bg-yellow-500/20"
+          title="Deshacer (Ctrl+Z) - Elimina el último dibujo"
+        >
+          <Undo2 className="w-5 h-5 text-yellow-400" />
+        </button>
 
         {/* Limpiar todo */}
         <button
