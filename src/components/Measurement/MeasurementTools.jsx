@@ -139,31 +139,15 @@ export default function MeasurementTools({ map, onClose }) {
     map.on('draw.update', handleUpdate);
     map.on('draw.delete', handleDelete);
 
-    // Cleanup: Remover control y listeners al desmontar
+    // Cleanup: Solo remover listeners, NO el control ni los labels
+    // Esto permite que los dibujos persistan al ocultar la barra
     return () => {
       map.off('draw.create', handleCreate);
       map.off('draw.update', handleUpdate);
       map.off('draw.delete', handleDelete);
       
-      // Remover el control del mapa si existe
-      if (drawRef.current) {
-        try {
-          map.removeControl(drawRef.current);
-          drawRef.current = null; // Limpiar referencia
-        } catch (err) {
-          // Ignorar errores si el control ya fue removido
-          console.warn('Control already removed:', err);
-        }
-      }
-
-      // Limpiar labels del mapa
-      if (map.getLayer('measurement-labels')) {
-        map.removeLayer('measurement-labels');
-      }
-      if (map.getSource('measurement-labels')) {
-        map.removeSource('measurement-labels');
-      }
-      labelsAddedRef.current = false;
+      // NO removemos el control ni los labels aquí
+      // Solo se remueven cuando se llama explícitamente a handleClose()
     };
   }, [map]);
 
@@ -397,10 +381,32 @@ export default function MeasurementTools({ map, onClose }) {
     }
   };
 
-  // Manejar cierre del componente
+  // Manejar cierre del componente (botón X - Destructivo)
   const handleClose = () => {
     // Limpiar todos los gráficos antes de cerrar
     clearAll();
+    
+    // Remover control de MapboxDraw del mapa
+    if (drawRef.current && map) {
+      try {
+        map.removeControl(drawRef.current);
+        drawRef.current = null;
+      } catch (err) {
+        console.warn('Control already removed:', err);
+      }
+    }
+    
+    // Remover layers y sources de labels
+    if (map) {
+      if (map.getLayer('measurement-labels')) {
+        map.removeLayer('measurement-labels');
+      }
+      if (map.getSource('measurement-labels')) {
+        map.removeSource('measurement-labels');
+      }
+      labelsAddedRef.current = false;
+    }
+    
     // Llamar al callback de cierre
     if (onClose) {
       onClose();
