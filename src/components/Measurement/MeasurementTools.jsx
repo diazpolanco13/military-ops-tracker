@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
-import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2 } from 'lucide-react';
+import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus } from 'lucide-react';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 /**
@@ -17,6 +17,8 @@ export default function MeasurementTools({ map, onClose }) {
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
+  const [selectedColor, setSelectedColor] = useState('#22c55e'); // Verde por defecto
+  const [lineWidth, setLineWidth] = useState(3); // Grosor de línea por defecto
   const drawRef = useRef(null);
   const labelsAddedRef = useRef(false); // Para evitar agregar source/layer múltiples veces
 
@@ -477,6 +479,31 @@ export default function MeasurementTools({ map, onClose }) {
             </div>
           </div>
         )}
+
+        {/* Separador */}
+        <div className="h-px bg-slate-700 my-1"></div>
+
+        {/* Selector de colores */}
+        <div className="flex gap-1.5">
+          {[
+            { color: '#22c55e', name: 'Verde (Aliado)' },
+            { color: '#3b82f6', name: 'Azul (Neutral)' },
+            { color: '#ef4444', name: 'Rojo (Enemigo)' },
+            { color: '#f59e0b', name: 'Amarillo (Precaución)' }
+          ].map((colorOption) => (
+            <button
+              key={colorOption.color}
+              onClick={() => setSelectedColor(colorOption.color)}
+              className={`w-8 h-8 rounded-md transition-all hover:scale-110 ${
+                selectedColor === colorOption.color
+                  ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900'
+                  : 'opacity-70 hover:opacity-100'
+              }`}
+              style={{ backgroundColor: colorOption.color }}
+              title={colorOption.name}
+            />
+          ))}
+        </div>
 
         {/* Separador */}
         <div className="h-px bg-slate-700 my-1"></div>
