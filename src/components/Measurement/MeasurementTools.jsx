@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
-import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus } from 'lucide-react';
+import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus, ArrowRight } from 'lucide-react';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 /**
@@ -18,16 +18,36 @@ export default function MeasurementTools({ map, onClose }) {
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
   const [selectedColor, setSelectedColor] = useState('#22c55e'); // Verde por defecto
-  const [lineWidth, setLineWidth] = useState(3); // Grosor de línea por defecto
+  const [lineWidth, setLineWidth] = useState(3); // Grosor de línea (1-8)
+  const [lineStyle, setLineStyle] = useState('solid'); // 'solid', 'dashed', 'dotted'
   const drawRef = useRef(null);
   const labelsAddedRef = useRef(false); // Para evitar agregar source/layer múltiples veces
+  const arrowIdsRef = useRef(new Set()); // Set de IDs de features que son flechas
+  const currentToolRef = useRef(null); // Guardar el tool actual para handleCreate
 
   // Inicializar Mapbox Draw cada vez que se monta el componente
   useEffect(() => {
     if (!map) return;
 
-    // Si ya existe un draw, no crear otro
-    if (drawRef.current) return;
+    // Verificar si ya existe un MapboxDraw en el mapa (por ID de source)
+    // Si existe, no crear otro
+    if (map.getSource('mapbox-gl-draw-cold')) {
+      // Si tenemos referencia, cargar features existentes
+      if (drawRef.current) {
+        try {
+          const allFeatures = drawRef.current.getAll();
+          calculateMeasurements(allFeatures.features);
+        } catch (err) {
+          console.error('Error obteniendo features:', err);
+        }
+      }
+      return;
+    }
+
+    // Si hay un draw en el ref pero no en el mapa, limpiar ref
+    if (drawRef.current) {
+      drawRef.current = null;
+    }
 
     // Estilos militares personalizados para Draw
     const drawStyles = [
@@ -107,8 +127,20 @@ export default function MeasurementTools({ map, onClose }) {
     drawRef.current = draw;
 
     // Eventos de dibujo
-    const handleCreate = () => {
-      // Obtener TODAS las features, no solo las nuevas
+    const handleCreate = (e) => {
+      // Usar currentToolRef en lugar de activeTool (más confiable)
+      if (currentToolRef.current === 'arrow' && e.features) {
+        e.features.forEach(feature => {
+          if (feature.geometry.type === 'LineString') {
+            arrowIdsRef.current.add(feature.id);
+          }
+        });
+      }
+      
+      // Limpiar currentToolRef después de crear (para que no afecte el siguiente dibujo)
+      currentToolRef.current = null;
+      
+      // Obtener TODAS las features actualizadas
       const allFeatures = drawRef.current.getAll();
       calculateMeasurements(allFeatures.features);
     };
@@ -153,6 +185,114 @@ export default function MeasurementTools({ map, onClose }) {
     };
   }, [map]);
 
+  // Actualizar colores de las capas de MapboxDraw cuando cambia el color seleccionado
+  useEffect(() => {
+    if (!map) return;
+
+    
+    // Listar TODAS las capas que contienen "draw" en su ID
+    const allLayers = map.getStyle().layers;
+    const drawLayers = allLayers.filter(l => l.id.includes('draw') || l.id.includes('gl-draw'));
+
+    // Actualizar paint properties de TODAS las capas de dibujo encontradas
+    try {
+      drawLayers.forEach(layer => {
+        const layerId = layer.id;
+        
+        // Líneas
+        if (layer.type === 'line') {
+          map.setPaintProperty(layerId, 'line-color', selectedColor);
+        }
+        
+        // Polígonos (fill)
+        if (layer.type === 'fill') {
+          map.setPaintProperty(layerId, 'fill-color', selectedColor);
+        }
+        
+        // Círculos (vértices y puntos)
+        if (layer.type === 'circle') {
+          map.setPaintProperty(layerId, 'circle-color', selectedColor);
+        }
+      });
+
+      // Actualizar color de labels
+      if (map.getLayer('measurement-labels')) {
+        map.setPaintProperty('measurement-labels', 'text-color', selectedColor);
+      }
+
+      // Actualizar color de puntas de flecha
+      if (map.getLayer('arrow-heads')) {
+        map.setPaintProperty('arrow-heads', 'text-color', selectedColor);
+      }
+    } catch (err) {
+      console.error('❌ Error actualizando colores:', err);
+    }
+  }, [map, selectedColor]);
+
+  // Actualizar grosor de líneas Y tamaño de flechas cuando cambia lineWidth
+  useEffect(() => {
+    if (!map) return;
+
+
+    try {
+      const allLayers = map.getStyle().layers;
+      const lineLayers = allLayers.filter(l => 
+        (l.id.includes('draw') || l.id.includes('gl-draw')) && l.type === 'line'
+      );
+
+      lineLayers.forEach(layer => {
+        map.setPaintProperty(layer.id, 'line-width', lineWidth);
+      });
+
+      // Actualizar tamaño de flechas proporcionalmente
+      if (map.getLayer('arrow-heads')) {
+        const newSize = 16 + (lineWidth * 4);
+        const newHalo = 1 + lineWidth * 0.3;
+        map.setLayoutProperty('arrow-heads', 'text-size', newSize);
+        map.setPaintProperty('arrow-heads', 'text-halo-width', newHalo);
+      }
+    } catch (err) {
+      console.error('❌ Error actualizando grosor:', err);
+    }
+  }, [map, lineWidth]);
+
+  // Actualizar estilo de líneas (sólida, punteada, discontinua)
+  useEffect(() => {
+    if (!map) return;
+
+
+    // Configuración de dasharray según estilo
+    const dashArrays = {
+      solid: [1, 0],         // Línea continua (alternativa a null)
+      dashed: [6, 3],        // 6px línea, 3px espacio (más visible)
+      dotted: [0.5, 3]       // 0.5px punto, 3px espacio
+    };
+
+    try {
+      const allLayers = map.getStyle().layers;
+      const lineLayers = allLayers.filter(l => 
+        (l.id.includes('draw') || l.id.includes('gl-draw')) && l.type === 'line'
+      );
+
+
+      lineLayers.forEach(layer => {
+        try {
+          // Usar setPaintProperty para line-dasharray (algunos layers lo tienen en paint)
+          map.setPaintProperty(layer.id, 'line-dasharray', dashArrays[lineStyle]);
+        } catch (paintErr) {
+          // Si falla en paint, intentar en layout
+          try {
+            map.setLayoutProperty(layer.id, 'line-dasharray', dashArrays[lineStyle]);
+          } catch (layoutErr) {
+            console.warn('⚠️ No se pudo actualizar dasharray en:', layer.id);
+          }
+        }
+      });
+    } catch (err) {
+      console.error('❌ Error actualizando estilo:', err);
+    }
+  }, [map, lineStyle]);
+
   // Listener para crear círculo al hacer clic/tap en el mapa (desktop + móvil)
   useEffect(() => {
     if (!map || activeTool !== 'circle' || !drawRef.current) return;
@@ -192,14 +332,18 @@ export default function MeasurementTools({ map, onClose }) {
     const results = [];
 
     features.forEach(feature => {
-      // LÍNEAS: Mostrar distancia
+      // LÍNEAS: Mostrar distancia (incluye flechas)
       if (feature.geometry.type === 'LineString') {
         const line = turf.lineString(feature.geometry.coordinates);
         const length = turf.length(line, { units: 'kilometers' });
         
+        // Verificar si es una flecha (consultar el Set de IDs)
+        const isArrow = arrowIdsRef.current.has(feature.id);
+        
         results.push({
           id: feature.id,
-          type: 'distance',
+          type: isArrow ? 'arrow' : 'distance',
+          isArrow: isArrow,
           value: length,
           unit: 'km',
           label: `${length.toFixed(1)} km`,
@@ -247,12 +391,13 @@ export default function MeasurementTools({ map, onClose }) {
     addLabelsToMap(results); // ✅ Agregar labels visuales al mapa
   };
 
-  // Agregar labels al mapa mostrando mediciones directamente en las figuras
+  // Agregar labels y flechas al mapa
   const addLabelsToMap = (measurementsData) => {
     if (!map) return;
 
-    // Agregar source y layer solo una vez
+    // Agregar source y layers solo una vez
     if (!labelsAddedRef.current) {
+      // Source para labels de texto
       if (!map.getSource('measurement-labels')) {
         map.addSource('measurement-labels', {
           type: 'geojson',
@@ -263,6 +408,18 @@ export default function MeasurementTools({ map, onClose }) {
         });
       }
 
+      // Source para puntas de flecha
+      if (!map.getSource('arrow-heads')) {
+        map.addSource('arrow-heads', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: []
+          }
+        });
+      }
+
+      // Layer para labels de texto
       if (!map.getLayer('measurement-labels')) {
         map.addLayer({
           id: 'measurement-labels',
@@ -275,13 +432,38 @@ export default function MeasurementTools({ map, onClose }) {
             'text-anchor': 'center'
           },
           paint: {
-            'text-color': '#22c55e',
+            'text-color': selectedColor,
             'text-halo-color': '#000000',
             'text-halo-width': 2,
             'text-halo-blur': 1
           }
         });
+      } else {
+        map.setPaintProperty('measurement-labels', 'text-color', selectedColor);
       }
+
+      // Layer para puntas de flecha usando símbolos de texto
+      if (!map.getLayer('arrow-heads')) {
+        map.addLayer({
+          id: 'arrow-heads',
+          type: 'symbol',
+          source: 'arrow-heads',
+          layout: {
+            'text-field': '▶',
+            'text-size': 16 + (lineWidth * 4), // Escala con grosor: 20-48px
+            'text-rotate': ['get', 'bearing'],
+            'text-rotation-alignment': 'map',
+            'text-allow-overlap': true,
+            'text-ignore-placement': true
+          },
+          paint: {
+            'text-color': selectedColor,
+            'text-halo-color': '#000000',
+            'text-halo-width': 1 + lineWidth * 0.3 // Halo proporcional
+          }
+        });
+      }
+      
       labelsAddedRef.current = true;
     }
 
@@ -322,11 +504,60 @@ export default function MeasurementTools({ map, onClose }) {
         features: labelFeatures
       });
     }
+
+    // Crear puntas de flecha para líneas marcadas como flechas
+    const arrowsOnly = measurementsData.filter(m => m.type === 'arrow' || m.isArrow);
+    
+    const arrowHeads = arrowsOnly
+      .map(m => {
+        // Obtener el último punto de la línea (donde va la flecha)
+        const coords = m.coordinates;
+        const lastPoint = coords[coords.length - 1];
+        const secondLastPoint = coords[coords.length - 2];
+
+        if (!lastPoint || !secondLastPoint) return null;
+
+        // Calcular el ángulo de la línea para rotar la flecha
+        // turf.bearing devuelve ángulo en grados (-180 a 180)
+        // Mapbox necesita 0-360 con 0 = Norte
+        let bearing = turf.bearing(
+          turf.point(secondLastPoint),
+          turf.point(lastPoint)
+        );
+        
+        // Ajustar bearing: turf.bearing usa Norte=0, Este=90
+        // Pero el símbolo ▶ apunta a la derecha (Este), necesitamos rotar -90°
+        bearing = bearing - 90;
+
+        return {
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: lastPoint
+          },
+          properties: {
+            bearing: bearing
+          }
+        };
+      })
+      .filter(f => f);
+
+    // Actualizar source de puntas de flecha
+    const arrowSource = map.getSource('arrow-heads');
+    if (arrowSource) {
+      arrowSource.setData({
+        type: 'FeatureCollection',
+        features: arrowHeads
+      });
+    } else {
+      console.warn('⚠️ Source arrow-heads no existe');
+    }
   };
 
   // Activar herramienta de línea
   const activateLineTool = () => {
     if (!drawRef.current) return;
+    currentToolRef.current = 'line'; // Guardar en ref
     drawRef.current.changeMode('draw_line_string');
     setActiveTool('line');
   };
@@ -334,14 +565,24 @@ export default function MeasurementTools({ map, onClose }) {
   // Activar herramienta de polígono
   const activatePolygonTool = () => {
     if (!drawRef.current) return;
+    currentToolRef.current = 'polygon'; // Guardar en ref
     drawRef.current.changeMode('draw_polygon');
     setActiveTool('polygon');
   };
 
   // Activar modo círculo (no crea círculo aún, espera click en mapa)
   const activateCircleTool = () => {
+    currentToolRef.current = 'circle'; // Guardar en ref
     setActiveTool('circle');
     // No crear círculo aquí, esperar a que usuario haga clic en el mapa
+  };
+
+  // Activar herramienta de flecha (dibuja línea con punta de flecha)
+  const activateArrowTool = () => {
+    if (!drawRef.current) return;
+    currentToolRef.current = 'arrow'; // Guardar en ref
+    drawRef.current.changeMode('draw_line_string');
+    setActiveTool('arrow');
   };
 
   // Crear círculo en la ubicación donde el usuario hace clic
@@ -369,47 +610,81 @@ export default function MeasurementTools({ map, onClose }) {
   // Limpiar todo
   const clearAll = () => {
     if (!drawRef.current) return;
-    drawRef.current.deleteAll();
-    setMeasurements([]);
-    setActiveTool(null);
     
-    // Limpiar labels del mapa
-    const source = map?.getSource('measurement-labels');
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: []
-      });
+    try {
+      drawRef.current.deleteAll();
+      setMeasurements([]);
+      setActiveTool(null);
+      arrowIdsRef.current.clear(); // Limpiar set de flechas
+      
+      // Limpiar labels y flechas del mapa
+      const labelsSource = map?.getSource('measurement-labels');
+      if (labelsSource) {
+        labelsSource.setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+      
+      const arrowsSource = map?.getSource('arrow-heads');
+      if (arrowsSource) {
+        arrowsSource.setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+    } catch (err) {
+      console.error('Error en clearAll:', err);
     }
   };
 
   // Manejar cierre del componente (botón X - Destructivo)
   const handleClose = () => {
-    // Limpiar todos los gráficos antes de cerrar
-    clearAll();
+    // 1. Limpiar todos los gráficos dibujados
+    if (drawRef.current) {
+      try {
+        drawRef.current.deleteAll();
+      } catch (err) {
+        console.warn('Error deleting all:', err);
+      }
+    }
     
-    // Remover control de MapboxDraw del mapa
+    // 2. Remover control de MapboxDraw del mapa
     if (drawRef.current && map) {
       try {
         map.removeControl(drawRef.current);
-        drawRef.current = null;
+        drawRef.current = null; // ✅ Limpiar referencia para forzar recreación
       } catch (err) {
         console.warn('Control already removed:', err);
       }
     }
     
-    // Remover layers y sources de labels
+    // 3. Remover layers y sources de labels y flechas
     if (map) {
-      if (map.getLayer('measurement-labels')) {
-        map.removeLayer('measurement-labels');
+      try {
+        if (map.getLayer('measurement-labels')) {
+          map.removeLayer('measurement-labels');
+        }
+        if (map.getSource('measurement-labels')) {
+          map.removeSource('measurement-labels');
+        }
+        if (map.getLayer('arrow-heads')) {
+          map.removeLayer('arrow-heads');
+        }
+        if (map.getSource('arrow-heads')) {
+          map.removeSource('arrow-heads');
+        }
+        labelsAddedRef.current = false;
+      } catch (err) {
+        console.warn('Error removing labels:', err);
       }
-      if (map.getSource('measurement-labels')) {
-        map.removeSource('measurement-labels');
-      }
-      labelsAddedRef.current = false;
     }
     
-    // Llamar al callback de cierre
+    // 4. Limpiar estado local
+    setMeasurements([]);
+    setActiveTool(null);
+    
+    // 5. Llamar al callback de cierre
     if (onClose) {
       onClose();
     }
@@ -458,6 +733,19 @@ export default function MeasurementTools({ map, onClose }) {
           <Circle className={`w-5 h-5 ${activeTool === 'circle' ? 'text-white' : 'text-cyan-400'}`} />
         </button>
 
+        {/* Flecha direccional */}
+        <button
+          onClick={activateArrowTool}
+          className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
+            activeTool === 'arrow'
+              ? 'bg-purple-500 border-2 border-purple-400'
+              : 'bg-slate-900/95 border-2 border-slate-700 hover:border-purple-500'
+          }`}
+          title="Flecha Direccional (Indica movimiento/ruta)"
+        >
+          <ArrowRight className={`w-5 h-5 ${activeTool === 'arrow' ? 'text-white' : 'text-purple-400'}`} />
+        </button>
+
         {/* Control de radio del círculo - Solo visible cuando círculo está activo */}
         {activeTool === 'circle' && (
           <div className="bg-slate-900/98 border border-cyan-500/50 rounded-lg backdrop-blur-md shadow-xl p-2 w-48">
@@ -503,6 +791,78 @@ export default function MeasurementTools({ map, onClose }) {
               title={colorOption.name}
             />
           ))}
+        </div>
+
+        {/* Separador */}
+        <div className="h-px bg-slate-700 my-1"></div>
+
+        {/* Control de grosor */}
+        <div className="flex gap-1.5">
+          {[1, 2, 3, 5, 8].map((width) => (
+            <button
+              key={width}
+              onClick={() => setLineWidth(width)}
+              className={`w-8 h-8 rounded-md bg-slate-800/50 border transition-all hover:scale-110 flex items-center justify-center ${
+                lineWidth === width
+                  ? 'border-white bg-slate-700'
+                  : 'border-slate-700 hover:border-slate-500'
+              }`}
+              title={`Grosor: ${width}px`}
+            >
+              <div 
+                className="bg-white rounded-full" 
+                style={{ 
+                  width: `${Math.min(width * 2, 16)}px`, 
+                  height: `${Math.min(width * 2, 16)}px` 
+                }}
+              />
+            </button>
+          ))}
+        </div>
+
+        {/* Estilo de línea */}
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setLineStyle('solid')}
+            className={`flex-1 h-8 rounded-md bg-slate-800/50 border transition-all hover:scale-105 flex items-center justify-center ${
+              lineStyle === 'solid'
+                ? 'border-white bg-slate-700'
+                : 'border-slate-700 hover:border-slate-500'
+            }`}
+            title="Línea Sólida"
+          >
+            <div className="w-6 h-0.5 bg-white rounded"></div>
+          </button>
+          <button
+            onClick={() => setLineStyle('dashed')}
+            className={`flex-1 h-8 rounded-md bg-slate-800/50 border transition-all hover:scale-105 flex items-center justify-center ${
+              lineStyle === 'dashed'
+                ? 'border-white bg-slate-700'
+                : 'border-slate-700 hover:border-slate-500'
+            }`}
+            title="Línea Discontinua"
+          >
+            <div className="flex gap-0.5">
+              <div className="w-1.5 h-0.5 bg-white"></div>
+              <div className="w-1.5 h-0.5 bg-white"></div>
+              <div className="w-1.5 h-0.5 bg-white"></div>
+            </div>
+          </button>
+          <button
+            onClick={() => setLineStyle('dotted')}
+            className={`flex-1 h-8 rounded-md bg-slate-800/50 border transition-all hover:scale-105 flex items-center justify-center ${
+              lineStyle === 'dotted'
+                ? 'border-white bg-slate-700'
+                : 'border-slate-700 hover:border-slate-500'
+            }`}
+            title="Línea Punteada"
+          >
+            <div className="flex gap-0.5">
+              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+              <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+            </div>
+          </button>
         </div>
 
         {/* Separador */}
