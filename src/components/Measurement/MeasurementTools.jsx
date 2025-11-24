@@ -409,8 +409,8 @@ export default function MeasurementTools({ map, onClose }) {
 
   return (
     <>
-      {/* Mini menú flotante de iconos - MINIMALISTA */}
-      <div className="fixed left-4 z-30 pointer-events-auto flex flex-col gap-2" style={{ top: '140px' }}>
+      {/* Mini menú flotante de iconos - MINIMALISTA - Debajo del botón Shapes */}
+      <div className="fixed left-4 z-30 pointer-events-auto flex flex-col gap-2" style={{ top: '190px' }}>
         {/* Medir distancia */}
         <button
           onClick={activateLineTool}
