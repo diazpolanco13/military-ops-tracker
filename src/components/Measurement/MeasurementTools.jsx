@@ -484,14 +484,14 @@ export default function MeasurementTools({ map, onClose }) {
           <Trash2 className="w-5 h-5 text-red-400" />
         </button>
 
-        {/* Cerrar */}
+        {/* Borrar todo y cerrar */}
         {onClose && (
           <button
             onClick={handleClose}
-            className="w-10 h-10 bg-slate-900/95 border-2 border-slate-600 hover:border-red-500 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center hover:bg-red-500/20"
-            title="Cerrar herramientas (borra dibujos)"
+            className="w-10 h-10 bg-red-900/30 border-2 border-red-500/50 hover:border-red-500 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center hover:bg-red-500/30"
+            title="Borrar todos los dibujos y cerrar"
           >
-            <X className="w-5 h-5 text-slate-400 hover:text-red-400" />
+            <X className="w-5 h-5 text-red-400 hover:text-red-300" />
           </button>
         )}
       </div>
