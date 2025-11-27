@@ -16,6 +16,12 @@ import EntityDetailedModal from '../Cards/EntityDetailedModal';
 import { useSelection } from '../../stores/SelectionContext';
 import { supabase } from '../../lib/supabase';
 import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
+import { useFlightRadar } from '../../hooks/useFlightRadar';
+import FlightMarker from '../FlightRadar/FlightMarker';
+import FlightRadarPanel from '../FlightRadar/FlightRadarPanel';
+import FlightDetailsPanel from '../FlightRadar/FlightDetailsPanel';
+import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
+import { getMilitaryCategory } from '../../services/flightRadarService';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -39,6 +45,88 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // 🎴 Vista de entidad: siempre card futurista
   const viewMode = 'card'; // Siempre card futurista
   const [showDetailedModal, setShowDetailedModal] = useState(false);
+
+  // ✈️ FlightRadar24 Integration
+  const [showFlightRadarPanel, setShowFlightRadarPanel] = useState(false);
+  const [selectedFlight, setSelectedFlight] = useState(null);
+  const [flightFilters, setFlightFilters] = useState({
+    militaryOnly: true,
+    showCombat: true,
+    showTransport: true,
+    showTanker: true,
+    showSurveillance: true,
+    showBomber: true,
+    showOthers: true,
+  });
+  const {
+    flights,
+    loading: flightsLoading,
+    error: flightsError,
+    isActive: flightsActive,
+    lastUpdate: flightsLastUpdate,
+    startTracking: startFlightTracking,
+    pauseTracking: pauseFlightTracking,
+    refetch: refetchFlights,
+  } = useFlightRadar({
+    autoUpdate: true,
+    updateInterval: 30000, // 30 segundos
+    enabled: true,
+  });
+
+  // Memoizar vuelos con categoría y aplicar filtros
+  const flightsWithCategory = useMemo(() => {
+    console.log('🔍 Aplicando filtros a', flights.length, 'vuelos');
+    console.log('📋 Filtros activos:', flightFilters);
+    
+    const flightsWithCat = flights.map(f => ({
+      ...f,
+      category: getMilitaryCategory(f)
+    }));
+
+    console.log('📊 Vuelos con categoría:', flightsWithCat.length);
+    console.log('📄 Muestra categorías:', flightsWithCat.slice(0, 5).map(f => ({ 
+      callsign: f.callsign, 
+      category: f.category 
+    })));
+
+    // Aplicar filtro militar primero
+    let filtered = flightsWithCat;
+    
+    if (flightFilters.militaryOnly) {
+      // Solo mostrar vuelos con categoría militar (no "otros")
+      filtered = filtered.filter(f => {
+        const cat = f.category;
+        return cat && cat !== 'otros';
+      });
+      
+      console.log('✈️ Después de filtro militar:', filtered.length);
+    }
+
+    // Aplicar filtros por categorías específicas
+    if (flightFilters.militaryOnly && filtered.length > 0) {
+      filtered = filtered.filter(f => {
+        const cat = f.category;
+        
+        // Si la categoría tiene un filtro específico desactivado, excluir
+        if (cat === 'combate' && !flightFilters.showCombat) return false;
+        if (cat === 'transporte' && !flightFilters.showTransport) return false;
+        if (cat === 'tanque' && !flightFilters.showTanker) return false;
+        if (cat === 'vigilancia' && !flightFilters.showSurveillance) return false;
+        if (cat === 'bombardero' && !flightFilters.showBomber) return false;
+        if (!['combate', 'transporte', 'tanque', 'vigilancia', 'bombardero'].includes(cat) && !flightFilters.showOthers) return false;
+        
+        return true;
+      });
+      
+      console.log('🎯 Después de filtros de categoría:', filtered.length);
+    }
+
+    // Limitar a 100 para performance
+    const limited = filtered.slice(0, 100);
+    console.log('✅ Vuelos finales a mostrar:', limited.length);
+    
+    return limited;
+  }, [flights, flightFilters]);
   
   // 🖼️ Estado para usar imágenes de plantillas
   const [useImages, setUseImages] = useState(() => {
@@ -614,6 +702,16 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           })
       }
 
+      {/* ✈️ VUELOS MILITARES EN TIEMPO REAL - FlightRadar24 */}
+      {mapLoaded && flightsWithCategory.map(flight => (
+        <FlightMarker 
+          key={flight.id}
+          flight={flight}
+          map={map.current}
+          onSelect={setSelectedFlight}
+        />
+      ))}
+
       {/* Indicador de carga */}
       {loading && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-bg-secondary/90 backdrop-blur-sm text-military-text-primary px-4 py-2 rounded-md shadow-lg">
@@ -646,6 +744,75 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
       {/* Dashboard de estadísticas (reemplaza contador simple) */}
       {mapLoaded && !loading && <DeploymentStats />}
+
+      {/* ✈️ Panel de FlightRadar24 */}
+      {showFlightRadarPanel && !selectedFlight && (
+        <FlightRadarPanel
+          flights={flightsWithCategory}
+          loading={flightsLoading}
+          error={flightsError}
+          isActive={flightsActive}
+          lastUpdate={flightsLastUpdate}
+          onStart={startFlightTracking}
+          onPause={pauseFlightTracking}
+          onRefresh={refetchFlights}
+          onFlightClick={(flight) => {
+            setSelectedFlight(flight);
+            // Centrar mapa en el vuelo
+            if (map.current) {
+              map.current.flyTo({
+                center: [flight.longitude, flight.latitude],
+                zoom: 9,
+                duration: 1500,
+              });
+            }
+          }}
+          onClose={() => setShowFlightRadarPanel(false)}
+        />
+      )}
+
+      {/* Panel de detalles de vuelo seleccionado */}
+      {selectedFlight && (
+        <FlightDetailsPanel
+          flight={flightsWithCategory.find(f => f.id === selectedFlight?.id) || selectedFlight}
+          onClose={() => setSelectedFlight(null)}
+        />
+      )}
+
+      {/* Botón flotante para abrir panel FlightRadar24 */}
+      {!showFlightRadarPanel && (
+        <button
+          onClick={() => setShowFlightRadarPanel(true)}
+          className="fixed right-4 bottom-20 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl transition-all hover:scale-110 z-30 group"
+          title="Abrir FlightRadar24"
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="animate-pulse"
+          >
+            <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+          </svg>
+          {flights.length > 0 && (
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold">
+              {flights.length}
+            </div>
+          )}
+        </button>
+      )}
+
+      {/* Barra inferior estilo FlightRadar24 */}
+      <FlightRadarBottomBar
+        activeFilters={flightFilters}
+        onFilterChange={setFlightFilters}
+      />
 
       {/* Botón de subida de imágenes - ELIMINADO, ahora integrado en plantillas y formularios */}
     </div>
