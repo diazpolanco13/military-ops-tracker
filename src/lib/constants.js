@@ -53,3 +53,6 @@ export const CARIBBEAN_BOUNDS = {
   west: -90,
 };
 
+// ✈️ FlightRadar24 API Configuration
+export const FLIGHTRADAR24_UPDATE_INTERVAL = 30000; // 30 segundos
+
