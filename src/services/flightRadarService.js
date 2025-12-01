@@ -24,12 +24,19 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const FLIGHTRADAR_PROXY_URL = `${SUPABASE_URL}/functions/v1/flightradar-proxy`;
 
 /**
- * Códigos ICAO de aerolíneas militares de EEUU
- * https://en.wikipedia.org/wiki/List_of_aircraft_registration_prefixes
+ * Códigos de aerolíneas/operadores MILITARES
+ * Campo [18] de la API - ¡CLAVE para identificar militares!
+ * 
+ * FlightRadar24 usa este campo para identificar operadores
+ * Ejemplos:
+ * - "RCH" = US Air Force (Reach)
+ * - "CNV" = US Air Force (Convoy)
+ * - "DAL" = Delta Airlines (civil)
+ * - "AVA" = Avianca (civil)
  */
-const MILITARY_CALLSIGN_PREFIXES = [
-  // USA - Principales
-  'RCH',     // US Air Force Cargo/Transport (Reach)
+const MILITARY_AIRLINE_CODES = [
+  // USA - Códigos oficiales de operador
+  'RCH',     // US Air Force Cargo/Transport (Reach) ⭐ PRINCIPAL
   'CNV',     // US Air Force Cargo/Transport (Convoy)
   'EVAC',    // US Air Force Medical Evacuation
   'SPAR',    // US Air Force Special Air Mission
@@ -43,14 +50,13 @@ const MILITARY_CALLSIGN_PREFIXES = [
   'PAT',     // US Air National Guard
   'NAVY',    // US Navy
   'USAF',    // US Air Force
-  'MC',      // US Military Cargo
-  'AE',      // US Air Force (Aeromedical Evacuation)
+  'USN',     // US Navy
+  'USMC',    // US Marine Corps
+  'USCG',    // US Coast Guard
+  'ANG',     // Air National Guard
   
-  // USA - Adicionales Caribe
+  // USA - Adicionales
   'SAM',     // Special Air Mission (Air Force One)
-  'AF',      // Air Force
-  'ARMY',    // US Army
-  'GUARD',   // Coast Guard / National Guard
   'VENUS',   // US Air Force VIP
   'COYOTE',  // US Military
   'HAWK',    // US Military
@@ -58,7 +64,10 @@ const MILITARY_CALLSIGN_PREFIXES = [
   'SNAKE',   // US Military
   'TROPIC',  // US Military Caribbean ops
   'KING',    // US Military VIP
-  'BAT',     // US Military (Batman callsign)
+  'GUNDOG',  // US Military
+  'ELVIS',   // US Military
+  'TORCH',   // US Military
+  'TANKER',  // US Military Refueling
   
   // Internacional - Latinoamérica/Caribe
   'FAC',     // Fuerza Aérea Colombiana
@@ -67,29 +76,77 @@ const MILITARY_CALLSIGN_PREFIXES = [
   'AME',     // Fuerza Aérea Mexicana
   'FARD',    // Fuerza Aérea República Dominicana
   'FAP',     // Fuerza Aérea Peruana
+  'RAF',     // Royal Air Force (UK)
+  'RAFAIR',  // Royal Air Force
+];
+
+/**
+ * Prefijos de callsign militar (campo [16] o [9])
+ */
+const MILITARY_CALLSIGN_PREFIXES = [
+  'RCH',     // Reach
+  'CNV',     // Convoy
+  'SPAR',    // Special Air Mission
+  'ELVIS',   // Military callsign
+  'NAVY',
+  'USAF',
+  'SAM',     // Special Air Mission
+  'PAT',     // Air National Guard
+  'ARMY',
+  'GUARD',
 ];
 
 /**
  * Códigos de aeronaves militares específicas
+ * 
+ * ⚠️ IMPORTANTE: Match EXACTO para evitar falsos positivos
+ * - C17 = C-17 Globemaster (MILITAR) ✅
+ * - C172 = Cessna 172 (CIVIL) ❌
+ * - C130 = C-130 Hercules (MILITAR) ✅
+ * - C182 = Cessna 182 (CIVIL) ❌
  */
 const MILITARY_AIRCRAFT_TYPES = [
+  // Transporte militar (NO confundir con Cessna civil)
   'C130',    // C-130 Hercules
   'C17',     // C-17 Globemaster III
+  'C5',      // C-5 Galaxy
+  'C40',     // C-40 Clipper
+  'C12',     // C-12 Huron
+  
+  // Reabastecimiento
   'KC135',   // KC-135 Stratotanker
   'KC10',    // KC-10 Extender
   'KC46',    // KC-46 Pegasus
+  
+  // Vigilancia/AWACS
   'E3',      // E-3 Sentry (AWACS)
   'E6',      // E-6 Mercury
+  'E2',      // E-2 Hawkeye
+  'E8',      // E-8 JSTARS
+  'RC135',   // RC-135 Rivet Joint
   'P8',      // P-8 Poseidon
+  'P3',      // P-3 Orion
+  
+  // Bombarderos
   'B52',     // B-52 Stratofortress
   'B1',      // B-1 Lancer
+  'B2',      // B-2 Spirit
+  
+  // Cazas
   'F15',     // F-15 Eagle
   'F16',     // F-16 Fighting Falcon
+  'F18',     // F/A-18 Hornet
   'F22',     // F-22 Raptor
   'F35',     // F-35 Lightning II
+  
+  // Helicópteros militares
   'V22',     // V-22 Osprey
   'CH47',    // CH-47 Chinook
-  'UH60',    // UH-60 Black Hawk
+  'UH60',    // UH-60 Black Hawk (también H60)
+  'H60',     // H60 Black Hawk variant
+  'MH60',    // MH-60 variant
+  'HH60',    // HH-60 Pave Hawk
+  'AH64',    // AH-64 Apache
 ];
 
 /**
@@ -177,28 +234,42 @@ export async function getFlightsByZone(bounds = CARIBBEAN_BOUNDS) {
 
 /**
  * Obtener vuelos MILITARES en el Caribe
- * Filtra por callsigns y tipos de aeronave militar
+ * Filtra por códigos de operador militar, callsigns y tipos de aeronave
  * @returns {Promise<Array>} - Lista de vuelos militares
  */
 export async function getMilitaryFlights() {
   try {
     const allFlights = await getFlightsByZone(CARIBBEAN_BOUNDS);
     
-    // 🧪 MODO DEBUG: Mostrar TODOS los vuelos (sin filtrar militares)
-    // Para verificar que la integración funciona
-    console.log(`✈️ Vuelos totales recibidos: ${allFlights.length}`);
-    console.log('📄 Muestra de vuelos:', allFlights.slice(0, 3));
+    console.log(`\n═══════════════════════════════════════`);
+    console.log(`📊 FLIGHTRADAR24 - ANÁLISIS DE VUELOS`);
+    console.log(`═══════════════════════════════════════`);
+    console.log(`✈️ Total de vuelos recibidos: ${allFlights.length}`);
     
     // Filtrar solo vuelos militares
     const militaryFlights = allFlights.filter(flight => 
       isMilitaryFlight(flight)
     );
 
-    console.log(`✈️ Vuelos totales: ${allFlights.length}, Militares: ${militaryFlights.length}`);
+    // Agregar categoría a cada vuelo militar
+    const categorizedFlights = militaryFlights.map(flight => ({
+      ...flight,
+      category: getMilitaryCategory(flight)
+    }));
+
+    console.log(`🎯 Vuelos militares detectados: ${militaryFlights.length}`);
+    console.log(`═══════════════════════════════════════\n`);
     
-    // 🧪 TEMPORAL: Retornar TODOS los vuelos para verificar que se muestran
-    // TODO: Cambiar a return militaryFlights cuando funcione
-    return allFlights.length > 0 ? allFlights : militaryFlights;
+    if (militaryFlights.length > 0) {
+      console.log(`📋 LISTA DE VUELOS MILITARES:`);
+      militaryFlights.forEach(f => {
+        const cat = getMilitaryCategory(f);
+        console.log(`   ${f.callsign.padEnd(15)} | ${f.aircraft.type.padEnd(8)} | ${cat.padEnd(12)} | ${f.aircraft.airline || 'N/A'}`);
+      });
+      console.log('');
+    }
+    
+    return categorizedFlights;
   } catch (error) {
     console.error('❌ Error fetching military flights:', error);
     return [];
@@ -207,41 +278,56 @@ export async function getMilitaryFlights() {
 
 /**
  * Determinar si un vuelo es militar o gubernamental
+ * 
+ * ✅ MÉTODO CORRECTO (verificado con datos reales):
+ * 1. PRIORITARIO: Campo airline ([18]) - Operador militar (ej: "RCH", "CNV")
+ * 2. Secundario: Callsign militar (ej: "ELVIS21", "97-0042")
+ * 3. Terciario: Tipo de aeronave (ej: "C17", "KC135")
+ * 4. Cuaternario: Registro militar (ej: "97-0042")
+ * 
  * @param {Object} flight - Datos del vuelo
  * @returns {Boolean}
  */
 function isMilitaryFlight(flight) {
+  const airline = (flight.aircraft?.airline || '').toUpperCase().trim();
   const callsign = (flight.callsign || '').toUpperCase().trim();
   const aircraftType = (flight.aircraft?.type || '').toUpperCase();
-  const registration = (flight.registration || flight.aircraft?.registration || '').toUpperCase();
+  const registration = (flight.registration || '').toUpperCase().trim();
   
-  // 1. Verificar callsign militar
+  // ✅ 1. PRIORITARIO: Verificar código de aerolínea/operador militar
+  // Este es el campo MÁS CONFIABLE según FlightRadar24
+  const hasMilitaryAirline = MILITARY_AIRLINE_CODES.some(code => 
+    airline === code || airline.startsWith(code)
+  );
+
+  if (hasMilitaryAirline) {
+    console.log(`🎯 MILITAR (airline): ${callsign} - Operador: ${airline}`);
+    return true;
+  }
+
+  // 2. Verificar callsign militar
   const hasMilitaryCallsign = MILITARY_CALLSIGN_PREFIXES.some(prefix => 
     callsign.startsWith(prefix)
   );
 
-  // 2. Verificar tipo de aeronave militar
-  const isMilitaryAircraft = MILITARY_AIRCRAFT_TYPES.some(type => 
-    aircraftType.includes(type)
-  );
+  // 3. Verificar tipo de aeronave militar ESPECÍFICO
+  // IMPORTANTE: Excluir aviones civiles (C172, C182 son Cessna CIVILES, NO C-17 militar)
+  const isMilitaryAircraft = MILITARY_AIRCRAFT_TYPES.some(type => {
+    // Match EXACTO para evitar falsos positivos
+    // C17 ≠ C172 (C17 es militar, C172 es civil)
+    return aircraftType === type;
+  });
 
-  // 3. Verificar registro militar/gobierno
-  // USA: N-numbers especiales (16xxxx, 17xxxx, 2xxxx, 8xxxx, 9xxxx)
-  // Ejemplo: N166XX (USAF), N2000X (Government)
+  // 4. Verificar registro militar (formato XX-XXXX)
+  // Ejemplo: "97-0042" (C-17 de USAF)
   const hasMilitaryRegistration = 
-    registration.startsWith('N16') ||  // USAF
-    registration.startsWith('N17') ||  // USAF
-    registration.startsWith('N2')  ||  // Government
-    registration.startsWith('N8')  ||  // Special
-    registration.startsWith('N9')  ||  // Military
-    registration.startsWith('N5')  ||  // US Army
-    registration.match(/^\d{2}-\d{4}$/) || // Formato militar internacional
+    registration.match(/^\d{2}-\d{4,5}$/) || // Formato militar: 97-0042
     registration.includes('USAF') ||
     registration.includes('ARMY') ||
     registration.includes('NAVY') ||
     registration.includes('MARINE');
 
-  // 4. Verificar squawk codes militares
+  // 5. Verificar squawk codes militares
   const squawk = flight.aircraft?.squawk || '';
   const hasMilitarySquawk = 
     squawk === '1277' ||  // Military VFR
@@ -249,22 +335,45 @@ function isMilitaryFlight(flight) {
     squawk === '4001' ||  // Military ops
     squawk === '1300';    // Military training
 
-  return hasMilitaryCallsign || isMilitaryAircraft || hasMilitaryRegistration || hasMilitarySquawk;
+  const isMilitary = hasMilitaryCallsign || isMilitaryAircraft || hasMilitaryRegistration || hasMilitarySquawk;
+  
+  if (isMilitary) {
+    console.log(`🎯 MILITAR: ${callsign} | Tipo: ${aircraftType} | Reg: ${registration} | Airline: ${airline}`);
+  }
+
+  return isMilitary;
 }
 
 /**
  * Parsear datos de vuelo desde formato FlightRadar24
  * 
  * ✅ Formato REAL verificado (data-cloud.flightradar24.com):
- * [icao24, lat, lon, heading, altitude, speed, squawk, registration, aircraft_type, callsign, timestamp, ...]
- * Ejemplo: ["A26454", 19.8, -66.46, 37, 63000, 16, "", "F-BDWY1", "BALL", "N253TH", 1764273627, ...]
+ * [0]  icao24 (hex transponder)
+ * [1]  latitude
+ * [2]  longitude
+ * [3]  heading (0-360°)
+ * [4]  altitude (feet)
+ * [5]  speed (knots)
+ * [6]  squawk (transponder code)
+ * [7]  registration (INVÁLIDO - siempre "F-BDWY1")
+ * [8]  aircraftType (ej: "C17", "B738", "A320")
+ * [9]  callsign (identificador del vuelo)
+ * [10] timestamp (unix)
+ * [11] origin (IATA code)
+ * [12] destination (IATA code)
+ * [13] flightNumber
+ * [14] onGround (0 o 1)
+ * [15] verticalSpeed (ft/min)
+ * [16] icaoType (callsign REAL + número, ej: "ELVIS21", "AVA019")
+ * [17] field17 (siempre 0)
+ * [18] airline (¡CLAVE! - operador/aerolínea, ej: "RCH" = US Air Force)
  * 
  * @param {String} flightId - ID del vuelo
  * @param {Array} flightData - Array de datos del vuelo
  * @returns {Object} - Objeto de vuelo parseado
  */
 function parseFlightData(flightId, flightData) {
-  if (!Array.isArray(flightData) || flightData.length < 11) {
+  if (!Array.isArray(flightData) || flightData.length < 17) {
     return null; // Datos inválidos
   }
 
@@ -275,8 +384,8 @@ function parseFlightData(flightId, flightData) {
     // Identificación
     id: flightId,
     icao24: flightData[0] || '',
-    callsign: flightData[9] || flightData[7] || flightData[0] || 'UNKNOWN',
-    registration: flightData[7] || '',
+    callsign: flightData[16] || flightData[9] || flightData[0] || 'UNKNOWN', // [16] es el callsign REAL
+    registration: flightData[9] || '', // [9] puede tener registro militar real
     
     // Posición
     latitude: parseFloat(flightData[1]),
@@ -291,8 +400,9 @@ function parseFlightData(flightId, flightData) {
     // Aeronave
     aircraft: {
       type: flightData[8] || 'UNKNOWN',
-      registration: flightData[7] || '',
+      registration: flightData[9] || '',
       squawk: flightData[6] || '',  // Código transponder
+      airline: flightData[18] || '', // ¡OPERADOR! (ej: "RCH", "AVA", "DAL")
     },
     
     // Vuelo
@@ -311,14 +421,128 @@ function parseFlightData(flightId, flightData) {
 
 /**
  * Obtener detalles completos de un vuelo específico
- * @param {String} flightId - ID del vuelo
- * @returns {Promise<Object>} - Detalles del vuelo
+ * 
+ * Usa el endpoint /clickhandler de FlightRadar24 que devuelve:
+ * - Nombre completo del modelo de aeronave
+ * - País de registro
+ * - Edad de la aeronave
+ * - Número de serie (MSN)
+ * - Fotos de la aeronave
+ * - Información de la aerolínea
+ * - Historial de vuelo
+ * - Aeropuertos de origen/destino con nombres completos
+ * 
+ * @param {String} flightId - ID del vuelo (ej: "3d38ecfe")
+ * @returns {Promise<Object>} - Detalles completos del vuelo
  */
 export async function getFlightDetails(flightId) {
-  // TODO: Implementar detalles de vuelo específico si es necesario
-  // Por ahora, la información básica viene en el feed principal
-  console.warn('getFlightDetails not implemented yet');
-  return null;
+  if (!flightId) {
+    console.warn('⚠️ getFlightDetails: No flight ID provided');
+    return null;
+  }
+
+  try {
+    console.log(`🔍 Fetching details for flight: ${flightId}`);
+    
+    // Obtener token de autenticación de Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+
+    const url = `${FLIGHTRADAR_PROXY_URL}?flight=${flightId}`;
+
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      console.error('❌ Error fetching flight details:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    console.log('✅ Flight details received:', {
+      id: flightId,
+      aircraft: data.aircraft?.model?.text,
+      airline: data.airline?.name,
+      registration: data.aircraft?.registration
+    });
+
+    // Parsear y estructurar los datos
+    return {
+      // Identificación
+      id: data.identification?.id || flightId,
+      callsign: data.identification?.callsign || '',
+      flightNumber: data.identification?.number?.default || '',
+      
+      // Aeronave
+      aircraft: {
+        type: data.aircraft?.model?.code || '',
+        modelName: data.aircraft?.model?.text || '', // ¡Nombre completo! ej: "Boeing C-17A Globemaster III"
+        registration: data.aircraft?.registration || '',
+        countryId: data.aircraft?.countryId || null,
+        age: data.aircraft?.age || null,
+        msn: data.aircraft?.msn || null, // Serial number
+        hex: data.aircraft?.hex || '',
+        images: data.aircraft?.images || null, // Fotos de la aeronave
+      },
+      
+      // Aerolínea/Operador
+      airline: {
+        name: data.airline?.name || '',
+        code: data.airline?.code || '',
+        url: data.airline?.url || '',
+      },
+      
+      // Propietario
+      owner: data.owner || null,
+      
+      // Aeropuertos
+      origin: data.airport?.origin ? {
+        code: data.airport.origin.code?.iata || data.airport.origin.code?.icao || '',
+        name: data.airport.origin.name || '',
+        city: data.airport.origin.position?.region?.city || '',
+        country: data.airport.origin.position?.country?.name || '',
+        timezone: data.airport.origin.timezone?.name || '',
+      } : null,
+      
+      destination: data.airport?.destination ? {
+        code: data.airport.destination.code?.iata || data.airport.destination.code?.icao || '',
+        name: data.airport.destination.name || '',
+        city: data.airport.destination.position?.region?.city || '',
+        country: data.airport.destination.position?.country?.name || '',
+        timezone: data.airport.destination.timezone?.name || '',
+      } : null,
+      
+      // Estado
+      status: {
+        live: data.status?.live || false,
+        text: data.status?.text || '',
+      },
+      
+      // Tiempos
+      time: data.time || null,
+      
+      // Trail (historial de posiciones)
+      trail: data.trail || [],
+      
+      // Raw data
+      _raw: data,
+    };
+  } catch (error) {
+    console.error('❌ Error fetching flight details:', error);
+    return null;
+  }
 }
 
 /**
@@ -342,30 +566,17 @@ export function knotsToKmh(speedKnots) {
 /**
  * Determinar categoría de aeronave militar
  * @param {Object} flight - Datos del vuelo
- * @returns {String} - Categoría: 'combat', 'transport', 'tanker', 'surveillance', 'other'
+ * @returns {String} - Categoría: 'combat', 'transport', 'tanker', 'surveillance', 'bomber', 'helicopter', 'other'
  */
 export function getMilitaryCategory(flight) {
   const type = (flight.aircraft?.type || '').toUpperCase();
   const callsign = (flight.callsign || '').toUpperCase();
+  const airline = (flight.aircraft?.airline || '').toUpperCase();
 
   // Cazas de combate
-  if (type.includes('F15') || type.includes('F16') || type.includes('F22') || type.includes('F35')) {
+  if (type.includes('F15') || type.includes('F16') || type.includes('F22') || type.includes('F35') || 
+      type.includes('F18') || type.includes('F14')) {
     return 'combat';
-  }
-
-  // Transporte/Carga
-  if (type.includes('C130') || type.includes('C17') || callsign.startsWith('RCH') || callsign.startsWith('CNV')) {
-    return 'transport';
-  }
-
-  // Reabastecimiento
-  if (type.includes('KC') || type.includes('TANKER')) {
-    return 'tanker';
-  }
-
-  // Vigilancia/Patrulla
-  if (type.includes('P8') || type.includes('E3') || type.includes('E6') || callsign.startsWith('IRON')) {
-    return 'surveillance';
   }
 
   // Bombarderos
@@ -373,22 +584,56 @@ export function getMilitaryCategory(flight) {
     return 'bomber';
   }
 
+  // Reabastecimiento (Tankers)
+  if (type.includes('KC135') || type.includes('KC10') || type.includes('KC46') || 
+      type.includes('KC') || callsign.includes('TANKER')) {
+    return 'tanker';
+  }
+
+  // Vigilancia/Patrulla/Reconocimiento
+  if (type.includes('P8') || type.includes('P3') || type.includes('E3') || type.includes('E6') || 
+      type.includes('E2') || type.includes('E8') || type.includes('RC135') || 
+      airline === 'IRON' || callsign.startsWith('IRON')) {
+    return 'surveillance';
+  }
+
+  // Transporte/Carga (más común en Caribe)
+  if (type.includes('C130') || type.includes('C17') || type.includes('C5') || type.includes('C141') ||
+      type.includes('C12') || type.includes('C40') ||
+      airline === 'RCH' || airline === 'CNV' || 
+      callsign.startsWith('RCH') || callsign.startsWith('CNV') || callsign.startsWith('SPAR')) {
+    return 'transport';
+  }
+
+  // Helicópteros
+  if (type.includes('CH47') || type.includes('UH60') || type.includes('AH64') || 
+      type.includes('MH60') || type.includes('HH60')) {
+    return 'helicopter';
+  }
+
+  // VIP/Special (Air Force One, etc)
+  if (callsign.startsWith('SAM') || callsign.startsWith('VENUS') || airline === 'SAM') {
+    return 'vip';
+  }
+
   return 'other';
 }
 
 /**
- * Obtener color según categoría militar
+ * Obtener color según categoría militar (estilo FlightRadar24)
  * @param {String} category - Categoría militar
  * @returns {String} - Color hex
  */
 export function getCategoryColor(category) {
   const colors = {
     combat: '#ef4444',       // Rojo (cazas)
-    transport: '#3b82f6',    // Azul (transporte)
+    bomber: '#dc2626',       // Rojo oscuro (bombarderos)
+    transport: '#FFC107',    // Amarillo (transporte) - ¡COMO FLIGHTRADAR24!
     tanker: '#10b981',       // Verde (reabastecimiento)
     surveillance: '#f59e0b', // Naranja (vigilancia)
-    bomber: '#dc2626',       // Rojo oscuro (bombarderos)
-    other: '#6b7280',        // Gris (otros)
+    helicopter: '#8b5cf6',   // Morado (helicópteros)
+    vip: '#ec4899',          // Rosa (VIP/Special)
+    other: '#FFC107',        // Amarillo (otros) - por defecto amarillo militar
   };
 
   return colors[category] || colors.other;

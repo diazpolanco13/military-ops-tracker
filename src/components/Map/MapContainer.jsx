@@ -323,11 +323,17 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       ...MAP_CONFIG.options,
     });
 
-    // Agregar controles de navegación
+    // 🔒 DESHABILITAR ROTACIÓN E INCLINACIÓN (estilo FlightRadar24 - mapa estático)
+    map.current.dragRotate.disable(); // No rotar con click derecho
+    map.current.touchZoomRotate.disableRotation(); // No rotar en touch
+    map.current.touchPitch.disable(); // No inclinar en touch
+    map.current.keyboard.disableRotation(); // No rotar con teclado
+
+    // Agregar controles de navegación (sin pitch)
     map.current.addControl(
       new mapboxgl.NavigationControl({
-        visualizePitch: true,
-        showCompass: true,
+        visualizePitch: false, // Ocultar control de inclinación
+        showCompass: false,    // Ocultar brújula (no hay rotación)
       }),
       'top-right'
     );
@@ -709,6 +715,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           flight={flight}
           map={map.current}
           onSelect={setSelectedFlight}
+          isSelected={selectedFlight?.id === flight.id}
         />
       ))}
 

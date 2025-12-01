@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import { Satellite, Moon, Sun, Map as MapIcon, Mountain, Navigation } from 'lucide-react';
+import { Satellite, Moon, Sun, Map as MapIcon, Mountain, Navigation, Plane, Radar } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 
 const STYLE_OPTIONS = [
+  // ⭐ NUEVO - Estilo FlightRadar24 primero
+  {
+    id: 'flightradar',
+    name: '🛩️ FlightRadar24',
+    icon: Plane,
+    style: MAPBOX_STYLES.FLIGHTRADAR,
+    description: 'Estilo tipo FlightRadar24 (estático)',
+    color: 'bg-yellow-600',
+  },
   {
     id: 'satellite-streets',
     name: 'Satélite + Calles',

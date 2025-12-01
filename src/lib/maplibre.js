@@ -18,6 +18,10 @@ export const MAPBOX_STYLES = {
   // Estilos Especiales
   SATELLITE: 'mapbox://styles/mapbox/satellite-v9',     // 🛰️ Satélite puro (sin calles)
   NAVIGATION_DAY: 'mapbox://styles/mapbox/navigation-day-v1',         // ☀️ Navegación diurna
+  
+  // 🛩️ ESTILO TIPO FLIGHTRADAR24 (CartoDB - Gratuito, estático)
+  FLIGHTRADAR: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json', // 🌍 Estilo FlightRadar24
+  FLIGHTRADAR_NOLABELS: 'https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json', // Sin etiquetas
 };
 
 /**
@@ -36,6 +40,8 @@ export function getSavedMapStyle() {
     'outdoors': MAPBOX_STYLES.OUTDOORS,
     'satellite': MAPBOX_STYLES.SATELLITE,
     'navigation-day': MAPBOX_STYLES.NAVIGATION_DAY,
+    'flightradar': MAPBOX_STYLES.FLIGHTRADAR,
+    'flightradar-nolabels': MAPBOX_STYLES.FLIGHTRADAR_NOLABELS,
   };
   
   return styleMap[savedStyleId] || MAPBOX_STYLES.SATELLITE_STREETS;
