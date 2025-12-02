@@ -719,14 +719,16 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           onRefresh={refetchFlights}
           onFlightClick={(flight) => {
             setSelectedFlight(flight);
-            // Centrar mapa en el vuelo
+            // Centrar mapa en el vuelo (zoom reducido para vista amplia)
             if (map.current) {
-              map.current.flyTo({
+              map.current.easeTo({
                 center: [flight.longitude, flight.latitude],
-                zoom: 9,
-                duration: 1500,
+                zoom: 7, // Zoom más alejado para ver contexto
+                duration: 1000, // Transición más rápida
+                essential: true
               });
             }
+            // NO cerrar el sidebar - mantener ambos paneles abiertos
           }}
           onClose={() => setShowFlightRadarPanel(false)}
         />
