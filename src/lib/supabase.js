@@ -2,12 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 
 // Helper para obtener env vars (runtime en Docker o build-time en dev)
 const getEnv = (key) => {
-  // En producción (Docker), las vars están en window.ENV
+  // Primero intenta import.meta.env (desarrollo local con .env)
+  if (import.meta.env[key]) {
+    return import.meta.env[key];
+  }
+  // Si no existe, intenta window.ENV (producción Docker)
   if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
     return window.ENV[key];
   }
-  // En desarrollo, usa import.meta.env
-  return import.meta.env[key];
+  return undefined;
 };
 
 const supabaseUrl = getEnv('VITE_SUPABASE_URL');
