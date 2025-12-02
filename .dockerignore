@@ -54,3 +54,6 @@ test.html
 photo_*.jpg
 despliegue*.txt
 
+# Supabase Functions (se despliegan separadamente)
+supabase/functions
+
