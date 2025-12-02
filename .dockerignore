@@ -42,7 +42,7 @@ images
 
 # Scripts
 scripts
-*.sh
+# *.sh - NO bloquear, necesario para docker-entrypoint.sh
 
 # Testing
 coverage
