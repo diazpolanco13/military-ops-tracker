@@ -707,7 +707,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {mapLoaded && !loading && <DeploymentStats />}
 
       {/* ✈️ Panel de FlightRadar24 */}
-      {showFlightRadarPanel && !selectedFlight && (
+      {showFlightRadarPanel && (
         <FlightRadarPanel
           flights={flightsWithCategory}
           loading={flightsLoading}
