@@ -1,7 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Helper para obtener env vars (runtime en Docker o build-time en dev)
+const getEnv = (key) => {
+  // En producción (Docker), las vars están en window.ENV
+  if (typeof window !== 'undefined' && window.ENV && window.ENV[key]) {
+    return window.ENV[key];
+  }
+  // En desarrollo, usa import.meta.env
+  return import.meta.env[key];
+};
+
+const supabaseUrl = getEnv('VITE_SUPABASE_URL');
+const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ Faltan variables de entorno de Supabase');
