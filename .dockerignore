@@ -55,5 +55,5 @@ photo_*.jpg
 despliegue*.txt
 
 # Supabase Functions (se despliegan separadamente)
-supabase/functions
+_supabase_functions_backup
 
