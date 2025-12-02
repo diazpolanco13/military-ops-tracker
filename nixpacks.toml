@@ -1,8 +1,21 @@
+# Nixpacks configuration for Dokploy deployment
+# Provider: Node.js
+
+[providers]
+node = "20"
+
+[phases.setup]
+nixPkgs = ['nodejs-20_x', 'npm-10_x']
+
 [phases.install]
-cmds = ['npm install --legacy-peer-deps']
+cmds = [
+  'npm ci --legacy-peer-deps || npm install --legacy-peer-deps'
+]
 
 [phases.build]
-cmds = ['npm run build']
+cmds = [
+  'npm run build'
+]
 
 [start]
 cmd = 'npx serve dist -l 80'
