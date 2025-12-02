@@ -639,14 +639,120 @@ export function getCategoryColor(category) {
   return colors[category] || colors.other;
 }
 
+/**
+ * 🎯 CLASIFICAR VUELO EN CATEGORÍA FLIGHTRADAR24
+ * Categorías: passenger, cargo, military, business, general, helicopter, drones, other
+ * 
+ * @param {Object} flight - Datos del vuelo
+ * @returns {String} - Categoría del vuelo
+ */
+export function getFlightCategory(flight) {
+  const type = (flight.aircraft?.type || '').toUpperCase();
+  const callsign = (flight.callsign || '').toUpperCase();
+  const airline = (flight.aircraft?.airline || '').toUpperCase();
+  const registration = (flight.registration || flight.aircraft?.registration || '').toUpperCase();
+
+  // 1. MILITAR O GOBIERNO
+  if (isMilitaryFlight(flight)) {
+    return 'military';
+  }
+
+  // 2. HELICÓPTEROS (civiles)
+  const heliTypes = ['H60', 'H47', 'H64', 'H53', 'S76', 'S92', 'EC', 'AS', 'R44', 'R22', 'B06', 'B07', 'A109', 'A139', 'BK17', 'EC35', 'EC45', 'EC55', 'EC75', 'EC30'];
+  if (heliTypes.some(h => type.includes(h))) {
+    return 'helicopter';
+  }
+
+  // 3. CARGA (freight)
+  const cargoAirlines = ['FDX', 'UPS', 'DHL', 'ABX', 'GTI', 'CLX', 'CAL', 'KAL CARGO', 'NCA', 'PAC', 'SQC'];
+  if (cargoAirlines.some(c => airline.includes(c)) || callsign.includes('CARGO') || callsign.includes('HEAVY')) {
+    return 'cargo';
+  }
+
+  // 4. JETS PRIVADOS / EJECUTIVOS
+  const businessTypes = ['GLF', 'G', 'CL', 'LJ', 'C525', 'C550', 'C560', 'C680', 'C750', 'FA', 'PC12', 'PC24', 'E55P', 'E550', 'GLEX', 'GL5T', 'GL7T', 'G280', 'G450', 'G550', 'G650', 'GALX'];
+  if (businessTypes.some(b => type.startsWith(b) || type.includes(b))) {
+    return 'business';
+  }
+
+  // 5. PASAJEROS (aerolíneas comerciales)
+  const passengerAirlines = ['AAL', 'UAL', 'DAL', 'SWA', 'JBU', 'NKS', 'FFT', 'AAY', 'ASA', 'HAL', 'SKW', 'ENY', 'RPA', 'JIA', 'LAN', 'TAM', 'AVA', 'CMP', 'GLG', 'VIV', 'VOI', 'AZU', 'ARG', 'AEA', 'IBE', 'BAW', 'AFR', 'KLM', 'DLH', 'ACA', 'WJA', 'EZY'];
+  const passengerTypes = ['A32', 'A33', 'A34', 'A35', 'A38', 'B73', 'B74', 'B75', 'B76', 'B77', 'B78', 'B38M', 'B39M', 'E17', 'E19', 'E75', 'E90', 'E95', 'CRJ', 'DH8', 'AT7', 'AT4'];
+  if (passengerAirlines.some(a => airline.includes(a)) || passengerTypes.some(t => type.includes(t))) {
+    return 'passenger';
+  }
+
+  // 6. AVIACIÓN GENERAL (pequeñas aeronaves)
+  const generalTypes = ['C172', 'C182', 'C206', 'C208', 'PA28', 'PA32', 'PA34', 'PA46', 'SR20', 'SR22', 'DA40', 'DA42', 'BE33', 'BE35', 'BE36', 'BE55', 'BE58', 'M20', 'TB20', 'TB21'];
+  if (generalTypes.some(t => type.includes(t))) {
+    return 'general';
+  }
+
+  // 7. DRONES
+  const droneTypes = ['RPAS', 'UAV', 'MQ9', 'MQ1', 'RQ4', 'HALE'];
+  if (droneTypes.some(d => type.includes(d)) || callsign.includes('DRONE')) {
+    return 'drones';
+  }
+
+  // 8. PLANEADORES
+  const gliderTypes = ['GLID', 'SGS', 'ASK', 'ASW', 'LS8', 'DG8', 'VENTUS'];
+  if (gliderTypes.some(g => type.includes(g))) {
+    return 'gliders';
+  }
+
+  // 9. Si tiene operador pero no identificado, probablemente pasajero
+  if (airline && airline.length >= 2) {
+    return 'passenger';
+  }
+
+  // 10. Sin categorizar
+  return 'uncategorized';
+}
+
+/**
+ * Filtrar vuelos según categorías activas
+ * @param {Array} flights - Lista de vuelos
+ * @param {Object} activeFilters - Filtros activos { military: true, passenger: false, ... }
+ * @returns {Array} - Vuelos filtrados
+ */
+export function filterFlightsByCategory(flights, activeFilters = {}) {
+  // Si no hay filtros activos, mostrar todos
+  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
+  if (!hasActiveFilters) {
+    return flights;
+  }
+
+  return flights.filter(flight => {
+    const category = flight.flightCategory || getFlightCategory(flight);
+    return activeFilters[category] === true;
+  });
+}
+
+/**
+ * Obtener todos los vuelos (sin filtrar por militar) con categoría asignada
+ */
+export async function getAllFlights() {
+  const allFlights = await getFlightsByZone(CARIBBEAN_BOUNDS);
+  
+  // Agregar categoría a cada vuelo
+  return allFlights.map(flight => ({
+    ...flight,
+    flightCategory: getFlightCategory(flight),
+    category: isMilitaryFlight(flight) ? getMilitaryCategory(flight) : null
+  }));
+}
+
 export default {
   getFlightsByZone,
   getMilitaryFlights,
+  getAllFlights,
   getFlightDetails,
   feetToMeters,
   knotsToKmh,
   getMilitaryCategory,
   getCategoryColor,
+  getFlightCategory,
+  filterFlightsByCategory,
   CARIBBEAN_BOUNDS,
 };
 

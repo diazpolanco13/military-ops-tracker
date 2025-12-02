@@ -1,266 +1,158 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   CloudRain, 
   Filter, 
   BarChart3,
   Clock,
-  X
+  Plane
 } from 'lucide-react';
+import FlightRadarFiltersPanel from './FlightRadarFiltersPanel';
 
 /**
- * 🎛️ BARRA INFERIOR FLIGHTRADAR24 - VERSIÓN COMPACTA
+ * 🎛️ BARRA INFERIOR FLIGHTRADAR24
  * 
- * Barra pequeña centrada en la parte inferior (estilo FlightRadar24)
- * Panel de filtros lateral derecho
+ * Barra compacta + Contador circular clickeable que abre el panel lateral
  */
 export default function FlightRadarBottomBar({ 
   onFilterChange,
-  activeFilters = {
-    militaryOnly: true,
-    showCombat: true,
-    showTransport: true,
-    showTanker: true,
-    showSurveillance: true,
-    showBomber: true,
-    showOthers: true,
-  }
+  activeFilters = {},
+  flightCount = 0,
+  isFlightRadarEnabled = true,
+  onToggleFlightRadar,
+  updateInterval = 30000,
+  onOpenPanel, // Nueva prop para abrir el sidebar
+  isPanelOpen = false,
 }) {
   const [showFilters, setShowFilters] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  const handleFilterToggle = (filterName) => {
-    if (onFilterChange) {
-      onFilterChange({
-        ...activeFilters,
-        [filterName]: !activeFilters[filterName]
-      });
+  // Animación de progreso circular
+  useEffect(() => {
+    if (!isFlightRadarEnabled) {
+      setProgress(0);
+      return;
     }
-  };
 
-  // Contar filtros activos
-  const activeCount = Object.values(activeFilters).filter(Boolean).length - 1; // -1 porque militaryOnly no cuenta
+    setProgress(0);
+    const startTime = Date.now();
+    
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / updateInterval) * 100, 100);
+      setProgress(newProgress);
+      
+      if (newProgress >= 100) {
+        setProgress(0);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isFlightRadarEnabled, updateInterval, flightCount]);
+
+  const activeCount = Object.values(activeFilters).filter(Boolean).length;
+  const circumference = 2 * Math.PI * 26;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <>
       {/* Barra inferior compacta centrada */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="flex items-center gap-2 px-4 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl">
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="flex items-center gap-1 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl">
           
-          {/* Settings */}
+          {/* Toggle FlightRadar ON/OFF */}
           <button
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-            title="Configuración"
+            onClick={onToggleFlightRadar}
+            className={`p-2.5 rounded-full transition-all ${
+              isFlightRadarEnabled 
+                ? 'text-yellow-400 bg-yellow-900/30' 
+                : 'text-slate-500 hover:text-white hover:bg-slate-800'
+            }`}
+            title={isFlightRadarEnabled ? 'Desactivar radar' : 'Activar radar'}
           >
+            <Plane size={20} className={isFlightRadarEnabled ? 'drop-shadow-lg' : ''} />
+          </button>
+
+          <div className="w-px h-6 bg-slate-700 mx-1"></div>
+
+          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Configuración">
             <Settings size={18} />
           </button>
 
-          {/* Weather */}
-          <button
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-            title="Clima"
-          >
+          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Clima">
             <CloudRain size={18} />
           </button>
 
-          {/* Filters (PRINCIPAL) */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`relative p-2 rounded-full transition-all ${
-              showFilters 
-                ? 'text-blue-400 bg-blue-900/30' 
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            className={`relative p-2.5 rounded-full transition-all ${
+              showFilters ? 'text-yellow-400 bg-yellow-900/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
             title="Filtros"
           >
             <Filter size={18} />
-            {activeFilters.militaryOnly && (
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-[10px] font-bold text-white">{activeCount}</span>
+            {activeCount > 0 && (
+              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-[9px] font-bold text-black">{activeCount}</span>
               </div>
             )}
           </button>
 
-          {/* Widgets */}
-          <button
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-            title="Widgets"
-          >
+          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Estadísticas">
             <BarChart3 size={18} />
           </button>
 
-          {/* Playback */}
-          <button
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all"
-            title="Reproducir"
-          >
+          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Historial">
             <Clock size={18} />
           </button>
         </div>
       </div>
 
-      {/* Panel lateral de filtros (estilo FlightRadar24) */}
-      {showFilters && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/50 z-45"
-            onClick={() => setShowFilters(false)}
-          />
-
-          {/* Panel lateral derecho */}
-          <div className="fixed right-0 top-0 h-screen w-80 bg-slate-900/98 backdrop-blur-md border-l border-slate-700 shadow-2xl z-50 flex flex-col overflow-hidden">
+      {/* CONTADOR CIRCULAR CLICKEABLE - Abre el sidebar */}
+      {isFlightRadarEnabled && !isPanelOpen && (
+        <button
+          onClick={onOpenPanel}
+          className="fixed bottom-6 right-6 z-40 group"
+          title="Ver lista de vuelos"
+        >
+          <div className="relative flex items-center justify-center transition-transform hover:scale-110">
+            {/* SVG Progreso */}
+            <svg className="absolute w-16 h-16 -rotate-90" viewBox="0 0 56 56">
+              <circle
+                cx="28" cy="28" r="26"
+                fill="none"
+                stroke="rgba(71, 85, 105, 0.4)"
+                strokeWidth="3"
+              />
+              <circle
+                cx="28" cy="28" r="26"
+                fill="none"
+                stroke="#FFC107"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+              />
+            </svg>
             
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Filter size={18} />
-                Filtros
-              </h3>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Contenido scrolleable */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              
-              {/* Categorías */}
-              <div>
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                  Categorías
-                </h4>
-                
-                {/* Militar/Gobierno */}
-                <label className="flex items-center gap-3 p-3 bg-yellow-900/20 border border-yellow-700/50 rounded-lg cursor-pointer hover:bg-yellow-900/30 transition-colors mb-2">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.militaryOnly}
-                    onChange={() => handleFilterToggle('militaryOnly')}
-                    className="w-4 h-4 rounded border-slate-600 text-yellow-600 focus:ring-yellow-500"
-                  />
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-yellow-200">
-                      Militar o gobierno
-                    </div>
-                  </div>
-                </label>
-
-                {/* Combate */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showCombat}
-                    onChange={() => handleFilterToggle('showCombat')}
-                    className="w-4 h-4 rounded border-slate-600 text-red-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Combate
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 bg-red-900/30 px-2 py-0.5 rounded">
-                    F-15, F-16, F-22
-                  </span>
-                </label>
-
-                {/* Transporte */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showTransport}
-                    onChange={() => handleFilterToggle('showTransport')}
-                    className="w-4 h-4 rounded border-slate-600 text-blue-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Transporte
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 bg-blue-900/30 px-2 py-0.5 rounded">
-                    C-17, C-130
-                  </span>
-                </label>
-
-                {/* Tanquero */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showTanker}
-                    onChange={() => handleFilterToggle('showTanker')}
-                    className="w-4 h-4 rounded border-slate-600 text-cyan-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Tanquero
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 bg-cyan-900/30 px-2 py-0.5 rounded">
-                    KC-135, KC-10
-                  </span>
-                </label>
-
-                {/* Vigilancia */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showSurveillance}
-                    onChange={() => handleFilterToggle('showSurveillance')}
-                    className="w-4 h-4 rounded border-slate-600 text-yellow-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Vigilancia
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 bg-yellow-900/30 px-2 py-0.5 rounded">
-                    E-3, P-8, RC-135
-                  </span>
-                </label>
-
-                {/* Bombardero */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showBomber}
-                    onChange={() => handleFilterToggle('showBomber')}
-                    className="w-4 h-4 rounded border-slate-600 text-orange-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Bombardero
-                  </span>
-                  <span className="ml-auto text-[10px] text-slate-500 bg-orange-900/30 px-2 py-0.5 rounded">
-                    B-1, B-2, B-52
-                  </span>
-                </label>
-
-                {/* Otros */}
-                <label className="flex items-center gap-3 p-2 hover:bg-slate-800/50 rounded cursor-pointer transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={activeFilters.showOthers}
-                    onChange={() => handleFilterToggle('showOthers')}
-                    className="w-4 h-4 rounded border-slate-600 text-slate-600"
-                    disabled={!activeFilters.militaryOnly}
-                  />
-                  <span className={`text-sm ${activeFilters.militaryOnly ? 'text-slate-300' : 'text-slate-500'}`}>
-                    Otros militares
-                  </span>
-                </label>
-              </div>
-
-              {/* Área de cobertura */}
-              <div className="p-3 bg-blue-900/10 border border-blue-700/30 rounded-lg">
-                <div className="text-xs font-semibold text-blue-300 mb-1">
-                  📍 Área de Monitoreo
-                </div>
-                <div className="text-[11px] text-slate-400 leading-relaxed">
-                  Caribe • República Dominicana • Puerto Rico • Trinidad y Tobago • Curazao • Aruba • Venezuela • Colombia • Panamá
-                </div>
-              </div>
+            {/* Centro */}
+            <div className="w-14 h-14 bg-slate-900 border-2 border-slate-700 group-hover:border-yellow-500 rounded-full shadow-xl flex flex-col items-center justify-center transition-colors">
+              <Plane size={18} className="text-yellow-400 -mt-0.5" />
+              <span className="text-xs font-bold text-white leading-none">
+                {flightCount}
+              </span>
             </div>
           </div>
-        </>
+        </button>
       )}
+
+      <FlightRadarFiltersPanel
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        activeFilters={activeFilters}
+        onFilterChange={onFilterChange}
+      />
     </>
   );
 }

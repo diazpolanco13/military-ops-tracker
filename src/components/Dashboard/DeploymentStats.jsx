@@ -151,23 +151,8 @@ export default function DeploymentStats() {
 
   return (
     <>
-      {/* Badge compacto (siempre visible) - Esquina inferior derecha */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="fixed bottom-4 right-4 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl transition-all hover:scale-105 hover:border-blue-500 z-40"
-      >
-        <div className="px-3 py-2 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-blue-400" />
-          <div className="text-left">
-            <div className="text-white font-bold text-xs">
-              {stats.totalMarkers} marcadores • {stats.totalUnits} unidades
-            </div>
-            <div className="text-slate-400 text-[10px]">
-              {stats.totalPersonnel.toLocaleString()} efectivos
-            </div>
-          </div>
-        </div>
-      </button>
+      {/* Badge OCULTO - Solo el contador de vuelos se muestra ahora */}
+      {/* Para ver stats de despliegue, usar el botón de estadísticas en la barra inferior */}
 
       {/* Panel expandido (al hacer click) - Esquina inferior derecha */}
       {isExpanded && (

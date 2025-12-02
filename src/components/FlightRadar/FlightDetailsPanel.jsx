@@ -63,6 +63,30 @@ const isHelicopter = (type) => {
   return heliTypes.some(h => (type || '').toUpperCase().includes(h));
 };
 
+// Nombres de categorías en español
+const getCategoryName = (category) => {
+  const names = {
+    military: 'Militar/Gobierno',
+    passenger: 'Pasajeros',
+    cargo: 'Carga',
+    business: 'Jet Privado',
+    general: 'Aviación General',
+    helicopter: 'Helicóptero',
+    drones: 'Drone',
+    gliders: 'Planeador',
+    other: 'Otro',
+    uncategorized: 'Sin categorizar',
+    // Categorías militares específicas
+    combat: 'Combate',
+    transport: 'Transporte Militar',
+    tanker: 'Cisterna',
+    surveillance: 'Vigilancia',
+    bomber: 'Bombardero',
+    vip: 'VIP/Gobierno',
+  };
+  return names[category] || category || 'Desconocido';
+};
+
 /**
  * 🛩️ PANEL DE DETALLES DE VUELO - ESTILO FLIGHTRADAR24
  * 
@@ -97,7 +121,10 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   const registration = details?.aircraft?.registration || flight.registration || 'N/A';
   const aircraftAge = details?.aircraft?.age;
   const aircraftMSN = details?.aircraft?.msn;
-  const countryInfo = details?.aircraft?.countryId ? COUNTRY_MAP[details.aircraft.countryId] : null;
+  // País: primero del avión, si no del aeropuerto de origen
+  const countryId = details?.aircraft?.countryId;
+  const countryInfo = countryId ? COUNTRY_MAP[countryId] : null;
+  const originCountry = details?.origin?.country; // Fallback
   const isHeli = isHelicopter(aircraftType);
 
   return (
@@ -263,7 +290,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               <span className="font-mono font-bold text-white">{registration}</span>
             </div>
             
-            {/* País de registro - DESTACADO */}
+            {/* País de registro */}
             {countryInfo ? (
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -274,20 +301,27 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                   <span className="text-cyan-400">{countryInfo.name}</span>
                 </span>
               </div>
-            ) : details?.aircraft?.countryId && (
+            ) : originCountry ? (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <Flag size={10} className="text-blue-400" /> País (origen)
+                </span>
+                <span className="font-semibold text-slate-300">{originCountry}</span>
+              </div>
+            ) : countryId && (
               <div className="flex justify-between items-center">
                 <span className="text-slate-400 flex items-center gap-1">
                   <Flag size={10} className="text-blue-400" /> País ID
                 </span>
-                <span className="font-mono text-slate-300">{details.aircraft.countryId}</span>
+                <span className="font-mono text-slate-300">{countryId}</span>
               </div>
             )}
             
-            {/* Categoría de aeronave - NUEVO */}
+            {/* Categoría de aeronave - DINÁMICA */}
             <div className="flex justify-between items-center">
               <span className="text-slate-400">Categoría</span>
-              <span className="font-semibold text-yellow-400 flex items-center gap-1">
-                <Shield size={10} /> Militar/Gobierno
+              <span className="font-semibold flex items-center gap-1" style={{ color }}>
+                <Shield size={10} /> {getCategoryName(flight.flightCategory || flight.category)}
               </span>
             </div>
             
