@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Plane, Navigation, Clock, Gauge, MapPin, Radio, Activity, Wind, Loader2, Flag, Shield } from 'lucide-react';
 import { 
   feetToMeters, 
@@ -73,6 +73,7 @@ const getCategoryName = (category) => {
 export default function FlightDetailsPanel({ flight, onClose }) {
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     if (flight?.id) {
@@ -85,6 +86,25 @@ export default function FlightDetailsPanel({ flight, onClose }) {
         .catch(() => setLoading(false));
     }
   }, [flight?.id]);
+
+  // Cerrar al hacer clic fuera del panel
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        onClose();
+      }
+    };
+
+    // Agregar listener después de un pequeño delay para evitar cerrar inmediatamente
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onClose]);
 
   if (!flight) return null;
 
@@ -108,6 +128,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
 
   return (
     <div 
+      ref={panelRef}
       className="fixed left-4 top-20 w-[340px] max-h-[88vh] bg-slate-900 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-600 z-50 flex flex-col overflow-hidden"
       style={{
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
