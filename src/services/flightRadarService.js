@@ -20,7 +20,14 @@
  */
 import { supabase } from '../lib/supabase';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+// Helper para obtener env vars (compatible con .env local y Docker)
+const getEnv = (key) => {
+  if (import.meta.env[key]) return import.meta.env[key];
+  if (typeof window !== 'undefined' && window.ENV?.[key]) return window.ENV[key];
+  return undefined;
+};
+
+const SUPABASE_URL = getEnv('VITE_SUPABASE_URL');
 const FLIGHTRADAR_PROXY_URL = `${SUPABASE_URL}/functions/v1/flightradar-proxy`;
 
 /**
