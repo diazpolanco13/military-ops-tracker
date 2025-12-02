@@ -7,54 +7,32 @@ import {
   getFlightDetails
 } from '../../services/flightRadarService';
 
-// Mapa de países por countryId de FlightRadar24
-const COUNTRY_MAP = {
-  // América del Norte
-  236: { code: 'US', name: 'Estados Unidos', flag: '🇺🇸' },
-  39: { code: 'CA', name: 'Canadá', flag: '🇨🇦' },
-  143: { code: 'MX', name: 'México', flag: '🇲🇽' },
+// Países comunes en la región (mismo que FlightRadarPanel)
+const COUNTRIES = {
+  US: { label: 'Estados Unidos', flag: '🇺🇸' },
+  CO: { label: 'Colombia', flag: '🇨🇴' },
+  VE: { label: 'Venezuela', flag: '🇻🇪' },
+  BR: { label: 'Brasil', flag: '🇧🇷' },
+  MX: { label: 'México', flag: '🇲🇽' },
+  PA: { label: 'Panamá', flag: '🇵🇦' },
+  NL: { label: 'Países Bajos', flag: '🇳🇱' },
+  other: { label: 'Otro', flag: '🏳️' },
+};
+
+// Detectar país por registro o callsign (mismo que FlightRadarPanel)
+const detectCountry = (flight) => {
+  const reg = (flight.registration || flight.aircraft?.registration || '').toUpperCase();
+  const callsign = (flight.callsign || '').toUpperCase();
   
-  // Caribe y Centroamérica
-  60: { code: 'CU', name: 'Cuba', flag: '🇨🇺' },
-  66: { code: 'DO', name: 'Rep. Dominicana', flag: '🇩🇴' },
-  182: { code: 'PR', name: 'Puerto Rico', flag: '🇵🇷' },
-  108: { code: 'JM', name: 'Jamaica', flag: '🇯🇲' },
-  95: { code: 'HT', name: 'Haití', flag: '🇭🇹' },
-  229: { code: 'TT', name: 'Trinidad y Tobago', flag: '🇹🇹' },
-  17: { code: 'BB', name: 'Barbados', flag: '🇧🇧' },
-  12: { code: 'AW', name: 'Aruba', flag: '🇦🇼' },
-  59: { code: 'CW', name: 'Curazao', flag: '🇨🇼' },
-  175: { code: 'PA', name: 'Panamá', flag: '🇵🇦' },
-  56: { code: 'CR', name: 'Costa Rica', flag: '🇨🇷' },
-  94: { code: 'GT', name: 'Guatemala', flag: '🇬🇹' },
-  97: { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
-  169: { code: 'NI', name: 'Nicaragua', flag: '🇳🇮' },
+  if (reg.startsWith('N') || callsign.startsWith('N')) return 'US';
+  if (reg.startsWith('HK') || callsign.startsWith('AVA')) return 'CO';
+  if (reg.startsWith('YV')) return 'VE';
+  if (reg.startsWith('PT') || reg.startsWith('PR') || reg.startsWith('PP')) return 'BR';
+  if (reg.startsWith('XA') || reg.startsWith('XB') || reg.startsWith('XC')) return 'MX';
+  if (reg.startsWith('HP')) return 'PA';
+  if (reg.startsWith('PH') || reg.startsWith('PJ')) return 'NL';
   
-  // Sudamérica
-  241: { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
-  49: { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
-  32: { code: 'BR', name: 'Brasil', flag: '🇧🇷' },
-  11: { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
-  46: { code: 'CL', name: 'Chile', flag: '🇨🇱' },
-  178: { code: 'PE', name: 'Perú', flag: '🇵🇪' },
-  69: { code: 'EC', name: 'Ecuador', flag: '🇪🇨' },
-  26: { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
-  
-  // Europa
-  235: { code: 'GB', name: 'Reino Unido', flag: '🇬🇧' },
-  77: { code: 'FR', name: 'Francia', flag: '🇫🇷' },
-  83: { code: 'DE', name: 'Alemania', flag: '🇩🇪' },
-  107: { code: 'IT', name: 'Italia', flag: '🇮🇹' },
-  72: { code: 'ES', name: 'España', flag: '🇪🇸' },
-  166: { code: 'NL', name: 'Países Bajos', flag: '🇳🇱' },
-  183: { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  188: { code: 'RU', name: 'Rusia', flag: '🇷🇺' },
-  
-  // Otros
-  105: { code: 'IL', name: 'Israel', flag: '🇮🇱' },
-  47: { code: 'CN', name: 'China', flag: '🇨🇳' },
-  109: { code: 'JP', name: 'Japón', flag: '🇯🇵' },
-  13: { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  return 'other';
 };
 
 // Determinar si es helicóptero basado en el tipo
@@ -121,10 +99,11 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   const registration = details?.aircraft?.registration || flight.registration || 'N/A';
   const aircraftAge = details?.aircraft?.age;
   const aircraftMSN = details?.aircraft?.msn;
-  // País: primero del avión, si no del aeropuerto de origen
-  const countryId = details?.aircraft?.countryId;
-  const countryInfo = countryId ? COUNTRY_MAP[countryId] : null;
-  const originCountry = details?.origin?.country; // Fallback
+  
+  // Detectar país automáticamente por registro/callsign
+  const detectedCountryCode = detectCountry(flight);
+  const countryInfo = COUNTRIES[detectedCountryCode] || COUNTRIES.other;
+  
   const isHeli = isHelicopter(aircraftType);
 
   return (
@@ -290,32 +269,16 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               <span className="font-mono font-bold text-white">{registration}</span>
             </div>
             
-            {/* País de registro */}
-            {countryInfo ? (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Flag size={10} className="text-blue-400" /> País
-                </span>
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <span className="text-lg">{countryInfo.flag}</span> 
-                  <span className="text-cyan-400">{countryInfo.name}</span>
-                </span>
-              </div>
-            ) : originCountry ? (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Flag size={10} className="text-blue-400" /> País (origen)
-                </span>
-                <span className="font-semibold text-slate-300">{originCountry}</span>
-              </div>
-            ) : countryId && (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Flag size={10} className="text-blue-400" /> País ID
-                </span>
-                <span className="font-mono text-slate-300">{countryId}</span>
-              </div>
-            )}
+            {/* País de registro - SIEMPRE VISIBLE */}
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Flag size={10} className="text-blue-400" /> País
+              </span>
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <span className="text-lg">{countryInfo.flag}</span> 
+                <span className="text-cyan-400">{countryInfo.label}</span>
+              </span>
+            </div>
             
             {/* Categoría de aeronave - DINÁMICA */}
             <div className="flex justify-between items-center">

@@ -72,7 +72,7 @@ export default function LoginPage({ onLoginSuccess }) {
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 tracking-wide">
-              SAE - MONITOR
+              SAE - RADAR
             </h1>
             <p className="text-slate-400 text-base">
               Sistema de Análisis Estratégico

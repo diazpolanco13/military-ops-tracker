@@ -148,7 +148,7 @@ export default function TopNavigationBar({
         
         {/* 🏢 Logo / Inicio */}
         <div className="flex items-center gap-1 sm:gap-2 pr-2 sm:pr-4 border-r border-slate-700 flex-shrink-0">
-          <span className="text-white font-bold text-xs sm:text-sm hidden sm:block">SAE - MONITOR</span>
+          <span className="text-white font-bold text-xs sm:text-sm hidden sm:block">SAE - RADAR</span>
         </div>
 
         {/* Separador - Oculto en móvil */}
