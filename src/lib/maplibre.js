@@ -53,7 +53,7 @@ export const MAP_CONFIG = {
     parseFloat(import.meta.env.VITE_MAP_CENTER_LNG) || -66.1057,
     parseFloat(import.meta.env.VITE_MAP_CENTER_LAT) || 14.2095
   ],
-  zoom: parseInt(import.meta.env.VITE_MAP_DEFAULT_ZOOM) || 10,
+  zoom: parseInt(import.meta.env.VITE_MAP_DEFAULT_ZOOM) || 5,
   
   // Estilo activo (ahora dinámico desde localStorage)
   style: getSavedMapStyle(),
