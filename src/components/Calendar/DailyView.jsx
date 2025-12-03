@@ -56,28 +56,55 @@ export default function DailyView({ onClose, mapInstance }) {
     setCurrentPage(1);
   }, [currentDate]);
 
-  // Calcular eventos por página dinámicamente
+  // Calcular eventos por página dinámicamente basado en altura real
   useEffect(() => {
     const calculateEventsPerPage = () => {
       if (!eventsContainerRef.current) return;
-      const containerHeight = eventsContainerRef.current.clientHeight;
-      const avgEventHeight = 262;
-      const canFit = Math.floor(containerHeight / avgEventHeight);
-      const newEventsPerPage = Math.max(3, Math.min(20, canFit));
+      
+      const container = eventsContainerRef.current;
+      const containerHeight = container.clientHeight;
+      
+      // Obtener altura real de las tarjetas si existen
+      const eventCards = container.querySelectorAll('.event-card');
+      let avgEventHeight = 200; // Altura base estimada más realista
+      
+      if (eventCards.length > 0) {
+        // Calcular promedio de altura real de las tarjetas existentes
+        const heights = Array.from(eventCards).map(card => card.offsetHeight);
+        avgEventHeight = heights.reduce((sum, h) => sum + h, 0) / heights.length;
+      }
+      
+      // Agregar margen entre tarjetas (gap-3 = 12px)
+      const cardWithGap = avgEventHeight + 12;
+      
+      // Calcular cuántas tarjetas caben
+      const canFit = Math.floor(containerHeight / cardWithGap);
+      
+      // Si caben todos los eventos, no paginar
+      const newEventsPerPage = todayEvents.length <= canFit 
+        ? todayEvents.length || 50  // Mostrar todos si caben
+        : Math.max(3, canFit); // Sino, calcular cuántos caben
+      
       if (newEventsPerPage !== eventsPerPage) {
         setEventsPerPage(newEventsPerPage);
         setCurrentPage(1);
       }
     };
 
-    calculateEventsPerPage();
-    const resizeObserver = new ResizeObserver(calculateEventsPerPage);
+    // Esperar un tick para que el DOM se actualice
+    const timeoutId = setTimeout(calculateEventsPerPage, 100);
+    
+    const resizeObserver = new ResizeObserver(() => {
+      setTimeout(calculateEventsPerPage, 100);
+    });
+    
     if (eventsContainerRef.current) {
       resizeObserver.observe(eventsContainerRef.current);
     }
     window.addEventListener('resize', calculateEventsPerPage);
 
     return () => {
+      clearTimeout(timeoutId);
       resizeObserver.disconnect();
       window.removeEventListener('resize', calculateEventsPerPage);
     };
@@ -127,7 +154,7 @@ export default function DailyView({ onClose, mapInstance }) {
     return (
       <div
         onClick={() => setSelectedEvent(event)}
-        className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border-2 border-slate-700 hover:border-blue-500/70 transition-all cursor-pointer shadow-xl hover:shadow-blue-500/30 overflow-hidden"
+        className="event-card bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border-2 border-slate-700 hover:border-blue-500/70 transition-all cursor-pointer shadow-xl hover:shadow-blue-500/30 overflow-hidden"
       >
         <div className="p-4">
           {/* Header con badges - SIEMPRE ARRIBA */}
