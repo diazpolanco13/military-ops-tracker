@@ -7,6 +7,7 @@ import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
 import EventTimeline from './components/Timeline/EventTimeline';
 import CalendarView from './components/Calendar/CalendarView';
+import DailyView from './components/Calendar/DailyView';
 import AddEventModal from './components/Timeline/AddEventModal';
 import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
@@ -19,6 +20,7 @@ import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
 import { EventsProvider } from './stores/EventsContext';
+import { DrawingToolsProvider } from './stores/DrawingToolsContext';
 // Importar utils para exponer en window
 import './utils/loadGADMBoundaries';
 import './utils/loadTerrestrialBoundaries';
@@ -34,6 +36,7 @@ function App() {
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
   const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
   const [showCalendar, setShowCalendar] = useState(false); // Control del Calendario de Eventos
+  const [showDailyView, setShowDailyView] = useState(false); // Control de la Vista Diaria
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
   const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
   const [showSettingsPanel, setShowSettingsPanel] = useState(false); // Estado del panel de configuración
@@ -122,7 +125,8 @@ function App() {
     <EventsProvider>
       <LockProvider>
         <SelectionProvider>
-          <MaritimeBoundariesProvider>
+          <DrawingToolsProvider>
+            <MaritimeBoundariesProvider>
           {/* Navbar superior horizontal - Incluye menú Ver con todas las acciones */}
           <TopNavigationBar 
           onTogglePalette={() => setShowPalette(!showPalette)}
@@ -138,6 +142,8 @@ function App() {
           timelineVisible={showEventTimeline}
           onToggleCalendar={() => setShowCalendar(!showCalendar)}
           calendarVisible={showCalendar}
+          onToggleDailyView={() => setShowDailyView(!showDailyView)}
+          dailyViewVisible={showDailyView}
           onToggleSearch={() => setShowSearch(!showSearch)}
           searchVisible={showSearch}
           user={user}
@@ -227,9 +233,17 @@ function App() {
         )}
 
         {/* Calendario de Eventos - Vista completa */}
-        {showCalendar && (
+        {showCalendar && !showDailyView && (
           <CalendarView
             onClose={() => setShowCalendar(false)}
+          />
+        )}
+
+        {/* Vista Diaria - Split Mapa/Eventos */}
+        {showDailyView && !showCalendar && (
+          <DailyView
+            onClose={() => setShowDailyView(false)}
+            mapInstance={mapInstance}
           />
         )}
 
@@ -246,7 +260,8 @@ function App() {
           </div>
         )}
       </div>
-          </MaritimeBoundariesProvider>
+            </MaritimeBoundariesProvider>
+          </DrawingToolsProvider>
         </SelectionProvider>
       </LockProvider>
     </EventsProvider>

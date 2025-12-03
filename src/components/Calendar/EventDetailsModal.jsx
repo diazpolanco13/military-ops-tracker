@@ -114,7 +114,7 @@ export default function EventDetailsModal({ event, onClose, onEdit, onDelete }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto pt-16 sm:pt-6">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[10000] flex items-start sm:items-center justify-center p-3 sm:p-6 overflow-y-auto pt-16 sm:pt-6">
       <div className="bg-slate-900 rounded-xl shadow-2xl border border-slate-700 w-full max-w-4xl mt-2 sm:my-8 mb-24 sm:mb-8 relative z-10">
         {/* Header con imagen de fondo si existe */}
         <div className="relative z-10">

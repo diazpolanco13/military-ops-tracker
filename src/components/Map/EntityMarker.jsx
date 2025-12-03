@@ -3,6 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import { createRoot } from 'react-dom/client';
 import { useSelection } from '../../stores/SelectionContext';
 import { useLock } from '../../stores/LockContext';
+import { useDrawingTools } from '../../stores/DrawingToolsContext';
 import { getTemplateIcon, getEntityIcon } from '../../config/i2Icons';
 import { getFlagComponent } from '../Common/CountrySelector';
 import { supabase } from '../../lib/supabase';
@@ -154,6 +155,7 @@ export default function EntityMarker({ entity, template: templateProp, map, onPo
   
   const { isCtrlPressed, isSelected, selectEntity, addToSelection } = useSelection();
   const { isLocked } = useLock();
+  const { isDrawingToolActive } = useDrawingTools(); // 🔒 Detectar si hay herramientas activas
   
   // Template ahora viene como prop desde MapContainer (cacheado)
 
@@ -449,6 +451,12 @@ export default function EntityMarker({ entity, template: templateProp, map, onPo
     // 🎯 Event listener para click en el marcador (selección o sidebar)
     el.addEventListener('click', (e) => {
       if (isDraggingRef.current) return; // Ignorar si es drag
+      
+      // 🔒 BLOQUEAR clicks en entidades cuando hay herramienta de dibujo activa
+      if (isDrawingToolActive) {
+        e.stopPropagation(); // Prevenir que el evento llegue al mapa
+        return; // No hacer nada más
+      }
       
       // Detectar Ctrl/Cmd directamente del evento del mouse
       const ctrlPressed = e.ctrlKey || e.metaKey;

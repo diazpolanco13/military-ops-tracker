@@ -129,7 +129,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   return (
     <div 
       ref={panelRef}
-      className="fixed left-4 top-20 w-[340px] max-h-[88vh] bg-slate-900 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-600 z-50 flex flex-col overflow-hidden"
+      className="fixed left-4 top-20 w-[340px] max-h-[88vh] bg-slate-900 backdrop-blur-xl rounded-xl shadow-2xl border border-slate-600 z-30 flex flex-col overflow-hidden"
       style={{
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.1)',
         background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'

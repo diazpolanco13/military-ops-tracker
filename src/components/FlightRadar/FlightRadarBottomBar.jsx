@@ -57,7 +57,7 @@ export default function FlightRadarBottomBar({
   return (
     <>
       {/* Barra inferior compacta centrada */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40">
+      <div id="flight-radar-bottom-bar" className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30">
         <div className="flex items-center gap-1 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl">
           
           {/* Toggle FlightRadar ON/OFF */}
@@ -111,8 +111,9 @@ export default function FlightRadarBottomBar({
       {/* CONTADOR CIRCULAR CLICKEABLE - Abre el sidebar */}
       {isFlightRadarEnabled && !isPanelOpen && (
         <button
+          id="flight-radar-counter-button"
           onClick={onOpenPanel}
-          className="fixed bottom-6 right-6 z-40 group"
+          className="fixed bottom-6 right-6 z-30 group"
           title="Ver lista de vuelos"
         >
           <div className="relative flex items-center justify-center transition-transform hover:scale-110">

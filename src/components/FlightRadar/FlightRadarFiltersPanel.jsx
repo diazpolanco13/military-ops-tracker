@@ -123,12 +123,12 @@ export default function FlightRadarFiltersPanel({
     <>
       {/* Backdrop transparente */}
       <div 
-        className="fixed inset-0 z-40"
+        className="fixed inset-0 z-20"
         onClick={onClose}
       />
 
       {/* Panel compacto - NO toda la ventana */}
-      <div className="fixed left-4 bottom-20 w-72 max-h-[70vh] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden">
+      <div className="fixed left-4 bottom-20 w-72 max-h-[70vh] bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-30 flex flex-col overflow-hidden">
         
         {/* Header compacto */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800/50">

@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ocultar botones de FlightRadar cuando Vista Diaria está activa */
+body:has(.daily-view-active) #flight-radar-bottom-bar,
+body:has(.daily-view-active) #flight-radar-counter-button {
+  display: none !important;
+}
+
 /* Scrollbar moderno casi invisible */
 .modern-scrollbar {
   scrollbar-width: thin;

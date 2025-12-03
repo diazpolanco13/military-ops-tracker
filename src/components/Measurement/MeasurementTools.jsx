@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import * as turf from '@turf/turf';
-import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus, ArrowRight, Undo2 } from 'lucide-react';
+import { Ruler, Circle, Pentagon, Trash2, X, Minimize2, Maximize2, Palette, Minus, Plus, ArrowRight, Undo2, Type } from 'lucide-react';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import TextAnnotationTool from './TextAnnotationTool';
+import { useDrawingTools } from '../../stores/DrawingToolsContext';
 
 /**
  * 🛠️ Herramientas de Medición Militar
@@ -14,12 +16,14 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
  * - Cleanup correcto al cerrar/abrir
  */
 export default function MeasurementTools({ map, onClose }) {
+  const { activateTool: setGlobalDrawingTool, deactivateTool: clearGlobalDrawingTool } = useDrawingTools();
   const [measurements, setMeasurements] = useState([]);
   const [activeTool, setActiveTool] = useState(null);
   const [circleRadius, setCircleRadius] = useState(100); // km
   const [selectedColor, setSelectedColor] = useState('#22c55e'); // Verde por defecto
   const [lineWidth, setLineWidth] = useState(3); // Grosor de línea (1-8)
   const [lineStyle, setLineStyle] = useState('solid'); // 'solid', 'dashed', 'dotted'
+  const [showTextTool, setShowTextTool] = useState(false); // 🆕 Herramienta de texto
   const drawRef = useRef(null);
   const labelsAddedRef = useRef(false); // Para evitar agregar source/layer múltiples veces
   const arrowIdsRef = useRef(new Set()); // Set de IDs de features que son flechas
@@ -140,6 +144,10 @@ export default function MeasurementTools({ map, onClose }) {
       
       // Limpiar currentToolRef después de crear (para que no afecte el siguiente dibujo)
       currentToolRef.current = null;
+      
+      // 🔓 Desbloquear selección de entidades después de dibujar
+      setActiveTool(null);
+      clearGlobalDrawingTool();
       
       // Obtener TODAS las features actualizadas
       const allFeatures = drawRef.current.getAll();
@@ -574,6 +582,7 @@ export default function MeasurementTools({ map, onClose }) {
     currentToolRef.current = 'line'; // Guardar en ref
     drawRef.current.changeMode('draw_line_string');
     setActiveTool('line');
+    setGlobalDrawingTool('line'); // 🔒 Bloquear selección de entidades
   };
 
   // Activar herramienta de polígono
@@ -582,12 +591,14 @@ export default function MeasurementTools({ map, onClose }) {
     currentToolRef.current = 'polygon'; // Guardar en ref
     drawRef.current.changeMode('draw_polygon');
     setActiveTool('polygon');
+    setGlobalDrawingTool('polygon'); // 🔒 Bloquear selección de entidades
   };
 
   // Activar modo círculo (no crea círculo aún, espera click en mapa)
   const activateCircleTool = () => {
     currentToolRef.current = 'circle'; // Guardar en ref
     setActiveTool('circle');
+    setGlobalDrawingTool('circle'); // 🔒 Bloquear selección de entidades
     // No crear círculo aquí, esperar a que usuario haga clic en el mapa
   };
 
@@ -597,6 +608,7 @@ export default function MeasurementTools({ map, onClose }) {
     currentToolRef.current = 'arrow'; // Guardar en ref
     drawRef.current.changeMode('draw_line_string');
     setActiveTool('arrow');
+    setGlobalDrawingTool('arrow'); // 🔒 Bloquear selección de entidades
   };
 
   // Crear círculo en la ubicación donde el usuario hace clic
@@ -615,6 +627,10 @@ export default function MeasurementTools({ map, onClose }) {
 
     // Agregar como polígono
     drawRef.current.add(circle);
+    
+    // 🔓 Desbloquear selección de entidades después de crear círculo
+    setActiveTool(null);
+    clearGlobalDrawingTool();
     
     // Recalcular TODAS las mediciones (incluido el nuevo círculo)
     const allFeatures = drawRef.current.getAll();
@@ -730,8 +746,33 @@ export default function MeasurementTools({ map, onClose }) {
 
   return (
     <>
+      {/* Herramienta de anotaciones de texto */}
+      {showTextTool && (
+        <TextAnnotationTool
+          mapInstance={map}
+          isActive={showTextTool}
+          onClose={() => setShowTextTool(false)}
+        />
+      )}
+
       {/* Mini menú flotante de iconos - MINIMALISTA - Debajo del botón Shapes */}
       <div className="fixed left-4 z-30 pointer-events-auto flex flex-col gap-2" style={{ top: '190px' }}>
+        {/* Herramienta de texto/anotaciones */}
+        <button
+          onClick={() => setShowTextTool(!showTextTool)}
+          className={`w-10 h-10 rounded-lg backdrop-blur-md shadow-lg transition-all hover:scale-110 flex items-center justify-center ${
+            showTextTool
+              ? 'bg-yellow-500 border-2 border-yellow-400'
+              : 'bg-slate-900/95 border-2 border-slate-700 hover:border-yellow-500'
+          }`}
+          title="Anotaciones de Texto (Agregar etiquetas al mapa)"
+        >
+          <Type className={`w-5 h-5 ${showTextTool ? 'text-white' : 'text-yellow-400'}`} />
+        </button>
+
+        {/* Separador si hay herramienta de texto activa */}
+        {showTextTool && <div className="h-px bg-slate-700 my-1"></div>}
+
         {/* Medir distancia */}
         <button
           onClick={activateLineTool}

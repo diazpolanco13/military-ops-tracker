@@ -37,10 +37,10 @@ export default function GlobalAddEventButton({ settingsPanelOpen = false }) {
 
   return (
     <>
-      {/* Botón flotante - Esquina inferior izquierda - Se oculta en móvil cuando hay modal de detalles */}
+      {/* Botón flotante - Esquina inferior izquierda - Colores radar aéreo */}
       <button
         onClick={() => setShowCreateModal(true)}
-        className={`fixed bottom-8 left-8 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[60] border-2 border-blue-400 ${
+        className={`fixed bottom-8 left-8 w-14 h-14 bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-yellow-400 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[60] border-2 border-yellow-500/50 hover:border-yellow-400 ${
           detailsModalOpen ? 'sm:flex hidden' : 'flex'
         }`}
         title="Crear nuevo evento"

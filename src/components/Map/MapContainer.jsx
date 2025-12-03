@@ -14,6 +14,7 @@ import DeploymentStats from '../Dashboard/DeploymentStats';
 import EntityQuickCard from '../Cards/EntityQuickCard';
 import EntityDetailedModal from '../Cards/EntityDetailedModal';
 import { useSelection } from '../../stores/SelectionContext';
+import { useDrawingTools } from '../../stores/DrawingToolsContext';
 import { supabase } from '../../lib/supabase';
 import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
 import { useFlightRadar } from '../../hooks/useFlightRadar';
@@ -41,6 +42,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   });
   const { isLocked } = useLock();
   const { selectEntity } = useSelection();
+  const { isDrawingToolActive } = useDrawingTools(); // 🔒 Detectar herramientas activas
   
   // 🎴 Vista de entidad: siempre card futurista
   const viewMode = 'card'; // Siempre card futurista
@@ -517,6 +519,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
     // Click en cluster → hacer zoom
     map.current.on('click', clusterLayerId, (e) => {
+      // 🔒 Bloquear si hay herramienta de dibujo activa
+      if (isDrawingToolActive) return;
+      
       const features = map.current.queryRenderedFeatures(e.point, {
         layers: [clusterLayerId]
       });
@@ -536,6 +541,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
     // Click en marcador individual → abrir card futurista
     map.current.on('click', unclusteredLayerId, (e) => {
+      // 🔒 Bloquear si hay herramienta de dibujo activa
+      if (isDrawingToolActive) return;
+      
       const feature = e.features[0];
       const entityId = feature.properties.id;
       
@@ -592,10 +600,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
       }
     };
-  }, [mapLoaded, entities, loading, selectEntity, clusterZoomThreshold, clusterRadius]);
+  }, [mapLoaded, entities, loading, selectEntity, clusterZoomThreshold, clusterRadius, isDrawingToolActive]);
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+    <div id="main-map-container" style={{ width: '100%', height: '100vh', position: 'relative' }}>
       {/* Vista de entidad: Card Futurista */}
       {selectedEntity && (
         <EntityQuickCard
@@ -616,6 +624,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
       {/* Contenedor del mapa - Empieza después de navbar */}
       <div
+        id="mapbox-container"
         ref={mapContainer}
         className={dragPreview ? 'map-drop-active' : ''}
         style={{
