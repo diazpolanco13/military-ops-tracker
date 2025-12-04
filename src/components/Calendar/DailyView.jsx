@@ -58,6 +58,9 @@ export default function DailyView({ onClose, mapInstance }) {
 
   // Calcular eventos por página dinámicamente basado en altura real
   useEffect(() => {
+    // Refs para almacenar timeoutIds y evitar memory leaks
+    const timeoutIds = new Set();
+    
     const calculateEventsPerPage = () => {
       if (!eventsContainerRef.current) return;
       
@@ -91,22 +94,36 @@ export default function DailyView({ onClose, mapInstance }) {
       }
     };
 
+    // Handler estable para ResizeObserver que trackea timeouts
+    const handleResize = () => {
+      const timeoutId = setTimeout(() => {
+        calculateEventsPerPage();
+        timeoutIds.delete(timeoutId);
+      }, 100);
+      timeoutIds.add(timeoutId);
+    };
+
     // Esperar un tick para que el DOM se actualice
-    const timeoutId = setTimeout(calculateEventsPerPage, 100);
+    const initialTimeoutId = setTimeout(calculateEventsPerPage, 100);
+    timeoutIds.add(initialTimeoutId);
     
-    const resizeObserver = new ResizeObserver(() => {
-      setTimeout(calculateEventsPerPage, 100);
-    });
+    const resizeObserver = new ResizeObserver(handleResize);
     
     if (eventsContainerRef.current) {
       resizeObserver.observe(eventsContainerRef.current);
     }
-    window.addEventListener('resize', calculateEventsPerPage);
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      clearTimeout(timeoutId);
+      // Cancelar TODOS los timeouts pendientes
+      timeoutIds.forEach(id => clearTimeout(id));
+      timeoutIds.clear();
+      
+      // Desconectar observer
       resizeObserver.disconnect();
-      window.removeEventListener('resize', calculateEventsPerPage);
+      
+      // Remover listener con la MISMA referencia de función
+      window.removeEventListener('resize', handleResize);
     };
   }, [eventsPerPage, todayEvents.length]);
 
