@@ -30,7 +30,12 @@ import {
   CalendarDays,
   User,
   LogOut,
-  UserCircle2
+  UserCircle2,
+  Ship,
+  Plane,
+  Users,
+  Truck,
+  MapPinned
 } from 'lucide-react';
 import { MAPBOX_STYLES } from '../../lib/maplibre';
 import { useSelection } from '../../stores/SelectionContext';
@@ -74,6 +79,31 @@ export default function TopNavigationBar({
   onSignOut = null
 }) {
   const [activePanel, setActivePanel] = useState(null);
+  
+  // 🚢 Estado para ocultar/mostrar embarcaciones
+  const [shipsVisible, setShipsVisible] = useState(() => {
+    return localStorage.getItem('shipsVisible') !== 'false'; // Por defecto visible
+  });
+
+  // ✈️ Estado para ocultar/mostrar aeronaves
+  const [aircraftVisible, setAircraftVisible] = useState(() => {
+    return localStorage.getItem('aircraftVisible') !== 'false';
+  });
+
+  // 👥 Estado para ocultar/mostrar tropas
+  const [troopsVisible, setTroopsVisible] = useState(() => {
+    return localStorage.getItem('troopsVisible') !== 'false';
+  });
+
+  // 🚙 Estado para ocultar/mostrar vehículos
+  const [vehiclesVisible, setVehiclesVisible] = useState(() => {
+    return localStorage.getItem('vehiclesVisible') !== 'false';
+  });
+
+  // 📍 Estado para ocultar/mostrar lugares (bases, aeropuertos, instalaciones)
+  const [placesVisible, setPlacesVisible] = useState(() => {
+    return localStorage.getItem('placesVisible') !== 'false';
+  });
   // 🗺️ Persistir selección de mapa en localStorage
   const [currentMapStyle, setCurrentMapStyle] = useState(() => {
     return localStorage.getItem('selectedMapStyle') || 'satellite-streets';
@@ -130,6 +160,58 @@ export default function TopNavigationBar({
 
   const togglePanel = (panelName) => {
     setActivePanel(activePanel === panelName ? null : panelName);
+  };
+
+  // Toggle para embarcaciones
+  const toggleShipsVisibility = () => {
+    const newState = !shipsVisible;
+    setShipsVisible(newState);
+    localStorage.setItem('shipsVisible', newState.toString());
+    
+    // Emitir evento para que MapContainer actualice el filtro
+    window.dispatchEvent(new CustomEvent('toggleShipsVisibility', { 
+      detail: { visible: newState } 
+    }));
+  };
+
+  // Toggle para aeronaves
+  const toggleAircraftVisibility = () => {
+    const newState = !aircraftVisible;
+    setAircraftVisible(newState);
+    localStorage.setItem('aircraftVisible', newState.toString());
+    window.dispatchEvent(new CustomEvent('toggleAircraftVisibility', { 
+      detail: { visible: newState } 
+    }));
+  };
+
+  // Toggle para tropas
+  const toggleTroopsVisibility = () => {
+    const newState = !troopsVisible;
+    setTroopsVisible(newState);
+    localStorage.setItem('troopsVisible', newState.toString());
+    window.dispatchEvent(new CustomEvent('toggleTroopsVisibility', { 
+      detail: { visible: newState } 
+    }));
+  };
+
+  // Toggle para vehículos
+  const toggleVehiclesVisibility = () => {
+    const newState = !vehiclesVisible;
+    setVehiclesVisible(newState);
+    localStorage.setItem('vehiclesVisible', newState.toString());
+    window.dispatchEvent(new CustomEvent('toggleVehiclesVisibility', { 
+      detail: { visible: newState } 
+    }));
+  };
+
+  // Toggle para lugares
+  const togglePlacesVisibility = () => {
+    const newState = !placesVisible;
+    setPlacesVisible(newState);
+    localStorage.setItem('placesVisible', newState.toString());
+    window.dispatchEvent(new CustomEvent('togglePlacesVisibility', { 
+      detail: { visible: newState } 
+    }));
   };
 
   const handleMapStyleChange = (styleId, styleUrl) => {
@@ -363,6 +445,16 @@ export default function TopNavigationBar({
                     measurementVisible={measurementVisible}
                     onToggleSearch={onToggleSearch}
                     searchVisible={searchVisible}
+                    onToggleShips={toggleShipsVisibility}
+                    shipsVisible={shipsVisible}
+                    onToggleAircraft={toggleAircraftVisibility}
+                    aircraftVisible={aircraftVisible}
+                    onToggleTroops={toggleTroopsVisibility}
+                    troopsVisible={troopsVisible}
+                    onToggleVehicles={toggleVehiclesVisibility}
+                    vehiclesVisible={vehiclesVisible}
+                    onTogglePlaces={togglePlacesVisibility}
+                    placesVisible={placesVisible}
                   />
                 ) : activePanel === 'zones' ? (
                   <ZonesPanel 
@@ -458,7 +550,17 @@ function ViewPanel({
   onToggleMeasurement = () => {},
   measurementVisible = false,
   onToggleSearch = () => {},
-  searchVisible = true
+  searchVisible = true,
+  onToggleShips = () => {},
+  shipsVisible = true,
+  onToggleAircraft = () => {},
+  aircraftVisible = true,
+  onToggleTroops = () => {},
+  troopsVisible = true,
+  onToggleVehicles = () => {},
+  vehiclesVisible = true,
+  onTogglePlaces = () => {},
+  placesVisible = true
 }) {
   const { getSelectedCount, getSelectedIds, clearSelection } = useSelection();
   const { toggleVisibility, archiveEntity, deleteEntity } = useEntityActions();
@@ -517,6 +619,36 @@ function ViewPanel({
       return; // No cerrar el panel
     }
 
+    // Acción de toggle embarcaciones
+    if (action === 'toggle-ships') {
+      onToggleShips();
+      return; // No cerrar el panel
+    }
+
+    // Acción de toggle aeronaves
+    if (action === 'toggle-aircraft') {
+      onToggleAircraft();
+      return;
+    }
+
+    // Acción de toggle tropas
+    if (action === 'toggle-troops') {
+      onToggleTroops();
+      return;
+    }
+
+    // Acción de toggle vehículos
+    if (action === 'toggle-vehicles') {
+      onToggleVehicles();
+      return;
+    }
+
+    // Acción de toggle lugares
+    if (action === 'toggle-places') {
+      onTogglePlaces();
+      return;
+    }
+
     let actionFunction = null;
 
     switch (action) {
@@ -546,6 +678,56 @@ function ViewPanel({
   };
 
   const VIEW_ACTIONS = [
+    {
+      id: 'toggle-ships',
+      title: shipsVisible ? 'Ocultar Embarcaciones' : 'Mostrar Embarcaciones',
+      description: shipsVisible ? 'Ocultar todos los buques del mapa' : 'Mostrar destructores, fragatas, portaaviones',
+      icon: Ship,
+      color: shipsVisible ? 'bg-blue-900/30' : 'bg-slate-700',
+      hoverColor: shipsVisible ? 'hover:bg-blue-900/50' : 'hover:bg-slate-600',
+      textColor: shipsVisible ? 'text-blue-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-aircraft',
+      title: aircraftVisible ? 'Ocultar Aeronaves' : 'Mostrar Aeronaves',
+      description: aircraftVisible ? 'Ocultar aviones, cazas, helicópteros' : 'Mostrar toda la aviación',
+      icon: Plane,
+      color: aircraftVisible ? 'bg-sky-900/30' : 'bg-slate-700',
+      hoverColor: aircraftVisible ? 'hover:bg-sky-900/50' : 'hover:bg-slate-600',
+      textColor: aircraftVisible ? 'text-sky-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-troops',
+      title: troopsVisible ? 'Ocultar Tropas' : 'Mostrar Tropas',
+      description: troopsVisible ? 'Ocultar personal militar e insurgentes' : 'Mostrar tropas e insurgentes',
+      icon: Users,
+      color: troopsVisible ? 'bg-amber-900/30' : 'bg-slate-700',
+      hoverColor: troopsVisible ? 'hover:bg-amber-900/50' : 'hover:bg-slate-600',
+      textColor: troopsVisible ? 'text-amber-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-vehicles',
+      title: vehiclesVisible ? 'Ocultar Vehículos' : 'Mostrar Vehículos',
+      description: vehiclesVisible ? 'Ocultar vehículos y tanques' : 'Mostrar blindados, tanques, APCs',
+      icon: Truck,
+      color: vehiclesVisible ? 'bg-gray-900/30' : 'bg-slate-700',
+      hoverColor: vehiclesVisible ? 'hover:bg-gray-900/50' : 'hover:bg-slate-600',
+      textColor: vehiclesVisible ? 'text-gray-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
+    {
+      id: 'toggle-places',
+      title: placesVisible ? 'Ocultar Instalaciones' : 'Mostrar Instalaciones',
+      description: placesVisible ? 'Ocultar bases, aeropuertos y lugares' : 'Mostrar bases militares y aeropuertos',
+      icon: MapPinned,
+      color: placesVisible ? 'bg-purple-900/30' : 'bg-slate-700',
+      hoverColor: placesVisible ? 'hover:bg-purple-900/50' : 'hover:bg-slate-600',
+      textColor: placesVisible ? 'text-purple-400' : 'text-slate-300',
+      requiresSelection: false,
+    },
     {
       id: 'toggle-measurement',
       title: measurementVisible ? 'Ocultar Medición' : 'Herramientas de Medición',

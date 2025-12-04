@@ -90,6 +90,31 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     return localStorage.getItem('useImages') === 'true';
   });
 
+  // 🚢 Estado para ocultar/mostrar embarcaciones
+  const [shipsVisible, setShipsVisible] = useState(() => {
+    return localStorage.getItem('shipsVisible') !== 'false';
+  });
+
+  // ✈️ Estado para ocultar/mostrar aeronaves
+  const [aircraftVisible, setAircraftVisible] = useState(() => {
+    return localStorage.getItem('aircraftVisible') !== 'false';
+  });
+
+  // 👥 Estado para ocultar/mostrar tropas
+  const [troopsVisible, setTroopsVisible] = useState(() => {
+    return localStorage.getItem('troopsVisible') !== 'false';
+  });
+
+  // 🚙 Estado para ocultar/mostrar vehículos
+  const [vehiclesVisible, setVehiclesVisible] = useState(() => {
+    return localStorage.getItem('vehiclesVisible') !== 'false';
+  });
+
+  // 📍 Estado para ocultar/mostrar lugares (bases, aeropuertos, instalaciones)
+  const [placesVisible, setPlacesVisible] = useState(() => {
+    return localStorage.getItem('placesVisible') !== 'false';
+  });
+
   // 🌊 Obtener configuración de límites marítimos desde BD
   const { showBoundaries } = useMaritimeBoundariesContext();
   const { settings, loading: loadingMaritime, updateTrigger, refetch: refetchSettings } = useMaritimeSettings();
@@ -104,6 +129,61 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     window.addEventListener('maritimeSettingsChanged', handleSettingsChange);
     return () => window.removeEventListener('maritimeSettingsChanged', handleSettingsChange);
   }, [refetchSettings]);
+
+  // 🚢 Escuchar evento para toggle de embarcaciones
+  useEffect(() => {
+    const handleToggleShips = (e) => {
+      console.log('🚢 Toggle ships visibility:', e.detail);
+      setShipsVisible(e.detail.visible);
+    };
+
+    window.addEventListener('toggleShipsVisibility', handleToggleShips);
+    return () => window.removeEventListener('toggleShipsVisibility', handleToggleShips);
+  }, []);
+
+  // ✈️ Escuchar evento para toggle de aeronaves
+  useEffect(() => {
+    const handleToggleAircraft = (e) => {
+      console.log('✈️ Toggle aircraft visibility:', e.detail);
+      setAircraftVisible(e.detail.visible);
+    };
+
+    window.addEventListener('toggleAircraftVisibility', handleToggleAircraft);
+    return () => window.removeEventListener('toggleAircraftVisibility', handleToggleAircraft);
+  }, []);
+
+  // 👥 Escuchar evento para toggle de tropas
+  useEffect(() => {
+    const handleToggleTroops = (e) => {
+      console.log('👥 Toggle troops visibility:', e.detail);
+      setTroopsVisible(e.detail.visible);
+    };
+
+    window.addEventListener('toggleTroopsVisibility', handleToggleTroops);
+    return () => window.removeEventListener('toggleTroopsVisibility', handleToggleTroops);
+  }, []);
+
+  // 🚙 Escuchar evento para toggle de vehículos
+  useEffect(() => {
+    const handleToggleVehicles = (e) => {
+      console.log('🚙 Toggle vehicles visibility:', e.detail);
+      setVehiclesVisible(e.detail.visible);
+    };
+
+    window.addEventListener('toggleVehiclesVisibility', handleToggleVehicles);
+    return () => window.removeEventListener('toggleVehiclesVisibility', handleToggleVehicles);
+  }, []);
+
+  // 📍 Escuchar evento para toggle de lugares
+  useEffect(() => {
+    const handleTogglePlaces = (e) => {
+      console.log('📍 Toggle places visibility:', e.detail);
+      setPlacesVisible(e.detail.visible);
+    };
+
+    window.addEventListener('togglePlacesVisibility', handleTogglePlaces);
+    return () => window.removeEventListener('togglePlacesVisibility', handleTogglePlaces);
+  }, []);
   
   // 🎯 Memorizar códigos de países visibles (recalcular cuando cambien settings o updateTrigger)
   const visibleCountryCodes = useMemo(() => {
@@ -409,7 +489,41 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     const geojson = {
       type: 'FeatureCollection',
       features: entities
-        .filter(e => e.latitude && e.longitude && e.is_visible !== false)
+        .filter(e => {
+          // Validar coordenadas y visibilidad
+          if (!e.latitude || !e.longitude || e.is_visible === false) return false;
+          
+          // 🚢 Filtrar embarcaciones si están ocultas
+          if (!shipsVisible) {
+            const shipTypes = ['destructor', 'fragata', 'portaaviones', 'anfibio', 'submarino', 'patrullero'];
+            if (shipTypes.includes(e.type)) return false;
+          }
+
+          // ✈️ Filtrar aeronaves si están ocultas
+          if (!aircraftVisible) {
+            const aircraftTypes = ['avion', 'caza', 'helicoptero', 'drone'];
+            if (aircraftTypes.includes(e.type)) return false;
+          }
+
+          // 👥 Filtrar tropas si están ocultas
+          if (!troopsVisible) {
+            const troopTypes = ['tropas', 'insurgente'];
+            if (troopTypes.includes(e.type)) return false;
+          }
+
+          // 🚙 Filtrar vehículos si están ocultos
+          if (!vehiclesVisible) {
+            const vehicleTypes = ['vehiculo', 'tanque'];
+            if (vehicleTypes.includes(e.type)) return false;
+          }
+
+          // 📍 Filtrar lugares si están ocultos
+          if (!placesVisible) {
+            if (e.type === 'lugar') return false;
+          }
+          
+          return true;
+        })
         .map(entity => ({
           type: 'Feature',
           geometry: {
@@ -600,7 +714,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
       }
     };
-  }, [mapLoaded, entities, loading, selectEntity, clusterZoomThreshold, clusterRadius, isDrawingToolActive]);
+  }, [mapLoaded, entities, loading, selectEntity, clusterZoomThreshold, clusterRadius, isDrawingToolActive, shipsVisible, aircraftVisible, troopsVisible, vehiclesVisible, placesVisible]);
 
   return (
     <div id="main-map-container" style={{ width: '100%', height: '100vh', position: 'relative' }}>
@@ -653,7 +767,41 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
       {/* Marcadores de Entidades (cuando zoom >= umbral) */}
       {mapLoaded && !loading && templatesLoaded && currentZoom >= clusterZoomThreshold && 
         entities
-          .filter(e => e.is_visible !== false)
+          .filter(e => {
+            // Filtrar entidades ocultas
+            if (e.is_visible === false) return false;
+            
+            // 🚢 Filtrar embarcaciones si están ocultas
+            if (!shipsVisible) {
+              const shipTypes = ['destructor', 'fragata', 'portaaviones', 'anfibio', 'submarino', 'patrullero'];
+              if (shipTypes.includes(e.type)) return false;
+            }
+
+            // ✈️ Filtrar aeronaves si están ocultas
+            if (!aircraftVisible) {
+              const aircraftTypes = ['avion', 'caza', 'helicoptero', 'drone'];
+              if (aircraftTypes.includes(e.type)) return false;
+            }
+
+            // 👥 Filtrar tropas si están ocultas
+            if (!troopsVisible) {
+              const troopTypes = ['tropas', 'insurgente'];
+              if (troopTypes.includes(e.type)) return false;
+            }
+
+            // 🚙 Filtrar vehículos si están ocultos
+            if (!vehiclesVisible) {
+              const vehicleTypes = ['vehiculo', 'tanque'];
+              if (vehicleTypes.includes(e.type)) return false;
+            }
+
+            // 📍 Filtrar lugares si están ocultos
+            if (!placesVisible) {
+              if (e.type === 'lugar') return false;
+            }
+            
+            return true;
+          })
           .map((entity) => {
             // ⚠️ CRÍTICO: Incluir template_id en la key para forzar recreación cuando cambia
             const template = templatesCache[entity.template_id];
