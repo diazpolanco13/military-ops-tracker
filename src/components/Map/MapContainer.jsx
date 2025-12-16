@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
 import { useFlightRadar } from '../../hooks/useFlightRadar';
 import FlightLayer from '../FlightRadar/FlightLayer';
+import FlightTrailLayer from '../FlightRadar/FlightTrailLayer';
 import FlightRadarPanel from '../FlightRadar/FlightRadarPanel';
 import FlightDetailsPanel from '../FlightRadar/FlightDetailsPanel';
 import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
@@ -822,12 +823,21 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
 
       {/* ✈️ VUELOS EN TIEMPO REAL - FlightRadar24 (Capa nativa sin lag) */}
       {mapLoaded && isFlightRadarEnabled && (
-        <FlightLayer
-          map={map.current}
-          flights={flightsWithCategory}
-          selectedFlight={selectedFlight}
-          onFlightClick={setSelectedFlight}
-        />
+        <>
+          {/* Capa de marcadores de vuelos (primero para que exista cuando trail se agregue) */}
+          <FlightLayer
+            map={map.current}
+            flights={flightsWithCategory}
+            selectedFlight={selectedFlight}
+            onFlightClick={setSelectedFlight}
+          />
+          {/* Capa de trayectoria del vuelo seleccionado (se inserta debajo de flights) */}
+          <FlightTrailLayer
+            map={map.current}
+            selectedFlight={selectedFlight}
+            showTrail={true}
+          />
+        </>
       )}
 
       {/* Indicador de carga */}

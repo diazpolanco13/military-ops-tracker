@@ -38,15 +38,16 @@ export default function GlobalAddEventButton({ settingsPanelOpen = false }) {
   return (
     <>
       {/* Botón flotante - Esquina inferior izquierda - Colores radar aéreo */}
+      {/* En móvil: más arriba para no tapar la barra de FlightRadar */}
       <button
         onClick={() => setShowCreateModal(true)}
-        className={`fixed bottom-8 left-8 w-14 h-14 bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-yellow-400 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[60] border-2 border-yellow-500/50 hover:border-yellow-400 ${
+        className={`fixed bottom-24 sm:bottom-8 left-4 sm:left-8 w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-yellow-400 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[60] border-2 border-yellow-500/50 hover:border-yellow-400 ${
           detailsModalOpen ? 'sm:flex hidden' : 'flex'
         }`}
         title="Crear nuevo evento"
         aria-label="Crear nuevo evento"
       >
-        <Plus size={28} strokeWidth={2.5} />
+        <Plus size={24} className="sm:w-7 sm:h-7" strokeWidth={2.5} />
       </button>
 
       {/* Modal de creación de evento */}

@@ -56,54 +56,55 @@ export default function FlightRadarBottomBar({
 
   return (
     <>
-      {/* Barra inferior compacta centrada */}
-      <div id="flight-radar-bottom-bar" className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30">
-        <div className="flex items-center gap-1 px-3 py-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl">
+      {/* Barra inferior compacta - responsive para móvil */}
+      <div id="flight-radar-bottom-bar" className="fixed bottom-6 left-4 sm:left-1/2 sm:transform sm:-translate-x-1/2 z-30">
+        <div className="flex items-center gap-0.5 sm:gap-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 rounded-full shadow-2xl">
           
           {/* Toggle FlightRadar ON/OFF */}
           <button
             onClick={onToggleFlightRadar}
-            className={`p-2.5 rounded-full transition-all ${
+            className={`p-2 sm:p-2.5 rounded-full transition-all ${
               isFlightRadarEnabled 
                 ? 'text-yellow-400 bg-yellow-900/30' 
                 : 'text-slate-500 hover:text-white hover:bg-slate-800'
             }`}
             title={isFlightRadarEnabled ? 'Desactivar radar' : 'Activar radar'}
           >
-            <Plane size={20} className={isFlightRadarEnabled ? 'drop-shadow-lg' : ''} />
+            <Plane size={18} className={`sm:w-5 sm:h-5 ${isFlightRadarEnabled ? 'drop-shadow-lg' : ''}`} />
           </button>
 
-          <div className="w-px h-6 bg-slate-700 mx-1"></div>
+          <div className="w-px h-5 sm:h-6 bg-slate-700 mx-0.5 sm:mx-1"></div>
 
-          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Configuración">
-            <Settings size={18} />
+          <button className="p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Configuración">
+            <Settings size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
 
-          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Clima">
-            <CloudRain size={18} />
+          {/* Ocultar en móvil muy pequeño para evitar overflow */}
+          <button className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Clima">
+            <CloudRain size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
 
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`relative p-2.5 rounded-full transition-all ${
+            className={`relative p-2 sm:p-2.5 rounded-full transition-all ${
               showFilters ? 'text-yellow-400 bg-yellow-900/30' : 'text-slate-400 hover:text-white hover:bg-slate-800'
             }`}
             title="Filtros"
           >
-            <Filter size={18} />
+            <Filter size={16} className="sm:w-[18px] sm:h-[18px]" />
             {activeCount > 0 && (
-              <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                <span className="text-[9px] font-bold text-black">{activeCount}</span>
+              <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-[8px] sm:text-[9px] font-bold text-black">{activeCount}</span>
               </div>
             )}
           </button>
 
-          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Estadísticas">
-            <BarChart3 size={18} />
+          <button className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Estadísticas">
+            <BarChart3 size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
 
-          <button className="p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Historial">
-            <Clock size={18} />
+          <button className="hidden sm:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Historial">
+            <Clock size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>
@@ -113,12 +114,12 @@ export default function FlightRadarBottomBar({
         <button
           id="flight-radar-counter-button"
           onClick={onOpenPanel}
-          className="fixed bottom-6 right-6 z-30 group"
+          className="fixed bottom-6 right-4 sm:right-6 z-30 group"
           title="Ver lista de vuelos"
         >
           <div className="relative flex items-center justify-center transition-transform hover:scale-110">
-            {/* SVG Progreso */}
-            <svg className="absolute w-16 h-16 -rotate-90" viewBox="0 0 56 56">
+            {/* SVG Progreso - más pequeño en móvil */}
+            <svg className="absolute w-14 h-14 sm:w-16 sm:h-16 -rotate-90" viewBox="0 0 56 56">
               <circle
                 cx="28" cy="28" r="26"
                 fill="none"
@@ -137,10 +138,10 @@ export default function FlightRadarBottomBar({
               />
             </svg>
             
-            {/* Centro */}
-            <div className="w-14 h-14 bg-slate-900 border-2 border-slate-700 group-hover:border-yellow-500 rounded-full shadow-xl flex flex-col items-center justify-center transition-colors">
-              <Plane size={18} className="text-yellow-400 -mt-0.5" />
-              <span className="text-xs font-bold text-white leading-none">
+            {/* Centro - más pequeño en móvil */}
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border-2 border-slate-700 group-hover:border-yellow-500 rounded-full shadow-xl flex flex-col items-center justify-center transition-colors">
+              <Plane size={16} className="sm:w-[18px] sm:h-[18px] text-yellow-400 -mt-0.5" />
+              <span className="text-[10px] sm:text-xs font-bold text-white leading-none">
                 {flightCount}
               </span>
             </div>
