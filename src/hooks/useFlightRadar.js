@@ -15,6 +15,49 @@ import {
  * - Actualización automática
  * - Pause/Resume
  */
+// ====== MONITOR DE ESPACIO AÉREO ======
+// Ejecuta el monitor de alertas cada 3 minutos (solo una vez activo)
+let monitorInterval = null;
+
+async function runAirspaceMonitor() {
+  try {
+    const response = await fetch(
+      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/military-airspace-monitor`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    if (response.ok) {
+      const data = await response.json();
+      if (data.alerts_sent > 0) {
+        console.log(`🚨 ALERTA: ${data.alerts_sent} vuelos militares detectados en Venezuela:`, data.alerted);
+      }
+    }
+  } catch (error) {
+    // Silencioso - no interrumpir la app si falla
+  }
+}
+
+export function startAirspaceMonitor(intervalMs = 180000) { // 3 minutos por defecto
+  if (monitorInterval) return; // Ya está corriendo
+  console.log('🛡️ Monitor de espacio aéreo iniciado (cada 3 min)');
+  runAirspaceMonitor(); // Ejecutar inmediatamente
+  monitorInterval = setInterval(runAirspaceMonitor, intervalMs);
+}
+
+export function stopAirspaceMonitor() {
+  if (monitorInterval) {
+    clearInterval(monitorInterval);
+    monitorInterval = null;
+    console.log('🛡️ Monitor de espacio aéreo detenido');
+  }
+}
+
+// ====== HOOK PRINCIPAL ======
 export function useFlightRadar({ 
   autoUpdate = true,
   updateInterval = 30000,
@@ -225,6 +268,9 @@ export function useFlightRadar({
       }
       return;
     }
+
+    // 🛡️ Iniciar monitor de alertas de espacio aéreo (cada 3 min)
+    startAirspaceMonitor();
 
     fetchFlights();
 

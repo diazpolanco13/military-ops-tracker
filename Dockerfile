@@ -51,8 +51,8 @@ RUN npm run build
 # ==================================
 FROM nginx:alpine
 
-# Instalar envsubst (viene con gettext)
-RUN apk add --no-cache gettext
+# Instalar envsubst (viene con gettext) y curl para el monitor de espacio aéreo
+RUN apk add --no-cache gettext curl
 
 # Copiar archivos compilados desde builder
 COPY --from=builder /app/dist /usr/share/nginx/html
