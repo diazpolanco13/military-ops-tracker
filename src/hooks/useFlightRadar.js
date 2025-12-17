@@ -42,9 +42,9 @@ async function runAirspaceMonitor() {
   }
 }
 
-export function startAirspaceMonitor(intervalMs = 180000) { // 3 minutos por defecto
+export function startAirspaceMonitor(intervalMs = 300000) { // 5 minutos para ahorrar créditos
   if (monitorInterval) return; // Ya está corriendo
-  console.log('🛡️ Monitor de espacio aéreo iniciado (cada 3 min)');
+  console.log('🛡️ Monitor de espacio aéreo iniciado (cada 5 min)');
   runAirspaceMonitor(); // Ejecutar inmediatamente
   monitorInterval = setInterval(runAirspaceMonitor, intervalMs);
 }
@@ -58,17 +58,23 @@ export function stopAirspaceMonitor() {
 }
 
 // ====== HOOK PRINCIPAL ======
+// ✅ Ahora usa API pública GRATUITA para el frontend
+// La API pagada solo se usa en military-airspace-monitor (alertas Telegram)
 export function useFlightRadar({ 
   autoUpdate = true,
-  updateInterval = 30000,
+  updateInterval = 30000,  // 30 segundos - API gratuita, sin límite
   enabled = true,
-  militaryOnly = false,  // Si true, solo carga militares (modo original)
+  militaryOnly = false,
+  bounds = null,
 } = {}) {
   const [allFlights, setAllFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [isActive, setIsActive] = useState(enabled);
+  
+  // Guardar bounds en ref para usarlos en fetchFlights
+  const boundsRef = useRef(bounds);
   
   // Filtros de categoría activos
   const [categoryFilters, setCategoryFilters] = useState({
@@ -89,36 +95,58 @@ export function useFlightRadar({
   const intervalRef = useRef(null);
   const isMountedRef = useRef(true);
 
+  // Ref para saber si es la primera carga
+  const isFirstLoadRef = useRef(true);
+  
+  // Actualizar boundsRef cuando cambian los bounds
+  useEffect(() => {
+    boundsRef.current = bounds;
+  }, [bounds]);
+
   /**
-   * Obtener vuelos (todos o solo militares)
+   * Obtener vuelos militares/gobierno
+   * ⚠️ NO borra vuelos existentes si hay error (preserva última actualización)
    */
   const fetchFlights = useCallback(async () => {
     if (!isActive) return;
 
     try {
-      setLoading(true);
+      // Solo mostrar loading en la primera carga
+      if (isFirstLoadRef.current) {
+        setLoading(true);
+      }
       setError(null);
 
+      // Usar bounds del viewport o los por defecto
+      const currentBounds = boundsRef.current;
+      
       let flightsData;
       
       if (militaryOnly) {
-        // Modo original: solo militares
-        flightsData = await getMilitaryFlights();
+        // Modo original: solo militares con bounds
+        flightsData = await getMilitaryFlights(currentBounds);
       } else {
-        // Modo completo: todos los vuelos con categoría
-        flightsData = await getAllFlights();
+        // Modo completo: todos los vuelos militares con categoría
+        flightsData = await getAllFlights(currentBounds);
       }
 
       if (!isMountedRef.current) return;
 
-      setAllFlights(flightsData);
-      setLastUpdate(new Date());
-      
-      console.log(`✅ FlightRadar24: ${flightsData.length} vuelos cargados`);
+      // ⚠️ Solo actualizar si hay datos válidos
+      if (Array.isArray(flightsData) && flightsData.length > 0) {
+        setAllFlights(flightsData);
+        setLastUpdate(new Date());
+        isFirstLoadRef.current = false;
+        console.log(`✅ FlightRadar24: ${flightsData.length} vuelos cargados`);
+      } else if (flightsData && flightsData.length === 0) {
+        // Si la API devuelve vacío, mantener los vuelos anteriores pero notificar
+        console.warn('⚠️ API devolvió 0 vuelos, manteniendo datos anteriores');
+      }
     } catch (err) {
       if (!isMountedRef.current) return;
       
-      console.error('❌ Error fetching flights:', err);
+      // ⚠️ NO borrar vuelos existentes - solo loguear el error
+      console.error('❌ Error fetching flights (manteniendo datos anteriores):', err);
       setError(err.message);
     } finally {
       if (isMountedRef.current) {
@@ -333,6 +361,17 @@ export function useFlightRadar({
     );
   }, [flights]);
 
+  /**
+   * 🗺️ Actualizar bounds del viewport y refrescar vuelos
+   */
+  const updateBounds = useCallback((newBounds) => {
+    if (newBounds && newBounds.north && newBounds.south && newBounds.west && newBounds.east) {
+      boundsRef.current = newBounds;
+      // Refrescar vuelos con los nuevos bounds
+      fetchFlights();
+    }
+  }, [fetchFlights]);
+
   return {
     // Estado
     flights,           // Vuelos filtrados
@@ -359,6 +398,7 @@ export function useFlightRadar({
     // Utilidades
     searchByCallsign,
     flightCountByCategory,
+    updateBounds,  // 🗺️ Para actualizar cuando cambia el viewport
 
     // Estadísticas
     totalFlights: flights.length,

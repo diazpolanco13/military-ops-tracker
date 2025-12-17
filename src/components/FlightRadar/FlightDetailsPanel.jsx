@@ -4,73 +4,10 @@ import {
   feetToMeters, 
   knotsToKmh, 
   getCategoryColor,
-  getFlightDetails
+  getFlightDetails,
+  getCountryByICAO24,
+  getAircraftModel,
 } from '../../services/flightRadarService';
-
-// Países comunes en la región
-const COUNTRIES = {
-  US: { label: 'Estados Unidos', flag: '🇺🇸' },
-  CO: { label: 'Colombia', flag: '🇨🇴' },
-  VE: { label: 'Venezuela', flag: '🇻🇪' },
-  BR: { label: 'Brasil', flag: '🇧🇷' },
-  MX: { label: 'México', flag: '🇲🇽' },
-  PA: { label: 'Panamá', flag: '🇵🇦' },
-  NL: { label: 'Países Bajos', flag: '🇳🇱' },
-  UK: { label: 'Reino Unido', flag: '🇬🇧' },
-  FR: { label: 'Francia', flag: '🇫🇷' },
-  CA: { label: 'Canadá', flag: '🇨🇦' },
-  other: { label: 'Desconocido', flag: '🏳️' },
-};
-
-// Detectar país por registro, callsign u operador
-const detectCountry = (flight) => {
-  const reg = (flight.registration || flight.aircraft?.registration || '').toUpperCase();
-  const callsign = (flight.callsign || '').toUpperCase();
-  const airline = (flight.aircraft?.airline || '').toUpperCase();
-  
-  // ===== ESTADOS UNIDOS =====
-  // Registro civil N
-  if (reg.startsWith('N')) return 'US';
-  // Callsigns militares USAF/USN/USCG
-  const usCallsigns = ['RCH', 'REACH', 'RRR', 'NAVY', 'TOPCAT', 'SPAR', 'SAM', 'AF', 'AE', 
-                       'CNV', 'DUKE', 'GOLD', 'KING', 'EVAC', 'NCHO', 'CFC', 'PAT',
-                       'TEAL', 'BISON', 'RHINO', 'HAWK', 'DOOM', 'JAKE', 'FURY'];
-  if (usCallsigns.some(prefix => callsign.startsWith(prefix))) return 'US';
-  // Operador contiene US/USAF/USN
-  if (airline.includes('UNITED STATES') || airline.includes('USAF') || 
-      airline.includes('US AIR FORCE') || airline.includes('US NAVY') ||
-      airline.includes('US ARMY') || airline.includes('US COAST GUARD') ||
-      airline.includes('AMERICAN')) return 'US';
-  
-  // ===== OTROS PAÍSES =====
-  // Colombia
-  if (reg.startsWith('HK') || callsign.startsWith('AVA') || 
-      airline.includes('COLOMBIA') || airline.includes('FAC')) return 'CO';
-  // Venezuela
-  if (reg.startsWith('YV') || airline.includes('VENEZUELA') || 
-      airline.includes('FANB') || airline.includes('CONVIASA')) return 'VE';
-  // Brasil
-  if (reg.startsWith('PT') || reg.startsWith('PR') || reg.startsWith('PP') ||
-      airline.includes('BRASIL') || airline.includes('BRAZIL') || airline.includes('FAB')) return 'BR';
-  // México
-  if (reg.startsWith('XA') || reg.startsWith('XB') || reg.startsWith('XC') ||
-      airline.includes('MEXICO') || airline.includes('FAM')) return 'MX';
-  // Panamá
-  if (reg.startsWith('HP') || airline.includes('PANAMA')) return 'PA';
-  // Países Bajos
-  if (reg.startsWith('PH') || reg.startsWith('PJ') || 
-      airline.includes('NETHERLANDS') || airline.includes('DUTCH') ||
-      airline.includes('KLM')) return 'NL';
-  // Reino Unido
-  if (reg.startsWith('G-') || airline.includes('ROYAL') && airline.includes('FORCE') ||
-      airline.includes('BRITAIN') || airline.includes('BRITISH')) return 'UK';
-  // Francia
-  if (reg.startsWith('F-') || airline.includes('FRANCE') || airline.includes('FRENCH')) return 'FR';
-  // Canadá
-  if (reg.startsWith('C-') || airline.includes('CANADA') || airline.includes('RCAF')) return 'CA';
-  
-  return 'other';
-};
 
 // Determinar si es helicóptero basado en el tipo
 const isHelicopter = (type) => {
@@ -102,80 +39,10 @@ const getCategoryName = (category) => {
   return names[category] || category || 'Desconocido';
 };
 
-// Base de datos de tipos ICAO a nombres completos
-const AIRCRAFT_MODELS = {
-  // USAF Transport
-  'C17': 'Boeing C-17A Globemaster III',
-  'C5': 'Lockheed C-5 Galaxy',
-  'C130': 'Lockheed C-130 Hercules',
-  'C5M': 'Lockheed C-5M Super Galaxy',
-  'KC135': 'Boeing KC-135 Stratotanker',
-  'KC10': 'McDonnell Douglas KC-10 Extender',
-  'KC46': 'Boeing KC-46 Pegasus',
-  'C40': 'Boeing C-40 Clipper',
-  'C32': 'Boeing C-32 (757)',
-  'C37': 'Gulfstream C-37',
-  // USAF Combat/Surveillance
-  'F16': 'General Dynamics F-16 Fighting Falcon',
-  'F15': 'McDonnell Douglas F-15 Eagle',
-  'F18': 'Boeing F/A-18 Hornet',
-  'F18S': 'Boeing F/A-18E/F Super Hornet',
-  'FA18': 'Boeing F/A-18 Hornet',
-  'F22': 'Lockheed Martin F-22 Raptor',
-  'F35': 'Lockheed Martin F-35 Lightning II',
-  'F185': 'Lockheed Martin F-35A Lightning II',
-  'B52': 'Boeing B-52 Stratofortress',
-  'B1': 'Rockwell B-1 Lancer',
-  'B2': 'Northrop Grumman B-2 Spirit',
-  'E3': 'Boeing E-3 Sentry AWACS',
-  'E8': 'Northrop Grumman E-8 Joint STARS',
-  'P8': 'Boeing P-8A Poseidon',
-  'P3': 'Lockheed P-3 Orion',
-  'RC135': 'Boeing RC-135 Rivet Joint',
-  'U2': 'Lockheed U-2 Dragon Lady',
-  'RQ4': 'Northrop Grumman RQ-4 Global Hawk',
-  'MQ9': 'General Atomics MQ-9 Reaper',
-  // USN
-  'E2': 'Northrop Grumman E-2 Hawkeye',
-  'C2': 'Grumman C-2 Greyhound',
-  'EA18': 'Boeing EA-18G Growler',
-  // Helicopters
-  'H60': 'Sikorsky UH-60 Black Hawk',
-  'UH60': 'Sikorsky UH-60 Black Hawk',
-  'MH60': 'Sikorsky MH-60 Seahawk',
-  'HH60': 'Sikorsky HH-60 Pave Hawk',
-  'CH47': 'Boeing CH-47 Chinook',
-  'H47': 'Boeing CH-47 Chinook',
-  'AH64': 'Boeing AH-64 Apache',
-  'V22': 'Bell Boeing V-22 Osprey',
-  // UK RAF
-  'A400': 'Airbus A400M Atlas',
-  'C130J': 'Lockheed C-130J Super Hercules',
-  'EUFI': 'Eurofighter Typhoon',
-  // Comerciales
-  'A330': 'Airbus A330',
-  'B737': 'Boeing 737',
-  'B747': 'Boeing 747',
-  'B757': 'Boeing 757',
-  'B767': 'Boeing 767',
-  'B777': 'Boeing 777',
-  'B787': 'Boeing 787 Dreamliner',
-  'A320': 'Airbus A320',
-  'A321': 'Airbus A321',
-  'A319': 'Airbus A319',
-  'A350': 'Airbus A350',
-  'A380': 'Airbus A380',
-};
-
-// Obtener nombre completo del modelo
+// Obtener nombre completo del modelo (usa el servicio centralizado)
 const getAircraftModelName = (icaoType) => {
-  if (!icaoType) return null;
-  const type = icaoType.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (AIRCRAFT_MODELS[type]) return AIRCRAFT_MODELS[type];
-  for (const [key, name] of Object.entries(AIRCRAFT_MODELS)) {
-    if (type.includes(key) || key.includes(type)) return name;
-  }
-  return null;
+  const modelInfo = getAircraftModel(icaoType);
+  return modelInfo?.name || null;
 };
 
 /**
@@ -212,23 +79,15 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   
   // Datos combinados
   const aircraftType = flight.aircraft?.type || '';
-  const aircraftModel = details?.aircraft?.modelName || aircraftType || 'Unknown';
+  const aircraftModel = flight.aircraft?.modelName || details?.aircraft?.modelName || getAircraftModelName(aircraftType) || aircraftType || 'Unknown';
   const airlineName = details?.airline?.name || flight.aircraft?.airline || '';
   const registration = details?.aircraft?.registration || flight.registration || 'N/A';
   const aircraftAge = details?.aircraft?.age;
   const aircraftMSN = details?.aircraft?.msn;
   
-  // Detectar país automáticamente por registro/callsign/operador
-  // Usamos también los detalles cargados de la API para mejor detección
-  const flightWithDetails = {
-    ...flight,
-    aircraft: {
-      ...flight.aircraft,
-      airline: details?.airline?.name || flight.aircraft?.airline || ''
-    }
-  };
-  const detectedCountryCode = detectCountry(flightWithDetails);
-  const countryInfo = COUNTRIES[detectedCountryCode] || COUNTRIES.other;
+  // 🌍 DETECTAR PAÍS - Prioridad: datos del vuelo > ICAO24
+  // El vuelo ya viene con información de país desde parseFlightData
+  const countryInfo = flight.country || getCountryByICAO24(flight.icao24);
   
   const isHeli = isHelicopter(aircraftType);
 
@@ -412,7 +271,8 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                     <span className="text-slate-400">País</span>
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <span className="text-base">{countryInfo.flag}</span>
-                      <span className="text-cyan-400">{countryInfo.label}</span>
+                      <span className="text-cyan-400">{countryInfo.name}</span>
+                      {countryInfo.military && <span className="ml-1 text-[8px] text-red-400">(MIL)</span>}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

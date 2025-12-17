@@ -157,6 +157,239 @@ const MILITARY_AIRCRAFT_TYPES = [
 ];
 
 /**
+ * 🌍 DETECCIÓN DE PAÍS POR ICAO24 (HEX)
+ * 
+ * El código ICAO24 (hex) contiene el prefijo del país registrador.
+ * Esta es la forma MÁS PRECISA de identificar el país de una aeronave.
+ * 
+ * Rangos ICAO24 oficiales: https://www.icao.int/publications/DOC8585
+ */
+const ICAO24_COUNTRY_RANGES = [
+  // ===== ESTADOS UNIDOS (MILITAR) =====
+  { start: 'AE0000', end: 'AFFFFF', code: 'US', flag: '🇺🇸', name: 'Estados Unidos', military: true },
+  { start: 'AF0000', end: 'AFFFFF', code: 'US', flag: '🇺🇸', name: 'Estados Unidos', military: true },
+  
+  // ===== ESTADOS UNIDOS (CIVIL) =====
+  { start: 'A00000', end: 'ADFFFF', code: 'US', flag: '🇺🇸', name: 'Estados Unidos', military: false },
+  
+  // ===== LATINOAMÉRICA =====
+  { start: '0D8000', end: '0D8FFF', code: 'VE', flag: '🇻🇪', name: 'Venezuela', military: false },
+  { start: '0AC000', end: 'ACFFFF', code: 'CO', flag: '🇨🇴', name: 'Colombia', military: false },
+  { start: 'E40000', end: 'E4FFFF', code: 'BR', flag: '🇧🇷', name: 'Brasil', military: false },
+  { start: '0D0000', end: '0D7FFF', code: 'MX', flag: '🇲🇽', name: 'México', military: false },
+  { start: '0C4000', end: '0C4FFF', code: 'DO', flag: '🇩🇴', name: 'Rep. Dominicana', military: false },
+  { start: '0C2000', end: '0C2FFF', code: 'PA', flag: '🇵🇦', name: 'Panamá', military: false },
+  { start: '0AE000', end: '0AEFFF', code: 'CR', flag: '🇨🇷', name: 'Costa Rica', military: false },
+  { start: '0A8000', end: '0A8FFF', code: 'CU', flag: '🇨🇺', name: 'Cuba', military: false },
+  { start: '0B0000', end: '0B0FFF', code: 'EC', flag: '🇪🇨', name: 'Ecuador', military: false },
+  { start: '0AA000', end: '0AAFFF', code: 'GT', flag: '🇬🇹', name: 'Guatemala', military: false },
+  { start: 'E00000', end: 'E0FFFF', code: 'AR', flag: '🇦🇷', name: 'Argentina', military: false },
+  { start: 'E80000', end: 'E8FFFF', code: 'CL', flag: '🇨🇱', name: 'Chile', military: false },
+  { start: 'E94000', end: 'E94FFF', code: 'PE', flag: '🇵🇪', name: 'Perú', military: false },
+  { start: '0A0000', end: '0A0FFF', code: 'TT', flag: '🇹🇹', name: 'Trinidad y Tobago', military: false },
+  { start: '0C0000', end: '0C0FFF', code: 'JM', flag: '🇯🇲', name: 'Jamaica', military: false },
+  
+  // ===== EUROPA =====
+  { start: '400000', end: '43FFFF', code: 'GB', flag: '🇬🇧', name: 'Reino Unido', military: false },
+  { start: '380000', end: '3BFFFF', code: 'FR', flag: '🇫🇷', name: 'Francia', military: false },
+  { start: '3C0000', end: '3FFFFF', code: 'DE', flag: '🇩🇪', name: 'Alemania', military: false },
+  { start: '480000', end: '487FFF', code: 'NL', flag: '🇳🇱', name: 'Países Bajos', military: false },
+  { start: '340000', end: '37FFFF', code: 'ES', flag: '🇪🇸', name: 'España', military: false },
+  { start: '300000', end: '33FFFF', code: 'IT', flag: '🇮🇹', name: 'Italia', military: false },
+  { start: '440000', end: '447FFF', code: 'AT', flag: '🇦🇹', name: 'Austria', military: false },
+  { start: '500000', end: '5003FF', code: 'PT', flag: '🇵🇹', name: 'Portugal', military: false },
+  { start: '100000', end: '1FFFFF', code: 'RU', flag: '🇷🇺', name: 'Rusia', military: false },
+  
+  // ===== OTROS =====
+  { start: 'C00000', end: 'C3FFFF', code: 'CA', flag: '🇨🇦', name: 'Canadá', military: false },
+  { start: '7C0000', end: '7FFFFF', code: 'AU', flag: '🇦🇺', name: 'Australia', military: false },
+  { start: 'C80000', end: 'C87FFF', code: 'NZ', flag: '🇳🇿', name: 'Nueva Zelanda', military: false },
+  { start: '780000', end: '7BFFFF', code: 'CN', flag: '🇨🇳', name: 'China', military: false },
+  { start: '840000', end: '87FFFF', code: 'JP', flag: '🇯🇵', name: 'Japón', military: false },
+  { start: '710000', end: '717FFF', code: 'IL', flag: '🇮🇱', name: 'Israel', military: false },
+];
+
+/**
+ * Detectar país por código ICAO24 (hex)
+ * @param {string} icao24 - Código hexadecimal del transponder
+ * @returns {Object} - { code, flag, name, military }
+ */
+export function getCountryByICAO24(icao24) {
+  if (!icao24 || typeof icao24 !== 'string') {
+    return { code: 'XX', flag: '🏳️', name: 'Desconocido', military: false };
+  }
+  
+  const hex = icao24.toUpperCase().replace(/[^A-F0-9]/g, '');
+  if (hex.length < 2) {
+    return { code: 'XX', flag: '🏳️', name: 'Desconocido', military: false };
+  }
+  
+  // Buscar en rangos
+  const hexNum = parseInt(hex.substring(0, 6).padEnd(6, '0'), 16);
+  
+  for (const range of ICAO24_COUNTRY_RANGES) {
+    const startNum = parseInt(range.start, 16);
+    const endNum = parseInt(range.end, 16);
+    
+    if (hexNum >= startNum && hexNum <= endNum) {
+      return {
+        code: range.code,
+        flag: range.flag,
+        name: range.name,
+        military: range.military
+      };
+    }
+  }
+  
+  // Detección por prefijo simple si no está en rangos
+  const prefix2 = hex.substring(0, 2);
+  const simpleMap = {
+    'AE': { code: 'US', flag: '🇺🇸', name: 'Estados Unidos (Mil)', military: true },
+    'AF': { code: 'US', flag: '🇺🇸', name: 'Estados Unidos (Mil)', military: true },
+    'AD': { code: 'US', flag: '🇺🇸', name: 'Estados Unidos', military: false },
+    '0D': { code: 'VE', flag: '🇻🇪', name: 'Venezuela', military: false },
+    '0A': { code: 'CO', flag: '🇨🇴', name: 'Colombia', military: false },
+    '0C': { code: 'DO', flag: '🇩🇴', name: 'Rep. Dominicana', military: false },
+    'E4': { code: 'BR', flag: '🇧🇷', name: 'Brasil', military: false },
+    '40': { code: 'GB', flag: '🇬🇧', name: 'Reino Unido', military: false },
+    '38': { code: 'FR', flag: '🇫🇷', name: 'Francia', military: false },
+    'C0': { code: 'CA', flag: '🇨🇦', name: 'Canadá', military: false },
+    'C8': { code: 'NZ', flag: '🇳🇿', name: 'Nueva Zelanda', military: false },
+  };
+  
+  if (simpleMap[prefix2]) {
+    return simpleMap[prefix2];
+  }
+  
+  return { code: 'XX', flag: '🏳️', name: 'Desconocido', military: false };
+}
+
+/**
+ * 🎖️ BASE DE DATOS DE MODELOS DE AERONAVES
+ * Mapeo de códigos ICAO a nombres completos
+ */
+export const AIRCRAFT_MODELS_DB = {
+  // ===== TRANSPORTE MILITAR USA =====
+  'C17': { name: 'Boeing C-17A Globemaster III', category: 'transport', country: 'US' },
+  'C130': { name: 'Lockheed C-130 Hercules', category: 'transport', country: 'US' },
+  'C5': { name: 'Lockheed C-5 Galaxy', category: 'transport', country: 'US' },
+  'C5M': { name: 'Lockheed C-5M Super Galaxy', category: 'transport', country: 'US' },
+  'C40': { name: 'Boeing C-40 Clipper', category: 'transport', country: 'US' },
+  'C32': { name: 'Boeing C-32 (757 VIP)', category: 'vip', country: 'US' },
+  'C37': { name: 'Gulfstream C-37A', category: 'vip', country: 'US' },
+  'C12': { name: 'Beechcraft C-12 Huron', category: 'transport', country: 'US' },
+  
+  // ===== REABASTECIMIENTO =====
+  'KC135': { name: 'Boeing KC-135 Stratotanker', category: 'tanker', country: 'US' },
+  'KC10': { name: 'McDonnell Douglas KC-10 Extender', category: 'tanker', country: 'US' },
+  'KC46': { name: 'Boeing KC-46 Pegasus', category: 'tanker', country: 'US' },
+  
+  // ===== VIGILANCIA/AWACS =====
+  'E3': { name: 'Boeing E-3 Sentry AWACS', category: 'surveillance', country: 'US' },
+  'E6': { name: 'Boeing E-6 Mercury', category: 'surveillance', country: 'US' },
+  'E2': { name: 'Northrop Grumman E-2 Hawkeye', category: 'surveillance', country: 'US' },
+  'E8': { name: 'Northrop Grumman E-8 Joint STARS', category: 'surveillance', country: 'US' },
+  'RC135': { name: 'Boeing RC-135 Rivet Joint', category: 'surveillance', country: 'US' },
+  'P8': { name: 'Boeing P-8A Poseidon', category: 'surveillance', country: 'US' },
+  'P3': { name: 'Lockheed P-3 Orion', category: 'surveillance', country: 'US' },
+  'U2': { name: 'Lockheed U-2 Dragon Lady', category: 'surveillance', country: 'US' },
+  'RQ4': { name: 'Northrop Grumman RQ-4 Global Hawk', category: 'surveillance', country: 'US' },
+  'MQ9': { name: 'General Atomics MQ-9 Reaper', category: 'surveillance', country: 'US' },
+  
+  // ===== CAZAS =====
+  'F15': { name: 'McDonnell Douglas F-15 Eagle', category: 'combat', country: 'US' },
+  'F16': { name: 'General Dynamics F-16 Fighting Falcon', category: 'combat', country: 'US' },
+  'F18': { name: 'Boeing F/A-18 Hornet', category: 'combat', country: 'US' },
+  'FA18': { name: 'Boeing F/A-18 Hornet', category: 'combat', country: 'US' },
+  'F22': { name: 'Lockheed Martin F-22 Raptor', category: 'combat', country: 'US' },
+  'F35': { name: 'Lockheed Martin F-35 Lightning II', category: 'combat', country: 'US' },
+  'F185': { name: 'Lockheed Martin F-35A Lightning II', category: 'combat', country: 'US' },
+  'EA18': { name: 'Boeing EA-18G Growler', category: 'combat', country: 'US' },
+  
+  // ===== BOMBARDEROS =====
+  'B52': { name: 'Boeing B-52 Stratofortress', category: 'bomber', country: 'US' },
+  'B1': { name: 'Rockwell B-1B Lancer', category: 'bomber', country: 'US' },
+  'B2': { name: 'Northrop Grumman B-2 Spirit', category: 'bomber', country: 'US' },
+  
+  // ===== HELICÓPTEROS MILITARES =====
+  'H60': { name: 'Sikorsky UH-60 Black Hawk', category: 'helicopter', country: 'US' },
+  'UH60': { name: 'Sikorsky UH-60 Black Hawk', category: 'helicopter', country: 'US' },
+  'MH60': { name: 'Sikorsky MH-60 Seahawk', category: 'helicopter', country: 'US' },
+  'HH60': { name: 'Sikorsky HH-60 Pave Hawk', category: 'helicopter', country: 'US' },
+  'CH47': { name: 'Boeing CH-47 Chinook', category: 'helicopter', country: 'US' },
+  'H47': { name: 'Boeing CH-47 Chinook', category: 'helicopter', country: 'US' },
+  'AH64': { name: 'Boeing AH-64 Apache', category: 'helicopter', country: 'US' },
+  'V22': { name: 'Bell Boeing V-22 Osprey', category: 'helicopter', country: 'US' },
+  
+  // ===== US NAVY ESPECÍFICOS =====
+  'C2': { name: 'Grumman C-2 Greyhound', category: 'transport', country: 'US' },
+  'HAWK': { name: 'McDonnell Douglas T-45 Goshawk', category: 'trainer', country: 'US' },
+  'T45': { name: 'McDonnell Douglas T-45 Goshawk', category: 'trainer', country: 'US' },
+  'GLF5': { name: 'Gulfstream C-37A/G-V', category: 'vip', country: 'US' },
+  'GLEX': { name: 'Bombardier Global Express', category: 'vip', country: 'US' },
+  
+  // ===== UK RAF =====
+  'A400': { name: 'Airbus A400M Atlas', category: 'transport', country: 'GB' },
+  'C130J': { name: 'Lockheed C-130J Super Hercules', category: 'transport', country: 'GB' },
+  'EUFI': { name: 'Eurofighter Typhoon', category: 'combat', country: 'GB' },
+  'TYPN': { name: 'Eurofighter Typhoon', category: 'combat', country: 'GB' },
+  
+  // ===== LATINOAMÉRICA =====
+  'TUCR': { name: 'Embraer EMB-314 Super Tucano', category: 'combat', country: 'BR' },
+  'T27': { name: 'Embraer EMB-312 Tucano', category: 'trainer', country: 'BR' },
+  'C208': { name: 'Cessna 208 Caravan', category: 'transport', country: 'US' },
+  'B350': { name: 'Beechcraft King Air 350', category: 'transport', country: 'US' },
+  'DH8B': { name: 'De Havilland Dash 8-200', category: 'transport', country: 'CA' },
+  
+  // ===== COMERCIALES (más comunes) =====
+  'A320': { name: 'Airbus A320', category: 'passenger', country: 'EU' },
+  'A321': { name: 'Airbus A321', category: 'passenger', country: 'EU' },
+  'A319': { name: 'Airbus A319', category: 'passenger', country: 'EU' },
+  'A330': { name: 'Airbus A330', category: 'passenger', country: 'EU' },
+  'A350': { name: 'Airbus A350 XWB', category: 'passenger', country: 'EU' },
+  'A380': { name: 'Airbus A380', category: 'passenger', country: 'EU' },
+  'B737': { name: 'Boeing 737', category: 'passenger', country: 'US' },
+  'B738': { name: 'Boeing 737-800', category: 'passenger', country: 'US' },
+  'B38M': { name: 'Boeing 737 MAX 8', category: 'passenger', country: 'US' },
+  'B39M': { name: 'Boeing 737 MAX 9', category: 'passenger', country: 'US' },
+  'B747': { name: 'Boeing 747', category: 'passenger', country: 'US' },
+  'B757': { name: 'Boeing 757', category: 'passenger', country: 'US' },
+  'B767': { name: 'Boeing 767', category: 'passenger', country: 'US' },
+  'B777': { name: 'Boeing 777', category: 'passenger', country: 'US' },
+  'B787': { name: 'Boeing 787 Dreamliner', category: 'passenger', country: 'US' },
+  'E190': { name: 'Embraer E190', category: 'passenger', country: 'BR' },
+  'E195': { name: 'Embraer E195', category: 'passenger', country: 'BR' },
+  'E145': { name: 'Embraer ERJ-145', category: 'passenger', country: 'BR' },
+  'MD82': { name: 'McDonnell Douglas MD-82', category: 'passenger', country: 'US' },
+  'MD83': { name: 'McDonnell Douglas MD-83', category: 'passenger', country: 'US' },
+};
+
+/**
+ * Obtener información del modelo de aeronave
+ * @param {string} icaoType - Código ICAO del tipo de aeronave
+ * @returns {Object} - { name, category, country } o null
+ */
+export function getAircraftModel(icaoType) {
+  if (!icaoType) return null;
+  
+  const type = icaoType.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // Búsqueda exacta
+  if (AIRCRAFT_MODELS_DB[type]) {
+    return AIRCRAFT_MODELS_DB[type];
+  }
+  
+  // Búsqueda parcial
+  for (const [key, value] of Object.entries(AIRCRAFT_MODELS_DB)) {
+    if (type.includes(key) || key.includes(type)) {
+      return value;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Configuración de zona del Caribe AMPLIADA (bounding box)
  * 
  * Cubre TODO el Caribe y norte de Sudamérica:
@@ -169,9 +402,11 @@ const MILITARY_AIRCRAFT_TYPES = [
  */
 export const CARIBBEAN_BOUNDS = {
   north: 27.0,   // Norte: Sur de Florida + Bahamas
-  south: 8.0,    // Sur: Norte de Venezuela (incluye Caracas 10.5°N)
+  south: 1.0,    // Sur: Venezuela completa (Amazonas ~1°N)
   west: -85.0,   // Oeste: Costa oeste de Panamá/Nicaragua
   east: -58.0,   // Este: Trinidad y Tobago + Barbados
+  // Incluye: Venezuela, Rep. Dominicana, Puerto Rico, Cuba, Jamaica, 
+  // Panamá, Colombia norte, Trinidad, Curazao, Aruba, etc.
 };
 
 /**
@@ -179,10 +414,13 @@ export const CARIBBEAN_BOUNDS = {
  * @param {Object} bounds - Límites geográficos {north, south, west, east}
  * @returns {Promise<Array>} - Lista de vuelos
  */
-export async function getFlightsByZone(bounds = CARIBBEAN_BOUNDS) {
+export async function getFlightsByZone(bounds = null) {
   try {
+    // Usar bounds proporcionados o los por defecto
+    const effectiveBounds = bounds || CARIBBEAN_BOUNDS;
+    
     // Params: bounds=north,south,west,east
-    const boundsString = `${bounds.north},${bounds.south},${bounds.west},${bounds.east}`;
+    const boundsString = `${effectiveBounds.north},${effectiveBounds.south},${effectiveBounds.west},${effectiveBounds.east}`;
     
     // Obtener token de autenticación de Supabase
     const { data: { session } } = await supabase.auth.getSession();
@@ -240,18 +478,20 @@ export async function getFlightsByZone(bounds = CARIBBEAN_BOUNDS) {
 }
 
 /**
- * Obtener vuelos MILITARES en el Caribe
- * Filtra por códigos de operador militar, callsigns y tipos de aeronave
+ * Obtener vuelos MILITARES usando la API oficial
+ * La API oficial con categories=M devuelve solo militares/gobierno
+ * @param {Object} bounds - Límites del viewport {north, south, west, east}
  * @returns {Promise<Array>} - Lista de vuelos militares
  */
-export async function getMilitaryFlights() {
+export async function getMilitaryFlights(bounds = CARIBBEAN_BOUNDS) {
   try {
-    const allFlights = await getFlightsByZone(CARIBBEAN_BOUNDS);
+    // Usar los bounds proporcionados (del viewport del mapa)
+    const allFlights = await getFlightsByZone(bounds);
     
     console.log(`\n═══════════════════════════════════════`);
-    console.log(`📊 FLIGHTRADAR24 - ANÁLISIS DE VUELOS`);
+    console.log(`📊 FLIGHTRADAR24 - VUELOS MILITARES`);
     console.log(`═══════════════════════════════════════`);
-    console.log(`✈️ Total de vuelos recibidos: ${allFlights.length}`);
+    console.log(`✈️ Vuelos militares recibidos: ${allFlights.length}`);
     
     // Filtrar solo vuelos militares
     const militaryFlights = allFlights.filter(flight => 
@@ -287,19 +527,28 @@ export async function getMilitaryFlights() {
  * Determinar si un vuelo es militar o gubernamental
  * 
  * ✅ MÉTODO CORRECTO (verificado con datos reales):
- * 1. PRIORITARIO: Campo airline ([18]) - Operador militar (ej: "RCH", "CNV")
- * 2. Secundario: Callsign militar (ej: "ELVIS21", "97-0042")
- * 3. Terciario: Tipo de aeronave (ej: "C17", "KC135")
- * 4. Cuaternario: Registro militar (ej: "97-0042")
+ * 0. ⭐ ICAO24 militar (prefijos AE, AF = USA militar) - MÁS CONFIABLE
+ * 1. Campo airline ([18]) - Operador militar (ej: "RCH", "CNV")
+ * 2. Callsign militar (ej: "ELVIS21", "97-0042")
+ * 3. Tipo de aeronave (ej: "C17", "KC135")
+ * 4. Registro militar (ej: "97-0042")
  * 
  * @param {Object} flight - Datos del vuelo
  * @returns {Boolean}
  */
 function isMilitaryFlight(flight) {
+  const icao24 = (flight.icao24 || '').toUpperCase();
   const airline = (flight.aircraft?.airline || '').toUpperCase().trim();
   const callsign = (flight.callsign || '').toUpperCase().trim();
   const aircraftType = (flight.aircraft?.type || '').toUpperCase();
   const registration = (flight.registration || '').toUpperCase().trim();
+  
+  // ⭐ 0. MÁS CONFIABLE: ICAO24 militar USA (prefijos AE, AF)
+  // AE0000-AFFFFF = Militar USA
+  // AD0000-ADFFFF = Civil USA (NO incluir)
+  if (icao24.startsWith('AE') || icao24.startsWith('AF')) {
+    return true;
+  }
   
   // ✅ 1. PRIORITARIO: Verificar código de aerolínea/operador militar
   // Este es el campo MÁS CONFIABLE según FlightRadar24
@@ -308,7 +557,6 @@ function isMilitaryFlight(flight) {
   );
 
   if (hasMilitaryAirline) {
-    console.log(`🎯 MILITAR (airline): ${callsign} - Operador: ${airline}`);
     return true;
   }
 
@@ -342,13 +590,7 @@ function isMilitaryFlight(flight) {
     squawk === '4001' ||  // Military ops
     squawk === '1300';    // Military training
 
-  const isMilitary = hasMilitaryCallsign || isMilitaryAircraft || hasMilitaryRegistration || hasMilitarySquawk;
-  
-  if (isMilitary) {
-    console.log(`🎯 MILITAR: ${callsign} | Tipo: ${aircraftType} | Reg: ${registration} | Airline: ${airline}`);
-  }
-
-  return isMilitary;
+  return hasMilitaryCallsign || isMilitaryAircraft || hasMilitaryRegistration || hasMilitarySquawk;
 }
 
 /**
@@ -387,10 +629,19 @@ function parseFlightData(flightId, flightData) {
   // Filtrar solo vuelos en el aire
   if (flightData[14] === 1) return null; // onGround
 
+  const icao24 = flightData[0] || '';
+  const aircraftType = flightData[8] || 'UNKNOWN';
+  
+  // Detectar país por ICAO24
+  const countryInfo = getCountryByICAO24(icao24);
+  
+  // Obtener modelo de aeronave
+  const modelInfo = getAircraftModel(aircraftType);
+
   return {
     // Identificación
     id: flightId,
-    icao24: flightData[0] || '',
+    icao24: icao24,
     callsign: flightData[16] || flightData[9] || flightData[0] || 'UNKNOWN', // [16] es el callsign REAL
     registration: flightData[9] || '', // [9] puede tener registro militar real
     
@@ -406,10 +657,13 @@ function parseFlightData(flightId, flightData) {
     
     // Aeronave
     aircraft: {
-      type: flightData[8] || 'UNKNOWN',
+      type: aircraftType,
       registration: flightData[9] || '',
       squawk: flightData[6] || '',  // Código transponder
       airline: flightData[18] || '', // ¡OPERADOR! (ej: "RCH", "AVA", "DAL")
+      // Nuevo: Modelo completo
+      modelName: modelInfo?.name || null,
+      modelCategory: modelInfo?.category || null,
     },
     
     // Vuelo
@@ -419,6 +673,14 @@ function parseFlightData(flightId, flightData) {
     
     // Estado
     onGround: flightData[14] === 1,
+    
+    // 🌍 PAÍS (detectado por ICAO24)
+    country: {
+      code: countryInfo.code,
+      flag: countryInfo.flag,
+      name: countryInfo.name,
+      military: countryInfo.military,
+    },
     
     // Metadata
     timestamp: flightData[10] || Date.now() / 1000,
@@ -736,10 +998,12 @@ export function filterFlightsByCategory(flights, activeFilters = {}) {
 }
 
 /**
- * Obtener todos los vuelos (sin filtrar por militar) con categoría asignada
+ * Obtener todos los vuelos con categoría asignada
+ * @param {Object} bounds - Límites del viewport {north, south, west, east}
  */
-export async function getAllFlights() {
-  const allFlights = await getFlightsByZone(CARIBBEAN_BOUNDS);
+export async function getAllFlights(bounds = null) {
+  // API pública gratuita - devuelve todos los vuelos
+  const allFlights = await getFlightsByZone(bounds);
   
   // Agregar categoría a cada vuelo
   return allFlights.map(flight => ({

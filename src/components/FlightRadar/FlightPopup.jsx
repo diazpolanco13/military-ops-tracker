@@ -1,75 +1,16 @@
-import { Plane, Navigation, Gauge, ArrowUp, MapPin, Clock } from 'lucide-react';
-import { feetToMeters, knotsToKmh, getCategoryColor } from '../../services/flightRadarService';
+import { Plane, Navigation, Gauge, ArrowUp, MapPin, Clock, Flag } from 'lucide-react';
+import { 
+  feetToMeters, 
+  knotsToKmh, 
+  getCategoryColor,
+  getCountryByICAO24,
+  getAircraftModel,
+} from '../../services/flightRadarService';
 
-// Base de datos de tipos ICAO a nombres completos (aeronaves militares comunes)
-const AIRCRAFT_MODELS = {
-  // USAF Transport
-  'C17': 'Boeing C-17A Globemaster III',
-  'C5': 'Lockheed C-5 Galaxy',
-  'C130': 'Lockheed C-130 Hercules',
-  'C5M': 'Lockheed C-5M Super Galaxy',
-  'KC135': 'Boeing KC-135 Stratotanker',
-  'KC10': 'McDonnell Douglas KC-10 Extender',
-  'KC46': 'Boeing KC-46 Pegasus',
-  'C40': 'Boeing C-40 Clipper',
-  'C32': 'Boeing C-32 (757)',
-  'C37': 'Gulfstream C-37',
-  // USAF Combat/Surveillance
-  'F16': 'General Dynamics F-16 Fighting Falcon',
-  'F15': 'McDonnell Douglas F-15 Eagle',
-  'F18': 'Boeing F/A-18 Hornet',
-  'F22': 'Lockheed Martin F-22 Raptor',
-  'F35': 'Lockheed Martin F-35 Lightning II',
-  'B52': 'Boeing B-52 Stratofortress',
-  'B1': 'Rockwell B-1 Lancer',
-  'B2': 'Northrop Grumman B-2 Spirit',
-  'E3': 'Boeing E-3 Sentry AWACS',
-  'E8': 'Northrop Grumman E-8 Joint STARS',
-  'P8': 'Boeing P-8A Poseidon',
-  'P3': 'Lockheed P-3 Orion',
-  'RC135': 'Boeing RC-135 Rivet Joint',
-  'U2': 'Lockheed U-2 Dragon Lady',
-  'RQ4': 'Northrop Grumman RQ-4 Global Hawk',
-  'MQ9': 'General Atomics MQ-9 Reaper',
-  // USN
-  'E2': 'Northrop Grumman E-2 Hawkeye',
-  'C2': 'Grumman C-2 Greyhound',
-  'EA18': 'Boeing EA-18G Growler',
-  // Helicopters
-  'H60': 'Sikorsky UH-60 Black Hawk',
-  'UH60': 'Sikorsky UH-60 Black Hawk',
-  'MH60': 'Sikorsky MH-60 Seahawk',
-  'HH60': 'Sikorsky HH-60 Pave Hawk',
-  'CH47': 'Boeing CH-47 Chinook',
-  'H47': 'Boeing CH-47 Chinook',
-  'AH64': 'Boeing AH-64 Apache',
-  'V22': 'Bell Boeing V-22 Osprey',
-  // UK RAF
-  'A400': 'Airbus A400M Atlas',
-  'C130J': 'Lockheed C-130J Super Hercules',
-  'EUFI': 'Eurofighter Typhoon',
-  // Comerciales
-  'A330': 'Airbus A330',
-  'B737': 'Boeing 737',
-  'B747': 'Boeing 747',
-  'B757': 'Boeing 757',
-  'B767': 'Boeing 767',
-  'B777': 'Boeing 777',
-  'B787': 'Boeing 787 Dreamliner',
-  'A320': 'Airbus A320',
-  'A321': 'Airbus A321',
-  'F185': 'Lockheed Martin F-35A Lightning II',
-};
-
-// Obtener nombre completo del modelo
+// Obtener nombre completo del modelo (usa el servicio centralizado)
 const getAircraftModelName = (icaoType) => {
-  if (!icaoType) return null;
-  const type = icaoType.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (AIRCRAFT_MODELS[type]) return AIRCRAFT_MODELS[type];
-  for (const [key, name] of Object.entries(AIRCRAFT_MODELS)) {
-    if (type.includes(key) || key.includes(type)) return name;
-  }
-  return null;
+  const modelInfo = getAircraftModel(icaoType);
+  return modelInfo?.name || null;
 };
 
 /**
@@ -82,7 +23,10 @@ export default function FlightPopup({ flight, category }) {
   const color = getCategoryColor(category);
   const altitudeM = feetToMeters(flight.altitude);
   const speedKmh = knotsToKmh(flight.speed);
-  const modelName = getAircraftModelName(flight.aircraft?.type);
+  const modelName = flight.aircraft?.modelName || getAircraftModelName(flight.aircraft?.type);
+  
+  // 🌍 País desde datos del vuelo o detectar por ICAO24
+  const countryInfo = flight.country || getCountryByICAO24(flight.icao24);
 
   // Categorías en español
   const categoryLabels = {
@@ -91,23 +35,35 @@ export default function FlightPopup({ flight, category }) {
     tanker: 'Reabastecimiento',
     surveillance: 'Vigilancia/Patrulla',
     bomber: 'Bombardero',
+    helicopter: 'Helicóptero',
+    vip: 'VIP/Gobierno',
+    trainer: 'Entrenamiento',
     other: 'Aeronave Militar',
   };
 
   return (
     <div className="flight-popup-content w-80 bg-slate-900 text-white p-4 rounded-lg shadow-2xl">
-      {/* Header */}
+      {/* Header con País */}
       <div className="flex items-start justify-between mb-3">
-        <div>
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <Plane size={18} style={{ color }} />
             <h3 className="text-lg font-bold">{flight.callsign || 'UNKNOWN'}</h3>
+            {/* Bandera del país */}
+            <span className="text-xl ml-auto" title={countryInfo.name}>{countryInfo.flag}</span>
           </div>
-          <div 
-            className="inline-block px-2 py-1 rounded text-xs font-semibold"
-            style={{ backgroundColor: color + '20', color }}
-          >
-            {categoryLabels[category] || 'Militar'}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div 
+              className="inline-block px-2 py-1 rounded text-xs font-semibold"
+              style={{ backgroundColor: color + '20', color }}
+            >
+              {categoryLabels[category] || 'Militar'}
+            </div>
+            {/* País con indicador militar */}
+            <span className="text-xs text-slate-400">
+              {countryInfo.name}
+              {countryInfo.military && <span className="text-red-400 ml-1">(MIL)</span>}
+            </span>
           </div>
         </div>
       </div>
