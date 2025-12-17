@@ -37,6 +37,97 @@ const AIRCRAFT_TYPES = {
   general: { label: 'General', color: '#22c55e' },
 };
 
+// Base de datos de tipos ICAO a nombres completos (aeronaves militares comunes)
+const AIRCRAFT_MODELS = {
+  // USAF Transport
+  'C17': 'Boeing C-17A Globemaster III',
+  'C5': 'Lockheed C-5 Galaxy',
+  'C130': 'Lockheed C-130 Hercules',
+  'C5M': 'Lockheed C-5M Super Galaxy',
+  'KC135': 'Boeing KC-135 Stratotanker',
+  'KC10': 'McDonnell Douglas KC-10 Extender',
+  'KC46': 'Boeing KC-46 Pegasus',
+  'C40': 'Boeing C-40 Clipper',
+  'C32': 'Boeing C-32 (757)',
+  'C37': 'Gulfstream C-37',
+  // USAF Combat/Surveillance
+  'F16': 'General Dynamics F-16 Fighting Falcon',
+  'F15': 'McDonnell Douglas F-15 Eagle',
+  'F18': 'Boeing F/A-18 Hornet',
+  'F22': 'Lockheed Martin F-22 Raptor',
+  'F35': 'Lockheed Martin F-35 Lightning II',
+  'B52': 'Boeing B-52 Stratofortress',
+  'B1': 'Rockwell B-1 Lancer',
+  'B2': 'Northrop Grumman B-2 Spirit',
+  'E3': 'Boeing E-3 Sentry AWACS',
+  'E8': 'Northrop Grumman E-8 Joint STARS',
+  'P8': 'Boeing P-8A Poseidon',
+  'P3': 'Lockheed P-3 Orion',
+  'RC135': 'Boeing RC-135 Rivet Joint',
+  'U2': 'Lockheed U-2 Dragon Lady',
+  'RQ4': 'Northrop Grumman RQ-4 Global Hawk',
+  'MQ9': 'General Atomics MQ-9 Reaper',
+  'MQ1': 'General Atomics MQ-1 Predator',
+  // USN
+  'E2': 'Northrop Grumman E-2 Hawkeye',
+  'C2': 'Grumman C-2 Greyhound',
+  'EA18': 'Boeing EA-18G Growler',
+  // Helicopters
+  'H60': 'Sikorsky UH-60 Black Hawk',
+  'UH60': 'Sikorsky UH-60 Black Hawk',
+  'MH60': 'Sikorsky MH-60 Seahawk',
+  'HH60': 'Sikorsky HH-60 Pave Hawk',
+  'CH47': 'Boeing CH-47 Chinook',
+  'H47': 'Boeing CH-47 Chinook',
+  'AH64': 'Boeing AH-64 Apache',
+  'H64': 'Boeing AH-64 Apache',
+  'V22': 'Bell Boeing V-22 Osprey',
+  // UK RAF
+  'A400': 'Airbus A400M Atlas',
+  'C130J': 'Lockheed C-130J Super Hercules',
+  'EUFI': 'Eurofighter Typhoon',
+  'TORY': 'Panavia Tornado',
+  // Otras
+  'A330': 'Airbus A330',
+  'B737': 'Boeing 737',
+  'B747': 'Boeing 747',
+  'B757': 'Boeing 757',
+  'B767': 'Boeing 767',
+  'B777': 'Boeing 777',
+  'B787': 'Boeing 787 Dreamliner',
+  'A320': 'Airbus A320',
+  'A321': 'Airbus A321',
+  'A319': 'Airbus A319',
+  'A350': 'Airbus A350',
+  'A380': 'Airbus A380',
+  'E190': 'Embraer E190',
+  'E195': 'Embraer E195',
+  'CRJ': 'Bombardier CRJ',
+  'G650': 'Gulfstream G650',
+  'GLF5': 'Gulfstream V',
+  'GLF6': 'Gulfstream G650',
+  'F185': 'Lockheed Martin F-35A Lightning II',
+  'F18S': 'Boeing F/A-18E/F Super Hornet',
+};
+
+// Obtener nombre completo del modelo a partir del tipo ICAO
+const getAircraftModelName = (icaoType) => {
+  if (!icaoType) return null;
+  const type = icaoType.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  
+  // Buscar coincidencia exacta
+  if (AIRCRAFT_MODELS[type]) return AIRCRAFT_MODELS[type];
+  
+  // Buscar coincidencia parcial
+  for (const [key, name] of Object.entries(AIRCRAFT_MODELS)) {
+    if (type.includes(key) || key.includes(type)) {
+      return name;
+    }
+  }
+  
+  return null;
+};
+
 // Países comunes en la región
 const COUNTRIES = {
   all: { label: 'Todos', flag: '🌎' },
@@ -47,21 +138,58 @@ const COUNTRIES = {
   MX: { label: 'México', flag: '🇲🇽' },
   PA: { label: 'Panamá', flag: '🇵🇦' },
   NL: { label: 'Países Bajos', flag: '🇳🇱' },
+  UK: { label: 'Reino Unido', flag: '🇬🇧' },
+  FR: { label: 'Francia', flag: '🇫🇷' },
+  CA: { label: 'Canadá', flag: '🇨🇦' },
   other: { label: 'Otros', flag: '🏳️' },
 };
 
-// Detectar país por registro o callsign
+// Detectar país por registro, callsign u operador
 const detectCountry = (flight) => {
   const reg = (flight.registration || flight.aircraft?.registration || '').toUpperCase();
   const callsign = (flight.callsign || '').toUpperCase();
+  const airline = (flight.aircraft?.airline || '').toUpperCase();
   
-  if (reg.startsWith('N') || callsign.startsWith('N')) return 'US';
-  if (reg.startsWith('HK') || callsign.startsWith('AVA')) return 'CO';
-  if (reg.startsWith('YV')) return 'VE';
-  if (reg.startsWith('PT') || reg.startsWith('PR') || reg.startsWith('PP')) return 'BR';
-  if (reg.startsWith('XA') || reg.startsWith('XB') || reg.startsWith('XC')) return 'MX';
-  if (reg.startsWith('HP')) return 'PA';
-  if (reg.startsWith('PH') || reg.startsWith('PJ')) return 'NL';
+  // ===== ESTADOS UNIDOS =====
+  // Registro civil N
+  if (reg.startsWith('N')) return 'US';
+  // Callsigns militares USAF/USN/USCG
+  const usCallsigns = ['RCH', 'REACH', 'RRR', 'NAVY', 'TOPCAT', 'SPAR', 'SAM', 'AF', 'AE', 
+                       'CNV', 'DUKE', 'GOLD', 'KING', 'EVAC', 'NCHO', 'CFC', 'PAT',
+                       'TEAL', 'BISON', 'RHINO', 'HAWK', 'DOOM', 'JAKE', 'FURY'];
+  if (usCallsigns.some(prefix => callsign.startsWith(prefix))) return 'US';
+  // Operador contiene US/USAF/USN
+  if (airline.includes('UNITED STATES') || airline.includes('USAF') || 
+      airline.includes('US AIR FORCE') || airline.includes('US NAVY') ||
+      airline.includes('US ARMY') || airline.includes('US COAST GUARD') ||
+      airline.includes('AMERICAN')) return 'US';
+  
+  // ===== OTROS PAÍSES =====
+  // Colombia
+  if (reg.startsWith('HK') || callsign.startsWith('AVA') || 
+      airline.includes('COLOMBIA') || airline.includes('FAC')) return 'CO';
+  // Venezuela
+  if (reg.startsWith('YV') || airline.includes('VENEZUELA') || 
+      airline.includes('FANB') || airline.includes('CONVIASA')) return 'VE';
+  // Brasil
+  if (reg.startsWith('PT') || reg.startsWith('PR') || reg.startsWith('PP') ||
+      airline.includes('BRASIL') || airline.includes('BRAZIL') || airline.includes('FAB')) return 'BR';
+  // México
+  if (reg.startsWith('XA') || reg.startsWith('XB') || reg.startsWith('XC') ||
+      airline.includes('MEXICO') || airline.includes('FAM')) return 'MX';
+  // Panamá
+  if (reg.startsWith('HP') || airline.includes('PANAMA')) return 'PA';
+  // Países Bajos
+  if (reg.startsWith('PH') || reg.startsWith('PJ') || 
+      airline.includes('NETHERLANDS') || airline.includes('DUTCH') ||
+      airline.includes('KLM')) return 'NL';
+  // Reino Unido
+  if (reg.startsWith('G-') || airline.includes('ROYAL') && airline.includes('FORCE') ||
+      airline.includes('BRITAIN') || airline.includes('BRITISH')) return 'UK';
+  // Francia
+  if (reg.startsWith('F-') || airline.includes('FRANCE') || airline.includes('FRENCH')) return 'FR';
+  // Canadá
+  if (reg.startsWith('C-') || airline.includes('CANADA') || airline.includes('RCAF')) return 'CA';
   
   return 'other';
 };
@@ -379,12 +507,31 @@ export default function FlightRadarPanel({
                     </div>
                   </div>
 
-                  {/* Tipo de aeronave */}
+                  {/* Modelo de aeronave - INFORMACIÓN CLAVE */}
                   {flight.aircraft?.type && (
-                    <div className="mt-2 pt-2 border-t border-slate-700/50 text-[10px] text-slate-500">
-                      <Plane size={10} className="inline mr-1" />
-                      {flight.aircraft.type}
-                      {flight.registration && <span className="ml-2 text-slate-600">• {flight.registration}</span>}
+                    <div className="mt-2 pt-2 border-t border-slate-700/50">
+                      <div className="flex items-start gap-1.5">
+                        <Plane size={12} className="text-cyan-400 mt-0.5 shrink-0" />
+                        <div className="min-w-0">
+                          {/* Nombre completo del modelo si está disponible */}
+                          {getAircraftModelName(flight.aircraft.type) ? (
+                            <>
+                              <p className="text-xs font-semibold text-cyan-300 truncate">
+                                {getAircraftModelName(flight.aircraft.type)}
+                              </p>
+                              <p className="text-[10px] text-slate-500">
+                                {flight.aircraft.type}
+                                {flight.registration && <span className="ml-1.5">• {flight.registration}</span>}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-[10px] text-slate-400">
+                              {flight.aircraft.type}
+                              {flight.registration && <span className="ml-1.5 text-slate-500">• {flight.registration}</span>}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </button>
