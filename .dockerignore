@@ -40,8 +40,9 @@ Thumbs.db
 docs
 images
 
-# Scripts
-scripts
+# Scripts (excepto aisstream-worker.js que necesita el worker de Docker)
+scripts/*
+!scripts/aisstream-worker.js
 # *.sh - NO bloquear, necesario para docker-entrypoint.sh
 
 # Testing
