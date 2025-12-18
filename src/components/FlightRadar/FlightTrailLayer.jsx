@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getFlightDetails } from '../../services/flightRadarService';
 
 /**
@@ -16,7 +16,7 @@ import { getFlightDetails } from '../../services/flightRadarService';
 const TRAIL_SOURCE_ID = 'flight-trail-source';
 const TRAIL_LAYER_ID = 'flight-trail-layer';
 const TRAIL_OUTLINE_LAYER_ID = 'flight-trail-outline';
-const FLIGHTS_LAYER_ID = 'flights-layer'; // ID de la capa de vuelos para insertar trail debajo
+const FLIGHTS_LAYER_ID = 'flights-layer';
 
 // Colores para el gradiente de altitud
 const ALTITUDE_COLORS = {
@@ -25,116 +25,64 @@ const ALTITUDE_COLORS = {
   high: '#22c55e',     // Verde - alta
 };
 
+/**
+ * Convertir trail a GeoJSON con segmentos coloreados por altitud
+ */
+function trailToGeoJSON(trail) {
+  if (!trail || trail.length < 2) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  // Filtrar puntos válidos y convertir a coordenadas
+  const coordinates = trail
+    .filter(point => point.lat && point.lng)
+    .map(point => [point.lng, point.lat, point.alt || 0]);
+
+  console.log(`🗺️ Trail: ${trail.length} puntos raw -> ${coordinates.length} puntos válidos`);
+
+  if (coordinates.length < 2) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  // Crear segmentos con colores según altitud
+  const features = [];
+  
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const start = coordinates[i];
+    const end = coordinates[i + 1];
+    const avgAlt = ((start[2] || 0) + (end[2] || 0)) / 2;
+    
+    // Determinar color según altitud (en pies)
+    let color;
+    if (avgAlt < 10000) {
+      color = ALTITUDE_COLORS.low;
+    } else if (avgAlt < 25000) {
+      color = ALTITUDE_COLORS.medium;
+    } else {
+      color = ALTITUDE_COLORS.high;
+    }
+
+    features.push({
+      type: 'Feature',
+      properties: { altitude: avgAlt, color, index: i },
+      geometry: {
+        type: 'LineString',
+        coordinates: [[start[0], start[1]], [end[0], end[1]]]
+      }
+    });
+  }
+
+  return { type: 'FeatureCollection', features };
+}
+
 export default function FlightTrailLayer({ 
   map, 
   selectedFlight,
   showTrail = true
 }) {
   const initializedRef = useRef(false);
-  const currentFlightIdRef = useRef(null);
+  const lastFlightIdRef = useRef(null);
   const [trail, setTrail] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  /**
-   * Obtener el trail del vuelo seleccionado
-   */
-  const fetchTrail = useCallback(async (flightId) => {
-    if (!flightId) {
-      setTrail([]);
-      return;
-    }
-
-    // Si es el mismo vuelo, no re-fetch
-    if (currentFlightIdRef.current === flightId && trail.length > 0) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log('🛫 Fetching trail for flight:', flightId);
-      const details = await getFlightDetails(flightId);
-      
-      if (details?.trail && details.trail.length > 0) {
-        // El trail viene como array de objetos con lat, lng, alt, spd, ts
-        console.log(`✅ Trail recibido: ${details.trail.length} puntos`);
-        setTrail(details.trail);
-        currentFlightIdRef.current = flightId;
-      } else {
-        console.log('⚠️ No hay trail disponible para este vuelo');
-        setTrail([]);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching trail:', error);
-      setTrail([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [trail.length]);
-
-  /**
-   * Convertir trail a GeoJSON LineString
-   */
-  const getTrailGeoJSON = useCallback(() => {
-    if (!trail || trail.length < 2) {
-      return {
-        type: 'FeatureCollection',
-        features: []
-      };
-    }
-
-    // Convertir trail a coordenadas [lng, lat, altitude]
-    // El formato de FlightRadar24: { lat, lng, alt, spd, ts }
-    const coordinates = trail
-      .filter(point => point.lat && point.lng)
-      .map(point => [point.lng, point.lat, point.alt || 0]);
-
-    if (coordinates.length < 2) {
-      return {
-        type: 'FeatureCollection',
-        features: []
-      };
-    }
-
-    // Crear segmentos con colores según altitud
-    const features = [];
-    
-    for (let i = 0; i < coordinates.length - 1; i++) {
-      const start = coordinates[i];
-      const end = coordinates[i + 1];
-      const avgAlt = ((start[2] || 0) + (end[2] || 0)) / 2;
-      
-      // Determinar color según altitud (en pies)
-      let color;
-      if (avgAlt < 10000) {
-        color = ALTITUDE_COLORS.low;
-      } else if (avgAlt < 25000) {
-        color = ALTITUDE_COLORS.medium;
-      } else {
-        color = ALTITUDE_COLORS.high;
-      }
-
-      features.push({
-        type: 'Feature',
-        properties: {
-          altitude: avgAlt,
-          color: color,
-          index: i
-        },
-        geometry: {
-          type: 'LineString',
-          coordinates: [
-            [start[0], start[1]],
-            [end[0], end[1]]
-          ]
-        }
-      });
-    }
-
-    return {
-      type: 'FeatureCollection',
-      features
-    };
-  }, [trail]);
 
   /**
    * Inicializar capas en el mapa
@@ -144,15 +92,14 @@ export default function FlightTrailLayer({
 
     const init = () => {
       try {
-        // Crear source
+        // Crear source vacío
         if (!map.getSource(TRAIL_SOURCE_ID)) {
           map.addSource(TRAIL_SOURCE_ID, {
             type: 'geojson',
-            data: getTrailGeoJSON()
+            data: { type: 'FeatureCollection', features: [] }
           });
         }
 
-        // Determinar dónde insertar las capas (debajo de los vuelos si existen)
         const beforeLayerId = map.getLayer(FLIGHTS_LAYER_ID) ? FLIGHTS_LAYER_ID : undefined;
 
         // Capa de outline (sombra)
@@ -161,10 +108,7 @@ export default function FlightTrailLayer({
             id: TRAIL_OUTLINE_LAYER_ID,
             type: 'line',
             source: TRAIL_SOURCE_ID,
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
               'line-color': '#000000',
               'line-width': 5,
@@ -180,10 +124,7 @@ export default function FlightTrailLayer({
             id: TRAIL_LAYER_ID,
             type: 'line',
             source: TRAIL_SOURCE_ID,
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
               'line-color': ['get', 'color'],
               'line-width': 3,
@@ -214,15 +155,12 @@ export default function FlightTrailLayer({
 
     return () => {
       map.off('style.load', handleStyleLoad);
-      
       try {
         if (map.getLayer(TRAIL_LAYER_ID)) map.removeLayer(TRAIL_LAYER_ID);
         if (map.getLayer(TRAIL_OUTLINE_LAYER_ID)) map.removeLayer(TRAIL_OUTLINE_LAYER_ID);
         if (map.getSource(TRAIL_SOURCE_ID)) map.removeSource(TRAIL_SOURCE_ID);
         initializedRef.current = false;
-      } catch (e) {
-        // Ignorar errores de cleanup
-      }
+      } catch (e) { /* ignore */ }
     };
   }, [map]);
 
@@ -230,13 +168,40 @@ export default function FlightTrailLayer({
    * Fetch trail cuando cambia el vuelo seleccionado
    */
   useEffect(() => {
-    if (selectedFlight?.id && showTrail) {
-      fetchTrail(selectedFlight.id);
-    } else {
+    // Limpiar si no hay vuelo seleccionado
+    if (!selectedFlight?.id || !showTrail) {
       setTrail([]);
-      currentFlightIdRef.current = null;
+      lastFlightIdRef.current = null;
+      return;
     }
-  }, [selectedFlight?.id, showTrail, fetchTrail]);
+
+    const flightId = selectedFlight.id;
+
+    // Evitar re-fetch del mismo vuelo
+    if (lastFlightIdRef.current === flightId) {
+      return;
+    }
+
+    console.log('🛫 Fetching trail for flight:', flightId);
+    lastFlightIdRef.current = flightId;
+
+    // Fetch async
+    getFlightDetails(flightId)
+      .then(details => {
+        if (details?.trail && Array.isArray(details.trail)) {
+          console.log(`✅ Trail recibido: ${details.trail.length} puntos`);
+          setTrail(details.trail);
+        } else {
+          console.log('⚠️ No hay trail disponible');
+          setTrail([]);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error fetching trail:', error);
+        setTrail([]);
+      });
+
+  }, [selectedFlight?.id, showTrail]);
 
   /**
    * Actualizar datos del trail en el mapa
@@ -247,14 +212,14 @@ export default function FlightTrailLayer({
     try {
       const source = map.getSource(TRAIL_SOURCE_ID);
       if (source) {
-        const geojson = getTrailGeoJSON();
+        const geojson = trailToGeoJSON(trail);
         source.setData(geojson);
-        console.log(`🗺️ Trail actualizado: ${geojson.features.length} segmentos`);
+        console.log(`🗺️ Trail actualizado en mapa: ${geojson.features.length} segmentos`);
       }
     } catch (e) {
       console.error('Error actualizando trail:', e);
     }
-  }, [map, trail, getTrailGeoJSON]);
+  }, [map, trail]);
 
   /**
    * Ocultar/mostrar capas según showTrail
@@ -271,10 +236,8 @@ export default function FlightTrailLayer({
       if (map.getLayer(TRAIL_OUTLINE_LAYER_ID)) {
         map.setLayoutProperty(TRAIL_OUTLINE_LAYER_ID, 'visibility', visibility);
       }
-    } catch (e) {
-      // Ignorar
-    }
+    } catch (e) { /* ignore */ }
   }, [map, showTrail, trail.length]);
 
-  return null; // Este componente no renderiza UI, solo maneja el mapa
+  return null;
 }

@@ -1,4 +1,4 @@
-import { X, Waves, Search, Plus, Trash2, Eye, EyeOff, Check, Globe } from 'lucide-react';
+import { X, Waves, Search, Plus, Trash2, Eye, EyeOff, Check, Globe, Bell, BellOff } from 'lucide-react';
 import { useState } from 'react';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { searchCountries } from '../../data/worldCountries';
@@ -13,7 +13,8 @@ export default function MaritimeBoundariesManager({ onClose }) {
     settings, 
     loading, 
     addCountry, 
-    toggleVisibility, 
+    toggleVisibility,
+    toggleAlert,
     updateColor,
     updateOpacity,
     removeCountry,
@@ -71,6 +72,7 @@ export default function MaritimeBoundariesManager({ onClose }) {
   };
 
   const visibleCount = settings.filter(s => s.is_visible).length;
+  const alertCount = settings.filter(s => s.alert_enabled).length;
 
   // Función para cargar Venezuela con Esequibo desde GADM
   const handleLoadTerrestrial = async () => {
@@ -111,7 +113,9 @@ export default function MaritimeBoundariesManager({ onClose }) {
             <Waves className="w-6 h-6 text-cyan-400" />
             <div>
               <h2 className="text-lg font-bold text-white">Límites Marítimos - Gestor Dinámico</h2>
-              <p className="text-xs text-slate-400">{visibleCount} de {settings.length} países visibles</p>
+              <p className="text-xs text-slate-400">
+                {visibleCount} visibles · {alertCount} con alertas activas
+              </p>
             </div>
           </div>
 
@@ -239,12 +243,20 @@ export default function MaritimeBoundariesManager({ onClose }) {
               {filteredSettings.map((country) => (
                 <div
                   key={country.country_code}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    country.is_visible
-                      ? 'bg-slate-800/50 border-cyan-500/50'
-                      : 'bg-slate-800/30 border-slate-700 opacity-60'
+                  className={`p-4 rounded-lg border-2 transition-all relative ${
+                    country.alert_enabled
+                      ? 'bg-yellow-900/20 border-yellow-500/50'
+                      : country.is_visible
+                        ? 'bg-slate-800/50 border-cyan-500/50'
+                        : 'bg-slate-800/30 border-slate-700 opacity-60'
                   }`}
                 >
+                  {/* Badge de alertas activas */}
+                  {country.alert_enabled && (
+                    <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Bell className="w-3 h-3" /> ALERTA
+                    </div>
+                  )}
                   {/* Header con nombre y acciones */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
@@ -253,7 +265,7 @@ export default function MaritimeBoundariesManager({ onClose }) {
                     </div>
                     
                     <div className="flex gap-1">
-                      {/* Toggle visibilidad */}
+                      {/* Toggle visibilidad en mapa */}
                       <button
                         onClick={() => toggleVisibility(country.country_code)}
                         className={`p-1.5 rounded transition-colors ${
@@ -261,9 +273,22 @@ export default function MaritimeBoundariesManager({ onClose }) {
                             ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
                             : 'bg-slate-700 hover:bg-slate-600 text-slate-400'
                         }`}
-                        title={country.is_visible ? 'Ocultar' : 'Mostrar'}
+                        title={country.is_visible ? 'Ocultar del mapa' : 'Mostrar en mapa'}
                       >
                         {country.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      </button>
+                      
+                      {/* Toggle alertas Telegram */}
+                      <button
+                        onClick={() => toggleAlert(country.country_code)}
+                        className={`p-1.5 rounded transition-colors ${
+                          country.alert_enabled
+                            ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                            : 'bg-slate-700 hover:bg-slate-600 text-slate-400'
+                        }`}
+                        title={country.alert_enabled ? 'Desactivar alertas Telegram' : 'Activar alertas Telegram'}
+                      >
+                        {country.alert_enabled ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                       </button>
                       
                       {/* Eliminar */}
@@ -320,17 +345,35 @@ export default function MaritimeBoundariesManager({ onClose }) {
           )}
         </div>
 
-        {/* Footer con info */}
-        <div className="p-4 border-t border-slate-700 bg-slate-800/50 flex justify-between items-center">
-          <div className="text-sm text-slate-400">
-            ℹ️ Los límites se cargan desde <a href="https://marineregions.org" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Marine Regions</a>
+        {/* Footer con leyenda e info */}
+        <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+          {/* Leyenda de iconos */}
+          <div className="flex flex-wrap gap-4 mb-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 bg-cyan-600 rounded"><Eye className="w-3 h-3 text-white" /></div>
+              <span className="text-slate-400">Visible en mapa</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 bg-yellow-600 rounded"><Bell className="w-3 h-3 text-white" /></div>
+              <span className="text-slate-400">Alertas Telegram activas</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 bg-red-900/50 rounded"><Trash2 className="w-3 h-3 text-red-400" /></div>
+              <span className="text-slate-400">Eliminar país</span>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
-            Cerrar
-          </button>
+          
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-slate-400">
+              ℹ️ Los límites se cargan desde <a href="https://marineregions.org" target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">Marine Regions</a>
+            </div>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </div>

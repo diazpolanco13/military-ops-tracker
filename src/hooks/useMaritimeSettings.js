@@ -225,6 +225,56 @@ export function useMaritimeSettings() {
   }
 
   /**
+   * 🔔 Toggle alertas de Telegram para un país
+   */
+  async function toggleAlert(countryCode) {
+    try {
+      const country = settings.find(s => s.country_code === countryCode);
+      if (!country) return { success: false, error: 'País no encontrado' };
+
+      const newAlertState = !country.alert_enabled;
+      
+      const { data, error } = await supabase
+        .from('maritime_boundaries_settings')
+        .update({ alert_enabled: newAlertState })
+        .eq('country_code', countryCode)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Actualizar estado local
+      setSettings(prev => prev.map(s => 
+        s.country_code === countryCode ? { ...data } : s
+      ));
+
+      // Forzar trigger
+      setUpdateTrigger(prev => prev + 1);
+
+      console.log(`🔔 Alertas ${newAlertState ? 'activadas' : 'desactivadas'} para ${countryCode}`);
+
+      return { success: true, data };
+    } catch (err) {
+      console.error('Error toggling alert:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * 🔔 Obtener países con alertas activas
+   */
+  function getAlertEnabledCountries() {
+    return settings.filter(s => s.alert_enabled);
+  }
+
+  /**
+   * 🔔 Obtener códigos de países con alertas activas
+   */
+  function getAlertEnabledCountryCodes() {
+    return settings.filter(s => s.alert_enabled).map(s => s.country_code);
+  }
+
+  /**
    * Obtener solo países visibles
    */
   function getVisibleCountries() {
@@ -256,11 +306,14 @@ export function useMaritimeSettings() {
     updateTrigger, // Para que los componentes puedan detectar cambios
     addCountry,
     toggleVisibility,
+    toggleAlert,
     updateColor,
     updateOpacity,
     removeCountry,
     getVisibleCountries,
     getVisibleCountryCodes,
+    getAlertEnabledCountries,
+    getAlertEnabledCountryCodes,
     getColorMap,
     refetch: fetchSettings,
   };
