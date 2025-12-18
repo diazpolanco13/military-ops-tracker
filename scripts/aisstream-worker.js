@@ -14,8 +14,8 @@
  *   SUPABASE_SERVICE_KEY - Service role key de Supabase
  */
 
-const WebSocket = require('ws');
-const { createClient } = require('@supabase/supabase-js');
+import WebSocket from 'ws';
+import { createClient } from '@supabase/supabase-js';
 
 // Configuración
 const AISSTREAM_API_KEY = process.env.AISSTREAM_API_KEY || '39bcbdd4e9292810f67a75746d974638a2542f27';
