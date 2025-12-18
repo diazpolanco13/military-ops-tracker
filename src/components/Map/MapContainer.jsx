@@ -25,6 +25,10 @@ import FlightDetailsPanel from '../FlightRadar/FlightDetailsPanel';
 import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
 // FlightRadar service ahora usado desde el hook
 
+// 🚢 ShipRadar - Tracking de buques AIS
+import { useShipRadar } from '../../hooks/useShipRadar';
+import { ShipLayer, ShipDetailsPanel, ShipRadarBottomBar } from '../ShipRadar';
+
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -85,6 +89,23 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
     console.log(`✅ FlightRadar: ${flights.length} vuelos filtrados, mostrando ${limited.length}`);
     return limited;
   }, [flights]);
+
+  // 🚢 ShipRadar Integration - Buques AIS
+  const [selectedShip, setSelectedShip] = useState(null);
+  const [isShipRadarEnabled, setIsShipRadarEnabled] = useState(true);
+  const [shipFilters, setShipFilters] = useState({ military: false, tanker: false });
+  
+  const {
+    ships,
+    stats: shipStats,
+    loading: shipsLoading,
+    lastUpdate: shipsLastUpdate,
+    refetch: refetchShips,
+  } = useShipRadar({
+    autoRefresh: true,
+    refreshInterval: 60000, // 1 minuto
+    filterType: shipFilters.military ? 'military' : shipFilters.tanker ? 'tanker' : 'all',
+  });
   
   // 🖼️ Estado para usar imágenes de plantillas
   const [useImages, setUseImages] = useState(() => {
@@ -840,6 +861,27 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         </>
       )}
 
+      {/* 🚢 BUQUES EN TIEMPO REAL - AISStream (Capa nativa) */}
+      {mapLoaded && isShipRadarEnabled && shipsVisible && (
+        <ShipLayer
+          map={map.current}
+          ships={ships}
+          selectedShip={selectedShip}
+          onShipClick={(ship) => {
+            setSelectedShip(ship);
+            // Centrar mapa en el buque
+            if (map.current) {
+              map.current.easeTo({
+                center: [ship.longitude, ship.latitude],
+                zoom: 8,
+                duration: 1000,
+              });
+            }
+          }}
+          visible={shipsVisible}
+        />
+      )}
+
       {/* Indicador de carga */}
       {loading && (
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-military-bg-secondary/90 backdrop-blur-sm text-military-text-primary px-4 py-2 rounded-md shadow-lg">
@@ -909,6 +951,14 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         />
       )}
 
+      {/* 🚢 Panel de detalles de buque seleccionado */}
+      {selectedShip && (
+        <ShipDetailsPanel
+          ship={ships.find(s => s.mmsi === selectedShip?.mmsi) || selectedShip}
+          onClose={() => setSelectedShip(null)}
+        />
+      )}
+
       {/* Botón azul eliminado - funcionalidad integrada en el contador circular */}
 
       {/* Barra inferior estilo FlightRadar24 */}
@@ -922,6 +972,17 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         onOpenPanel={() => setShowFlightRadarPanel(true)}
         isPanelOpen={showFlightRadarPanel}
       />
+
+      {/* 🚢 Widget ShipRadar - Buques AIS */}
+      {shipsVisible && (
+        <ShipRadarBottomBar
+          stats={shipStats}
+          loading={shipsLoading}
+          isEnabled={isShipRadarEnabled}
+          onToggle={() => setIsShipRadarEnabled(!isShipRadarEnabled)}
+          refreshInterval={60000}
+        />
+      )}
 
       {/* Botón de subida de imágenes - ELIMINADO, ahora integrado en plantillas y formularios */}
     </div>

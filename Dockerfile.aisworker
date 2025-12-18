@@ -1,0 +1,31 @@
+# ==================================
+# AISStream Worker - Recolector de datos marítimos
+# ==================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache curl
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+
+# Instalar solo dependencias de producción
+RUN npm install --production --legacy-peer-deps
+
+# Copiar solo el script del worker
+COPY scripts/aisstream-worker.js ./worker.js
+
+# Variables de entorno (se configuran en Dokploy)
+ENV NODE_ENV=production
+ENV AISSTREAM_API_KEY=""
+ENV SUPABASE_URL=""
+ENV SUPABASE_SERVICE_KEY=""
+
+# Health check - verifica que el proceso siga vivo
+HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=3 \
+  CMD pgrep -f "node worker.js" || exit 1
+
+# Ejecutar el worker
+CMD ["node", "worker.js"]
