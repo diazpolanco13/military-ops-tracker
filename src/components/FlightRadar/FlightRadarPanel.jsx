@@ -270,7 +270,7 @@ export default function FlightRadarPanel({
   const activeFiltersCount = (selectedType !== 'all' ? 1 : 0) + (selectedCountry !== 'all' ? 1 : 0);
 
   return (
-    <div className="fixed right-4 top-20 bottom-6 w-[360px] bg-slate-900/95 backdrop-blur-md shadow-2xl border border-slate-700 rounded-2xl z-30 flex flex-col overflow-hidden">
+    <div className="fixed right-4 top-20 bottom-6 w-[360px] bg-slate-900/95 backdrop-blur-md shadow-2xl border border-slate-700 rounded-2xl z-40 flex flex-col overflow-hidden">
       
       {/* Header - Estilo SAE */}
       <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-slate-800/50 to-slate-900/50">

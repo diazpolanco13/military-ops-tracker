@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Ship, Anchor, Fuel, Settings } from 'lucide-react';
+import { Ship } from 'lucide-react';
 
 /**
- * 🚢 WIDGET SHIP RADAR
- * Contador circular + barra compacta posicionada a la derecha
- * Similar al estilo de FlightRadarBottomBar
+ * 🚢 CONTADOR CIRCULAR SHIP RADAR
+ * Muestra solo los buques de interés (militares + petroleros)
  */
 
 export default function ShipRadarBottomBar({ 
@@ -14,8 +13,12 @@ export default function ShipRadarBottomBar({
   onToggle,
   refreshInterval = 60000,
   onOpenPanel,
+  isPanelOpen = false,
 }) {
   const [progress, setProgress] = useState(0);
+
+  // Conteo de buques de interés (solo militares + petroleros)
+  const interestCount = stats.military + stats.tankers;
 
   // Animación de progreso circular
   useEffect(() => {
@@ -38,83 +41,56 @@ export default function ShipRadarBottomBar({
     }, 100);
 
     return () => clearInterval(interval);
-  }, [isEnabled, refreshInterval, stats.total]);
+  }, [isEnabled, refreshInterval, interestCount]);
 
   const circumference = 2 * Math.PI * 26;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
+  // No mostrar si el panel está abierto o está deshabilitado
+  if (!isEnabled || isPanelOpen) return null;
+
   return (
-    <div className="fixed bottom-6 right-4 z-30">
-      <div className="flex items-center gap-3">
+    <button
+      onClick={onOpenPanel}
+      className="fixed bottom-6 right-[76px] sm:right-[88px] z-20 group"
+      title="Ver lista de buques"
+    >
+      <div className="relative flex items-center justify-center transition-transform hover:scale-110">
+        {/* SVG Progreso */}
+        <svg className="absolute w-14 h-14 sm:w-16 sm:h-16 -rotate-90" viewBox="0 0 56 56">
+          <circle
+            cx="28" cy="28" r="26"
+            fill="none"
+            stroke="rgba(71, 85, 105, 0.4)"
+            strokeWidth="3"
+          />
+          <circle
+            cx="28" cy="28" r="26"
+            fill="none"
+            stroke="#06B6D4"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{ transition: 'stroke-dashoffset 0.1s linear' }}
+          />
+        </svg>
         
-        {/* Barra de stats compacta */}
-        <div className="bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-full px-3 py-1.5 flex items-center gap-3 shadow-lg">
-          {/* Militares */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">⚔️</span>
-            <span className="text-xs font-bold text-red-400">{stats.military}</span>
-          </div>
-          
-          {/* Separador */}
-          <div className="w-px h-4 bg-slate-600" />
-          
-          {/* Petroleros */}
-          <div className="flex items-center gap-1.5">
-            <Fuel size={14} className="text-orange-400" />
-            <span className="text-xs font-bold text-orange-400">{stats.tankers}</span>
-          </div>
+        {/* Centro - Muestra SOLO buques de interés */}
+        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-900 border-2 border-slate-700 group-hover:border-cyan-500 rounded-full shadow-xl flex flex-col items-center justify-center transition-colors">
+          <Ship size={16} className="sm:w-[18px] sm:h-[18px] text-cyan-400 -mt-0.5" />
+          <span className="text-[10px] sm:text-xs font-bold text-white leading-none">
+            {interestCount}
+          </span>
         </div>
 
-        {/* Contador circular clickeable */}
-        <button
-          onClick={onToggle}
-          className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 ${
-            isEnabled 
-              ? 'bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border-2 border-cyan-500/50 shadow-lg shadow-cyan-500/20' 
-              : 'bg-slate-800/80 border-2 border-slate-600 opacity-50'
-          }`}
-          title={isEnabled ? 'Desactivar ShipRadar' : 'Activar ShipRadar'}
-        >
-          {/* Círculo de progreso */}
-          <svg className="absolute inset-0 w-full h-full -rotate-90">
-            <circle
-              cx="32"
-              cy="32"
-              r="26"
-              fill="none"
-              stroke="rgba(6, 182, 212, 0.2)"
-              strokeWidth="3"
-            />
-            <circle
-              cx="32"
-              cy="32"
-              r="26"
-              fill="none"
-              stroke="rgb(6, 182, 212)"
-              strokeWidth="3"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              className="transition-all duration-100"
-            />
-          </svg>
-          
-          {/* Icono y contador */}
-          <div className="relative z-10 flex flex-col items-center">
-            <Ship size={18} className={isEnabled ? 'text-cyan-400' : 'text-slate-500'} />
-            <span className={`text-xs font-bold ${isEnabled ? 'text-white' : 'text-slate-500'}`}>
-              {stats.total}
-            </span>
+        {/* Loading indicator */}
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin" />
           </div>
-
-          {/* Indicador de carga */}
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 rounded-full">
-              <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-        </button>
+        )}
       </div>
-    </div>
+    </button>
   );
 }

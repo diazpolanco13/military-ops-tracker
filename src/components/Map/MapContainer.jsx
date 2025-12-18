@@ -27,7 +27,7 @@ import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
 
 // 🚢 ShipRadar - Tracking de buques AIS
 import { useShipRadar } from '../../hooks/useShipRadar';
-import { ShipLayer, ShipDetailsPanel, ShipRadarBottomBar } from '../ShipRadar';
+import { ShipLayer, ShipDetailsPanel, ShipRadarBottomBar, ShipRadarPanel } from '../ShipRadar';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -93,6 +93,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   // 🚢 ShipRadar Integration - Buques AIS
   const [selectedShip, setSelectedShip] = useState(null);
   const [isShipRadarEnabled, setIsShipRadarEnabled] = useState(true);
+  const [showShipRadarPanel, setShowShipRadarPanel] = useState(false);
   const [shipFilters, setShipFilters] = useState({ military: false, tanker: false });
   
   const {
@@ -981,6 +982,30 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           isEnabled={isShipRadarEnabled}
           onToggle={() => setIsShipRadarEnabled(!isShipRadarEnabled)}
           refreshInterval={60000}
+          onOpenPanel={() => setShowShipRadarPanel(true)}
+          isPanelOpen={showShipRadarPanel}
+        />
+      )}
+
+      {/* 🚢 Panel lateral de ShipRadar */}
+      {showShipRadarPanel && (
+        <ShipRadarPanel
+          ships={ships}
+          loading={shipsLoading}
+          lastUpdate={shipsLastUpdate}
+          onRefresh={refetchShips}
+          onShipClick={(ship) => {
+            setSelectedShip(ship);
+            setShowShipRadarPanel(false);
+            if (map.current) {
+              map.current.easeTo({
+                center: [ship.longitude, ship.latitude],
+                zoom: 10,
+                duration: 1000,
+              });
+            }
+          }}
+          onClose={() => setShowShipRadarPanel(false)}
         />
       )}
 
