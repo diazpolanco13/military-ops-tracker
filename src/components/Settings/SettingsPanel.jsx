@@ -1,9 +1,10 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu, Radar } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
 import { useUserRole } from '../../hooks/useUserRole';
 import UserManagement from '../Auth/UserManagement';
 import RolePermissionsEditor from './RolePermissionsEditor';
+import IncursionMonitorPanel from './IncursionMonitorPanel';
 
 /**
  * ⚙️ Panel de Configuración
@@ -151,6 +152,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'vista', label: 'Modo Vista', icon: Monitor, adminOnly: false },
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag, adminOnly: false },
     { id: 'mapa', label: 'Cámara Mapa', icon: Video, adminOnly: false },
+    { id: 'incursiones', label: 'Monitor Incursiones', icon: Radar, adminOnly: true },
     { id: 'usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
     { id: 'permisos', label: 'Permisos', icon: Shield, adminOnly: true },
   ];
@@ -938,6 +940,11 @@ export default function SettingsPanel({ onClose }) {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: Monitor de Incursiones */}
+          {activeTab === 'incursiones' && (
+            <IncursionMonitorPanel />
           )}
 
           {/* TAB: Gestión de Usuarios */}
