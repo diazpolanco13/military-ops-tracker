@@ -276,10 +276,10 @@ export default function TopNavigationBar({
         {/* 📍 Ubicaciones */}
         <NavButton
           icon={<MapPin className="w-5 h-5" />}
-          label="Zonas"
+          label="Límites"
           active={activePanel === 'zones'}
           onClick={() => togglePanel('zones')}
-          tooltip="Zonas de Interés"
+          tooltip="Límites Territoriales"
         />
 
         {/* Separador - Oculto en móvil */}
@@ -775,7 +775,7 @@ function getPanelTitle(panel) {
     maps: '🗺️ Estilos de Mapa',
     view: '👁️ Gestión de Visibilidad',
     types: '🚢 Filtrar por Tipo',
-    zones: '📍 Zonas de Interés',
+    zones: '📍 Límites Territoriales',
     search: '🔍 Búsqueda Avanzada',
     filters: '🎛️ Filtros y Capas',
     settings: '⚙️ Configuración',
@@ -789,7 +789,7 @@ function getPanelTitle(panel) {
 function getPanelContent(panel) {
   const content = {
     types: 'Filtrar por: Destructores, Fragatas, Aviones, etc.',
-    zones: 'Gestión de zonas de interés',
+    zones: 'Gestión de límites territoriales',
     search: 'Búsqueda avanzada de entidades',
     filters: 'Activar/desactivar capas del mapa',
     settings: 'Configuración general de la aplicación',
@@ -853,44 +853,33 @@ function MapStylesPanel({ currentStyle, onStyleChange }) {
   ];
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar" style={{ maxWidth: '100%' }}>
-      {STYLE_OPTIONS.map((option) => {
-        const OptionIcon = option.icon;
-        const isActive = currentStyle === option.id;
+    <div className="bg-slate-800 rounded-lg p-3">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Seleccionar estilo</div>
+      <div className="flex flex-wrap gap-2">
+        {STYLE_OPTIONS.map((option) => {
+          const OptionIcon = option.icon;
+          const isActive = currentStyle === option.id;
 
-        return (
-          <button
-            key={option.id}
-            onClick={() => onStyleChange(option.id, option.style)}
-            className={`flex-shrink-0 flex flex-col items-center justify-center gap-2 p-4 rounded-lg transition-all ${
-              isActive
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                : 'bg-slate-700/50 hover:bg-slate-700 text-slate-200'
-            }`}
-            style={{ width: '200px', height: '140px' }}
-          >
-            {/* Icono con color */}
-            <div
-              className={`w-16 h-16 ${
-                isActive ? 'bg-white/20' : option.color
-              } rounded-lg flex items-center justify-center`}
+          return (
+            <button
+              key={option.id}
+              onClick={() => onStyleChange(option.id, option.style)}
+              title={option.description}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                isActive
+                  ? `${option.color} text-white`
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+              }`}
             >
-              <OptionIcon className="w-8 h-8 text-white" />
-            </div>
-
-            {/* Nombre */}
-            <div className="text-center">
-              <div className="font-medium text-sm flex items-center gap-2">
+              <OptionIcon className="w-4 h-4" />
+              <span className="text-xs font-medium whitespace-nowrap">
                 {option.name}
-                {isActive && <Check size={14} className="text-white" />}
-              </div>
-              <div className={`text-xs mt-0.5 ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
-                {option.description}
-              </div>
-            </div>
-          </button>
-        );
-      })}
+              </span>
+              {isActive && <Check size={12} />}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

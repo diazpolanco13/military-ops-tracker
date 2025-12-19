@@ -2,104 +2,55 @@ import { Waves, Palette, MapPin } from 'lucide-react';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 
 /**
- * 📍 Panel de Zonas de Interés
+ * 📍 Panel de Límites Territoriales
  * Incluye límites marítimos y futuras zonas personalizadas
  */
 export default function ZonesPanel({ onClose, onOpenMaritimeConfig }) {
   const { showBoundaries, toggleBoundaries } = useMaritimeBoundariesContext();
 
-  const ZONES_ACTIONS = [
-    {
-      id: 'toggle-maritime',
-      title: showBoundaries ? 'Ocultar Límites Marítimos' : 'Mostrar Límites Marítimos',
-      description: showBoundaries ? 'Ocultar EEZ de 200 NM' : 'Ver EEZ y aguas territoriales',
-      icon: Waves,
-      color: showBoundaries ? 'bg-cyan-900/30' : 'bg-slate-800/30',
-      hoverColor: showBoundaries ? 'hover:bg-cyan-900/50' : 'hover:bg-slate-700',
-      textColor: showBoundaries ? 'text-cyan-400' : 'text-slate-400',
-    },
-    {
-      id: 'configure-maritime',
-      title: 'Gestor de Países',
-      description: 'Buscar, agregar y personalizar límites',
-      icon: Palette,
-      color: 'bg-purple-900/30',
-      hoverColor: 'hover:bg-purple-900/50',
-      textColor: 'text-purple-400',
-    },
-    {
-      id: 'custom-zones',
-      title: 'Zonas Personalizadas',
-      description: 'Crear zonas de interés (Próximamente)',
-      icon: MapPin,
-      color: 'bg-slate-800/30',
-      hoverColor: 'hover:bg-slate-700',
-      textColor: 'text-slate-400',
-      disabled: true,
-    },
-  ];
-
-  const handleAction = (actionId) => {
-    switch (actionId) {
-      case 'toggle-maritime':
-        toggleBoundaries();
-        // No cerrar el panel para permitir múltiples acciones
-        break;
-      
-      case 'configure-maritime':
-        onOpenMaritimeConfig();
-        onClose();
-        break;
-      
-      case 'custom-zones':
-        // Futuro: abrir panel de zonas personalizadas
-        break;
-      
-      default:
-        break;
-    }
-  };
-
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar" style={{ maxWidth: '100%' }}>
-      {ZONES_ACTIONS.map((action) => {
-        const ActionIcon = action.icon;
-        const isDisabled = action.disabled;
+    <div className="bg-slate-800 rounded-lg p-3">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Límites Marítimos</div>
+      <div className="flex flex-wrap gap-2">
+        {/* Toggle Límites */}
+        <button
+          onClick={toggleBoundaries}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+            showBoundaries 
+              ? 'bg-cyan-600 text-white' 
+              : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+          }`}
+          title={showBoundaries ? 'Ocultar EEZ de 200 NM' : 'Ver EEZ y aguas territoriales'}
+        >
+          <Waves className="w-4 h-4" />
+          <span className="text-xs font-medium">
+            {showBoundaries ? 'Límites Visibles' : 'Límites Ocultos'}
+          </span>
+        </button>
 
-        return (
-          <button
-            key={action.id}
-            onClick={() => !isDisabled && handleAction(action.id)}
-            disabled={isDisabled}
-            className={`flex-shrink-0 flex flex-col items-center justify-center gap-2 p-4 rounded-lg transition-all ${
-              isDisabled
-                ? 'opacity-40 cursor-not-allowed bg-slate-800/30'
-                : `${action.color} ${action.hoverColor} cursor-pointer`
-            }`}
-            style={{ width: '200px', height: '140px' }}
-          >
-            {/* Icono */}
-            <div className={`w-16 h-16 ${isDisabled ? 'bg-slate-700' : 'bg-slate-700/80'} rounded-lg flex items-center justify-center`}>
-              <ActionIcon className={`w-8 h-8 ${action.textColor}`} />
-            </div>
+        {/* Gestor de Países */}
+        <button
+          onClick={() => {
+            onOpenMaritimeConfig();
+            onClose();
+          }}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-all"
+          title="Buscar, agregar y personalizar límites"
+        >
+          <Palette className="w-4 h-4" />
+          <span className="text-xs font-medium">Gestor de Países</span>
+        </button>
 
-            {/* Texto */}
-            <div className="text-center">
-              <div className={`font-medium text-sm ${action.textColor}`}>
-                {action.title}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {action.description}
-              </div>
-              {isDisabled && (
-                <div className="text-xs text-yellow-500 mt-1">
-                  Próximamente
-                </div>
-              )}
-            </div>
-          </button>
-        );
-      })}
+        {/* Zonas Personalizadas (próximamente) */}
+        <button
+          disabled
+          className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
+          title="Próximamente"
+        >
+          <MapPin className="w-4 h-4" />
+          <span className="text-xs font-medium">Zonas Personalizadas</span>
+        </button>
+      </div>
     </div>
   );
 }

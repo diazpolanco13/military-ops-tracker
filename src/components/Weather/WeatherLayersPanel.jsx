@@ -107,8 +107,8 @@ export default function WeatherLayersPanel({ map }) {
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all relative ${
           activeCount > 0
-            ? 'bg-sky-600 text-white shadow-lg shadow-sky-500/30'
-            : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/50 hover:text-white'
+            ? 'bg-sky-600 text-white'
+            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
         }`}
         title="Capas de Clima"
       >
@@ -125,7 +125,7 @@ export default function WeatherLayersPanel({ map }) {
       {isOpen && (
         <div 
           ref={panelRef}
-          className="fixed bg-slate-800/98 backdrop-blur-md rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+          className="fixed bg-slate-900 rounded-lg shadow-2xl border border-slate-600 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
           style={{
             top: '60px', // Justo debajo del navbar (altura 56px + margen)
             right: '1rem',
@@ -135,7 +135,7 @@ export default function WeatherLayersPanel({ map }) {
           }}
         >
           {/* Header */}
-          <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-sky-900/30 to-blue-900/30">
+          <div className="p-4 border-b border-slate-700 bg-slate-800">
             <h3 className="text-base font-semibold text-white flex items-center gap-2">
               <CloudSnow className="w-5 h-5 text-sky-400" />
               Capas Meteorológicas
@@ -157,8 +157,8 @@ export default function WeatherLayersPanel({ map }) {
                   key={layerType}
                   className={`p-3 rounded-lg mb-2 transition-all ${
                     isActive
-                      ? 'bg-gradient-to-r from-sky-600/20 to-blue-600/20 border border-sky-500/50'
-                      : 'bg-slate-900/30 border border-slate-700/50'
+                      ? 'bg-sky-900 border border-sky-600'
+                      : 'bg-slate-800 border border-slate-700'
                   } ${!isAvailable ? 'opacity-50' : ''}`}
                 >
                   <label className="flex items-center justify-between cursor-pointer">
@@ -209,22 +209,22 @@ export default function WeatherLayersPanel({ map }) {
           </div>
 
           {/* Footer con info */}
-          <div className="p-3 border-t border-slate-700 bg-slate-900/50">
+          <div className="p-3 border-t border-slate-700 bg-slate-800">
             {!OPENWEATHER_API_KEY ? (
-              <div className="text-xs text-amber-300 bg-amber-900/20 p-2 rounded border border-amber-700/30">
+              <div className="text-xs text-amber-300 bg-amber-900 p-2 rounded border border-amber-700">
                 <p className="font-semibold">⚠️ Modo Básico (RainViewer)</p>
-                <p className="text-slate-400 mt-1">Solo 2 capas disponibles. Configura API key para las 5 capas.</p>
+                <p className="text-slate-300 mt-1">Solo 2 capas disponibles. Configura API key para las 5 capas.</p>
               </div>
             ) : (
-              <div className="text-xs text-green-300 bg-green-900/20 p-2 rounded border border-green-700/30">
+              <div className="text-xs text-green-300 bg-green-900 p-2 rounded border border-green-700">
                 <p className="font-semibold">✅ Modo Completo (OpenWeatherMap)</p>
-                <p className="text-slate-400 mt-1">Todas las capas disponibles</p>
+                <p className="text-slate-300 mt-1">Todas las capas disponibles</p>
               </div>
             )}
           </div>
 
           {/* Presets rápidos */}
-          <div className="p-3 border-t border-slate-700 bg-slate-900/30">
+          <div className="p-3 border-t border-slate-700 bg-slate-800">
             <p className="text-xs text-slate-400 mb-2 font-medium">PRESETS:</p>
             <div className="flex flex-wrap gap-1.5">
               <button
