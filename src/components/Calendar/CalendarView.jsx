@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter, Plus, Grid3x3, Columns, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Search, Filter, Plus, Grid3x3, Columns, LayoutGrid, CalendarDays, Clock, MapPin, Tag, ExternalLink, FileText, AlertTriangle, AlertCircle, Target, Newspaper } from 'lucide-react';
 import { 
   startOfMonth, 
   endOfMonth, 
@@ -37,7 +37,7 @@ export default function CalendarView({ onClose }) {
   const [filterPriority, setFilterPriority] = useState('all'); // all, urgente, importante, normal
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'calendar' o 'search-results'
-  const [calendarView, setCalendarView] = useState('month'); // 'month', 'week', 'semester'
+  const [calendarView, setCalendarView] = useState('month'); // 'month', 'week', 'day', 'semester'
   const [selectedEventFromSemester, setSelectedEventFromSemester] = useState(null);
   const [eventToEdit, setEventToEdit] = useState(null); // Evento a editar
 
@@ -56,6 +56,9 @@ export default function CalendarView({ onClose }) {
         const dayBefore = subDays(currentMonth, 1);
         const dayAfter = addDays(currentMonth, 1);
         return [dayBefore, currentMonth, dayAfter];
+      } else if (calendarView === 'day') {
+        // Vista de 1 día: solo el día actual
+        return [currentMonth];
       } else {
         // Vista semestral: 6 meses
         return [];
@@ -191,6 +194,9 @@ export default function CalendarView({ onClose }) {
     } else if (calendarView === 'week') {
       // Vista de 3 días: retroceder 3 días
       setCurrentMonth(prev => subDays(prev, 3));
+    } else if (calendarView === 'day') {
+      // Vista de 1 día: retroceder 1 día
+      setCurrentMonth(prev => subDays(prev, 1));
     } else {
       // Vista semestral: retroceder 6 meses
       setCurrentMonth(prev => subMonths(prev, 6));
@@ -204,6 +210,9 @@ export default function CalendarView({ onClose }) {
     } else if (calendarView === 'week') {
       // Vista de 3 días: avanzar 3 días
       setCurrentMonth(prev => addDays(prev, 3));
+    } else if (calendarView === 'day') {
+      // Vista de 1 día: avanzar 1 día
+      setCurrentMonth(prev => addDays(prev, 1));
     } else {
       // Vista semestral: avanzar 6 meses
       setCurrentMonth(prev => addMonths(prev, 6));
@@ -225,6 +234,9 @@ export default function CalendarView({ onClose }) {
       const dayBefore = subDays(currentMonth, 1);
       const dayAfter = addDays(currentMonth, 1);
       return `${format(dayBefore, 'd')} - ${format(dayAfter, 'd MMM yyyy')}`;
+    } else if (calendarView === 'day') {
+      // Vista de 1 día: fecha completa
+      return format(currentMonth, "EEEE d 'de' MMMM, yyyy");
     } else {
       // Vista semestral
       const currentMonthNum = currentMonth.getMonth();
@@ -266,80 +278,91 @@ export default function CalendarView({ onClose }) {
       </div>
 
       {/* Navegación, búsqueda y filtros - Responsive */}
-      <div className="bg-slate-800/50 border-b border-slate-700 px-6 py-3">
+      <div className="bg-slate-800/50 border-b border-slate-700 px-3 sm:px-6 py-3">
         {/* Fila 1: Controles de vista y navegación */}
-        <div className="flex items-center gap-3 mb-3">
-        {/* Selector de tipo de vista */}
-        <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-          <button
-            onClick={() => setCalendarView('semester')}
-            className={`p-2 rounded transition-colors ${
-              calendarView === 'semester' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-300 hover:text-white hover:bg-slate-600'
-            }`}
-            title="Vista semestral (6 meses)"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => setCalendarView('month')}
-            className={`p-2 rounded transition-colors ${
-              calendarView === 'month' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-300 hover:text-white hover:bg-slate-600'
-            }`}
-            title="Vista mensual"
-          >
-            <Grid3x3 size={16} />
-          </button>
-          <button
-            onClick={() => setCalendarView('week')}
-            className={`p-2 rounded transition-colors ${
-              calendarView === 'week' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-300 hover:text-white hover:bg-slate-600'
-            }`}
-            title="Vista semanal"
-          >
-            <Columns size={16} />
-          </button>
-        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+          {/* Selector de tipo de vista */}
+          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
+            <button
+              onClick={() => setCalendarView('semester')}
+              className={`p-1.5 sm:p-2 rounded transition-colors ${
+                calendarView === 'semester' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+              }`}
+              title="Vista semestral (6 meses)"
+            >
+              <LayoutGrid size={14} className="sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={() => setCalendarView('month')}
+              className={`p-1.5 sm:p-2 rounded transition-colors ${
+                calendarView === 'month' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+              }`}
+              title="Vista mensual"
+            >
+              <Grid3x3 size={14} className="sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={() => setCalendarView('week')}
+              className={`p-1.5 sm:p-2 rounded transition-colors ${
+                calendarView === 'week' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+              }`}
+              title="Vista de 3 días"
+            >
+              <Columns size={14} className="sm:w-4 sm:h-4" />
+            </button>
+            <button
+              onClick={() => setCalendarView('day')}
+              className={`p-1.5 sm:p-2 rounded transition-colors ${
+                calendarView === 'day' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-600'
+              }`}
+              title="Vista de 1 día (detallada)"
+            >
+              <CalendarDays size={14} className="sm:w-4 sm:h-4" />
+            </button>
+          </div>
 
-        <div className="h-6 w-px bg-slate-700"></div>
+          <div className="hidden sm:block h-6 w-px bg-slate-700"></div>
 
-        {/* Navegación adaptativa */}
-        <button
-          onClick={goToPrevious}
-          className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title={calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? '3 días anteriores' : 'Semestre anterior'}
-        >
-          <ChevronLeft size={20} />
-        </button>
-        
-        <h3 className="text-lg font-semibold text-white min-w-[280px] text-center capitalize">
-          {getViewTitle()}
-        </h3>
-        
-        <button
-          onClick={goToNext}
-          className="p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
-          title={calendarView === 'month' ? 'Mes siguiente' : calendarView === 'week' ? '3 días siguientes' : 'Semestre siguiente'}
-        >
-          <ChevronRight size={20} />
-        </button>
+          {/* Navegación adaptativa */}
+          <button
+            onClick={goToPrevious}
+            className="p-1.5 sm:p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
+            title={calendarView === 'month' ? 'Mes anterior' : calendarView === 'week' ? '3 días anteriores' : 'Semestre anterior'}
+          >
+            <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+          </button>
+          
+          <h3 className="text-sm sm:text-lg font-semibold text-white flex-1 sm:flex-none sm:min-w-[280px] text-center capitalize truncate">
+            {getViewTitle()}
+          </h3>
+          
+          <button
+            onClick={goToNext}
+            className="p-1.5 sm:p-2 hover:bg-slate-700 rounded-lg transition-colors text-slate-300"
+            title={calendarView === 'month' ? 'Mes siguiente' : calendarView === 'week' ? '3 días siguientes' : 'Semestre siguiente'}
+          >
+            <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+          </button>
 
           {/* Botón Hoy */}
           <button
             onClick={goToToday}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium whitespace-nowrap"
+            className="px-2 sm:px-3 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium whitespace-nowrap"
           >
-            📅 Ir a Hoy
+            <span className="hidden sm:inline">📅 Ir a </span>Hoy
           </button>
         </div>
 
         {/* Fila 2: Búsqueda y filtros */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* Búsqueda */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
@@ -347,7 +370,7 @@ export default function CalendarView({ onClose }) {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar eventos por título, descripción, ubicación o etiquetas..."
+              placeholder="Buscar"
               className="w-full pl-10 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {searchTerm && (
@@ -360,51 +383,51 @@ export default function CalendarView({ onClose }) {
             )}
           </div>
 
-          {/* Filtro por prioridad */}
-          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
-            <button
-              onClick={() => setFilterPriority('all')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                filterPriority === 'all' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setFilterPriority('urgente')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                filterPriority === 'urgente' 
-                  ? 'bg-red-600 text-white' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🚨 Urgentes
-            </button>
-            <button
-              onClick={() => setFilterPriority('importante')}
-              className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                filterPriority === 'importante' 
-                  ? 'bg-yellow-600 text-white' 
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              ⚠️ Importantes
-            </button>
-          </div>
+          {/* Filtro por prioridad + Contador */}
+          <div className="flex items-center gap-2 justify-between sm:justify-end">
+            <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
+              <button
+                onClick={() => setFilterPriority('all')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium transition-colors ${
+                  filterPriority === 'all' 
+                    ? 'bg-blue-600 text-white' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setFilterPriority('urgente')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium transition-colors ${
+                  filterPriority === 'urgente' 
+                    ? 'bg-red-600 text-white' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span className="sm:hidden">🚨</span>
+                <span className="hidden sm:inline">🚨 Urgentes</span>
+              </button>
+              <button
+                onClick={() => setFilterPriority('importante')}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded text-xs font-medium transition-colors ${
+                  filterPriority === 'importante' 
+                    ? 'bg-yellow-600 text-white' 
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span className="sm:hidden">⚠️</span>
+                <span className="hidden sm:inline">⚠️ Importantes</span>
+              </button>
+            </div>
 
-          {/* Contador de resultados */}
-          <div className="text-xs text-slate-400 min-w-[120px] text-right">
-            {(searchTerm || filterPriority !== 'all') ? (
-              <>
-                {filteredEvents.length} encontrado{filteredEvents.length !== 1 ? 's' : ''}
-              </>
-            ) : (
-              <>
-                {events.length} total{events.length !== 1 ? 'es' : ''}
-              </>
-            )}
+            {/* Contador de resultados */}
+            <div className="text-xs text-slate-400 whitespace-nowrap">
+              {(searchTerm || filterPriority !== 'all') ? (
+                <>{filteredEvents.length} encontrado{filteredEvents.length !== 1 ? 's' : ''}</>
+              ) : (
+                <>{events.length} total{events.length !== 1 ? 'es' : ''}</>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -608,6 +631,16 @@ export default function CalendarView({ onClose }) {
                 );
               })}
             </div>
+          ) : calendarView === 'day' ? (
+            /* VISTA DE 1 DÍA: Timeline detallado de eventos */
+            <DayDetailedView
+              day={currentMonth}
+              events={getEventsForDay(currentMonth)}
+              onEventClick={(event) => {
+                setSelectedEventFromSemester(event);
+                setSelectedDate(currentMonth);
+              }}
+            />
           ) : (
             /* VISTA MENSUAL Y SEMANAL: Grid de días */
             <div className={`grid gap-4 ${
@@ -637,25 +670,25 @@ export default function CalendarView({ onClose }) {
 
           {/* Leyenda - Solo en vista mensual */}
           {calendarView === 'month' && (
-            <div className="mt-6 flex items-center justify-center gap-6 text-sm text-slate-400 flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-600"></div>
+            <div className="mt-4 sm:mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm text-slate-400 flex-shrink-0 px-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-600"></div>
                 <span>Eventos urgentes</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-yellow-600"></div>
                 <span>Eventos importantes</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-600/30 rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-600/30 rounded"></div>
                 <span>Baja actividad (1-2)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-600/60 rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-600/60 rounded"></div>
                 <span>Media actividad (3-5)</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-600 rounded"></div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-blue-600 rounded"></div>
                 <span>Alta actividad (6+)</span>
               </div>
             </div>
@@ -693,6 +726,292 @@ export default function CalendarView({ onClose }) {
       {/* Botón flotante para crear evento - Oculto porque ahora hay un botón global */}
       {/* El botón global GlobalAddEventButton se muestra en todas las vistas */}
       {/* El modal de creación se maneja desde el botón global */}
+    </div>
+  );
+}
+
+/**
+ * 📅 VISTA DE 1 DÍA DETALLADA
+ * Muestra todos los eventos del día en formato timeline/agenda
+ * con información completa de cada evento
+ */
+function DayDetailedView({ day, events = [], onEventClick }) {
+  // Ordenar eventos por hora
+  const sortedEvents = [...events].sort((a, b) => {
+    const dateA = new Date(a.event_date);
+    const dateB = new Date(b.event_date);
+    return dateA - dateB;
+  });
+
+  // Icono según tipo de evento
+  const getEventTypeIcon = (type) => {
+    switch (type) {
+      case 'evento': return <Target size={20} className="text-blue-400" />;
+      case 'noticia': return <Newspaper size={20} className="text-amber-400" />;
+      case 'informe': return <FileText size={20} className="text-purple-400" />;
+      default: return <CalendarIcon size={20} className="text-slate-400" />;
+    }
+  };
+
+  // Color de prioridad
+  const getPriorityStyles = (priority) => {
+    switch (priority) {
+      case 'urgente': 
+        return {
+          border: 'border-l-red-500 border-red-900/50',
+          bg: 'bg-red-950/30',
+          icon: <AlertTriangle size={16} className="text-red-500" />,
+          badge: 'bg-red-600 text-white'
+        };
+      case 'importante': 
+        return {
+          border: 'border-l-yellow-500 border-yellow-900/50',
+          bg: 'bg-yellow-950/30',
+          icon: <AlertCircle size={16} className="text-yellow-500" />,
+          badge: 'bg-yellow-600 text-white'
+        };
+      default: 
+        return {
+          border: 'border-l-slate-500 border-slate-700',
+          bg: 'bg-slate-800/50',
+          icon: null,
+          badge: 'bg-slate-600 text-slate-200'
+        };
+    }
+  };
+
+  // Badge de clasificación
+  const ClassificationBadge = ({ source, credibility }) => {
+    if (!source || !credibility) return null;
+    
+    const getColor = () => {
+      if (source === 'A' && credibility === '1') return 'bg-green-600';
+      if (['A', 'B'].includes(source) && ['1', '2'].includes(credibility)) return 'bg-blue-600';
+      if (['C', 'D'].includes(source)) return 'bg-yellow-600';
+      return 'bg-slate-600';
+    };
+
+    return (
+      <span className={`${getColor()} text-white text-xs font-bold px-2 py-0.5 rounded`}>
+        {source}{credibility}
+      </span>
+    );
+  };
+
+  const isTodayDate = isToday(day);
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {/* Header del día */}
+      <div className={`flex items-center gap-4 mb-6 p-4 rounded-xl ${
+        isTodayDate 
+          ? 'bg-gradient-to-r from-blue-900/50 to-slate-800 border-2 border-blue-500' 
+          : 'bg-slate-800/50 border border-slate-700'
+      }`}>
+        <div className="flex flex-col items-center justify-center w-20 h-20 bg-slate-900 rounded-xl border-2 border-slate-600">
+          <span className="text-xs text-slate-400 uppercase font-semibold">
+            {format(day, 'EEEE').slice(0, 3)}
+          </span>
+          <span className={`text-3xl font-bold ${isTodayDate ? 'text-blue-400' : 'text-white'}`}>
+            {format(day, 'd')}
+          </span>
+          <span className="text-[10px] text-slate-500">
+            {format(day, 'MMM yyyy')}
+          </span>
+        </div>
+        <div className="flex-1">
+          <h3 className={`text-2xl font-bold capitalize ${isTodayDate ? 'text-blue-400' : 'text-white'}`}>
+            {format(day, 'EEEE')}
+          </h3>
+          <p className="text-slate-400">
+            {format(day, "d 'de' MMMM 'de' yyyy")}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          {isTodayDate && (
+            <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+              HOY
+            </span>
+          )}
+          <span className="text-slate-400 text-sm">
+            {events.length} evento{events.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
+      {/* Lista de eventos o mensaje vacío */}
+      {sortedEvents.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center p-12 bg-slate-800/30 rounded-2xl border-2 border-dashed border-slate-700">
+            <CalendarIcon size={64} className="mx-auto text-slate-600 mb-4" />
+            <h4 className="text-xl font-semibold text-slate-400 mb-2">
+              Sin eventos este día
+            </h4>
+            <p className="text-sm text-slate-500">
+              No hay eventos programados para esta fecha.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto custom-scrollbar-transparent space-y-4 pr-2">
+          {sortedEvents.map((event, idx) => {
+            const styles = getPriorityStyles(event.priority_level);
+            const eventDate = new Date(event.event_date);
+
+            return (
+              <div
+                key={event.id}
+                onClick={() => onEventClick(event)}
+                className={`relative border-l-4 ${styles.border} ${styles.bg} rounded-r-xl p-5 cursor-pointer hover:scale-[1.01] transition-all group hover:shadow-lg hover:shadow-black/20`}
+              >
+                {/* Timeline connector */}
+                {idx < sortedEvents.length - 1 && (
+                  <div className="absolute left-[-2px] top-full h-4 w-[4px] bg-slate-700" />
+                )}
+
+                {/* Header: Hora + Tipo + Prioridad */}
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-3">
+                    {/* Hora prominente */}
+                    <div className="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg">
+                      <Clock size={16} className="text-blue-400" />
+                      <span className="text-lg font-bold text-white">
+                        {format(eventDate, 'HH:mm')}
+                      </span>
+                      <span className="text-xs text-slate-400">hrs</span>
+                    </div>
+                    
+                    {/* Tipo de evento */}
+                    <div className="flex items-center gap-2 text-sm">
+                      {getEventTypeIcon(event.type)}
+                      <span className="text-slate-300 capitalize">{event.type || 'Evento'}</span>
+                    </div>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex items-center gap-2">
+                    {styles.icon && (
+                      <span className={`${styles.badge} text-xs font-bold px-2 py-1 rounded flex items-center gap-1`}>
+                        {styles.icon}
+                        {event.priority_level}
+                      </span>
+                    )}
+                    <ClassificationBadge 
+                      source={event.source_reliability} 
+                      credibility={event.info_credibility} 
+                    />
+                  </div>
+                </div>
+
+                {/* Título */}
+                <h4 className="text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">
+                  {event.title}
+                </h4>
+
+                {/* Descripción completa */}
+                {event.description && (
+                  <p className="text-sm text-slate-300 mb-4 leading-relaxed whitespace-pre-wrap">
+                    {event.description}
+                  </p>
+                )}
+
+                {/* Imagen si existe */}
+                {event.image_url && (
+                  <div className="mb-4 rounded-lg overflow-hidden border border-slate-700">
+                    <img 
+                      src={event.image_url} 
+                      alt={event.title}
+                      className="w-full max-h-64 object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Información adicional en grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  {/* Ubicación */}
+                  {event.location && (
+                    <div className="flex items-center gap-2 text-sm bg-slate-900/50 px-3 py-2 rounded-lg">
+                      <MapPin size={16} className="text-green-400 flex-shrink-0" />
+                      <span className="text-slate-300">{event.location}</span>
+                    </div>
+                  )}
+
+                  {/* Link externo */}
+                  {event.link_url && (
+                    <a
+                      href={event.link_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-sm bg-blue-900/30 px-3 py-2 rounded-lg hover:bg-blue-900/50 transition-colors"
+                    >
+                      <ExternalLink size={16} className="text-blue-400 flex-shrink-0" />
+                      <span className="text-blue-300 truncate">Ver enlace externo</span>
+                    </a>
+                  )}
+
+                  {/* Archivo adjunto */}
+                  {event.file_url && (
+                    <a
+                      href={event.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-2 text-sm bg-purple-900/30 px-3 py-2 rounded-lg hover:bg-purple-900/50 transition-colors"
+                    >
+                      <FileText size={16} className="text-purple-400 flex-shrink-0" />
+                      <span className="text-purple-300 truncate">{event.file_name || 'Documento adjunto'}</span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Tags */}
+                {event.tags && event.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {event.tags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 text-xs bg-slate-700/50 text-slate-300 px-2.5 py-1 rounded-md border border-slate-600/50"
+                      >
+                        <Tag size={12} />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Entidades relacionadas */}
+                {event.related_entities && event.related_entities.length > 0 && (
+                  <div className="pt-4 border-t border-slate-700/50">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 uppercase tracking-wider mb-2">
+                      <span>Entidades Vinculadas</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {event.related_entities.map((entity) => (
+                        <span
+                          key={entity.id}
+                          className="inline-flex items-center gap-1.5 text-sm bg-blue-600/20 text-blue-300 px-3 py-1.5 rounded-lg border border-blue-600/30 hover:bg-blue-600/30 transition-colors"
+                        >
+                          {entity.type === 'destructor' || entity.type === 'portaaviones' || entity.type === 'fragata' ? '🚢' :
+                           entity.type === 'avion' || entity.type === 'caza' || entity.type === 'helicoptero' ? '✈️' :
+                           entity.type === 'tropas' ? '👥' :
+                           entity.type === 'lugar' ? '🏢' : '📍'}
+                          {entity.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Indicador de click */}
+                <div className="absolute bottom-3 right-3 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                  Click para más detalles →
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -27,7 +27,6 @@ import {
   TrendingUp,
   Clock,
   Calendar,
-  CalendarDays,
   User,
   LogOut,
   UserCircle2,
@@ -71,8 +70,6 @@ export default function TopNavigationBar({
   timelineVisible = false,
   onToggleCalendar = () => {},
   calendarVisible = false,
-  onToggleDailyView = () => {},
-  dailyViewVisible = false,
   onToggleSearch = () => {},
   searchVisible = true,
   user = null,
@@ -301,15 +298,6 @@ export default function TopNavigationBar({
           active={calendarVisible}
           onClick={onToggleCalendar}
           tooltip="Vista de Calendario"
-        />
-
-        {/* Vista Diaria */}
-        <NavButton
-          icon={<CalendarDays className="w-5 h-5" />}
-          label="Vista Diaria"
-          active={dailyViewVisible}
-          onClick={onToggleDailyView}
-          tooltip="Vista Diaria (Mapa + Eventos)"
         />
 
         {/* Separador - Oculto en móvil */}

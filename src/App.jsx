@@ -7,7 +7,6 @@ import RadarCrosshair from './components/Radar/RadarCrosshair';
 import MeasurementTools from './components/Measurement/MeasurementTools';
 import EventTimeline from './components/Timeline/EventTimeline';
 import CalendarView from './components/Calendar/CalendarView';
-import DailyView from './components/Calendar/DailyView';
 import AddEventModal from './components/Timeline/AddEventModal';
 import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
@@ -36,7 +35,6 @@ function App() {
   const [showMeasurementTools, setShowMeasurementTools] = useState(false); // Control de herramientas de medición
   const [showEventTimeline, setShowEventTimeline] = useState(false); // Control del Timeline de Eventos
   const [showCalendar, setShowCalendar] = useState(false); // Control del Calendario de Eventos
-  const [showDailyView, setShowDailyView] = useState(false); // Control de la Vista Diaria
   const [showSearch, setShowSearch] = useState(true); // Control de la barra de búsqueda (visible por defecto)
   const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
   const [showSettingsPanel, setShowSettingsPanel] = useState(false); // Estado del panel de configuración
@@ -142,8 +140,6 @@ function App() {
           timelineVisible={showEventTimeline}
           onToggleCalendar={() => setShowCalendar(!showCalendar)}
           calendarVisible={showCalendar}
-          onToggleDailyView={() => setShowDailyView(!showDailyView)}
-          dailyViewVisible={showDailyView}
           onToggleSearch={() => setShowSearch(!showSearch)}
           searchVisible={showSearch}
           user={user}
@@ -233,19 +229,12 @@ function App() {
         )}
 
         {/* Calendario de Eventos - Vista completa */}
-        {showCalendar && !showDailyView && (
+        {showCalendar && (
           <CalendarView
             onClose={() => setShowCalendar(false)}
           />
         )}
 
-        {/* Vista Diaria - Split Mapa/Eventos */}
-        {showDailyView && !showCalendar && (
-          <DailyView
-            onClose={() => setShowDailyView(false)}
-            mapInstance={mapInstance}
-          />
-        )}
 
         {/* Modal de edición de evento desde calendario - AHORA SE MANEJA DENTRO DE CalendarView */}
 

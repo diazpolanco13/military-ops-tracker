@@ -23,6 +23,7 @@ export default function FlightRadarBottomBar({
   updateInterval = 30000,
   onOpenPanel, // Nueva prop para abrir el sidebar
   isPanelOpen = false,
+  onOpenStats, // Prop para abrir panel de estadísticas
 }) {
   const [showFilters, setShowFilters] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -99,7 +100,11 @@ export default function FlightRadarBottomBar({
             )}
           </button>
 
-          <button className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Estadísticas">
+          <button 
+            onClick={onOpenStats}
+            className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-amber-400 hover:bg-amber-900/30 rounded-full transition-all" 
+            title="Inteligencia de Incursiones"
+          >
             <BarChart3 size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
 

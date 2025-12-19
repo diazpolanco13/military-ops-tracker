@@ -29,6 +29,9 @@ import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
 import { useShipRadar } from '../../hooks/useShipRadar';
 import { ShipLayer, ShipDetailsPanel, ShipRadarBottomBar, ShipRadarPanel } from '../ShipRadar';
 
+// 📊 Analytics - Panel de estadísticas de incursiones
+import IncursionStatsPanel from '../Analytics/IncursionStatsPanel';
+
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
@@ -57,6 +60,9 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
   const [showFlightRadarPanel, setShowFlightRadarPanel] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [isFlightRadarEnabled, setIsFlightRadarEnabled] = useState(true);
+  
+  // 📊 Panel de estadísticas de incursiones
+  const [showIncursionStats, setShowIncursionStats] = useState(false);
   const {
     flights,
     loading: flightsLoading,
@@ -972,6 +978,7 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         updateInterval={30000}
         onOpenPanel={() => setShowFlightRadarPanel(true)}
         isPanelOpen={showFlightRadarPanel}
+        onOpenStats={() => setShowIncursionStats(true)}
       />
 
       {/* 🚢 Widget ShipRadar - Buques AIS */}
@@ -1008,6 +1015,12 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
           onClose={() => setShowShipRadarPanel(false)}
         />
       )}
+
+      {/* 📊 Panel de estadísticas de incursiones */}
+      <IncursionStatsPanel
+        isOpen={showIncursionStats}
+        onClose={() => setShowIncursionStats(false)}
+      />
 
       {/* Botón de subida de imágenes - ELIMINADO, ahora integrado en plantillas y formularios */}
     </div>

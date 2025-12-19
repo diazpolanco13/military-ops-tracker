@@ -1,14 +1,25 @@
 import { useState } from 'react';
-import { X, Calendar, AlertTriangle, AlertCircle, FileText, Newspaper, Target, MapPin, ExternalLink, Clock, Tag } from 'lucide-react';
+import { X, Calendar, AlertTriangle, AlertCircle, FileText, Newspaper, Target, MapPin, ExternalLink, Clock, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import EventDetailsModal from './EventDetailsModal';
 
 /**
  * Modal que muestra todos los eventos de un día específico
  * Organizado en formato Kanban por prioridad
+ * En móvil: columnas verticales colapsables
  */
 export default function EventDayModal({ date, events = [], onClose, onEditEvent, onDeleteEvent }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
+  // Estados para secciones colapsables en móvil
+  const [expandedSections, setExpandedSections] = useState({
+    urgente: true,
+    importante: true,
+    normal: true
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Agrupar eventos por prioridad
   const eventsByPriority = {
@@ -174,47 +185,62 @@ export default function EventDayModal({ date, events = [], onClose, onEditEvent,
     <>
       {/* Vista de pantalla completa - Respeta navbar */}
       <div className="fixed inset-0 bg-slate-900 z-[200] flex flex-col" style={{ top: '56px' }}>
-        {/* Header compacto */}
-        <div className="bg-slate-800/50 px-6 py-3 border-b border-slate-700 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
+        {/* Header compacto - Responsive */}
+        <div className="bg-slate-800/50 px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between flex-shrink-0 gap-2">
+          {/* Fila superior */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors text-xs sm:text-sm"
             >
-              ← Calendario
+              ← <span className="hidden sm:inline">Calendario</span>
             </button>
-            <div className="h-4 w-px bg-slate-700"></div>
-            <Calendar size={18} className="text-blue-400" />
-            <h2 className="text-base font-semibold text-white capitalize">
+            <div className="hidden sm:block h-4 w-px bg-slate-700"></div>
+            <Calendar size={16} className="text-blue-400 sm:w-[18px] sm:h-[18px]" />
+            <h2 className="text-xs sm:text-base font-semibold text-white capitalize truncate max-w-[180px] sm:max-w-none">
               {format(date, "EEEE d 'de' MMMM, yyyy")}
             </h2>
-            <span className="text-xs text-slate-400">
+            <span className="text-[10px] sm:text-xs text-slate-400 whitespace-nowrap">
               • {events.length} evento{events.length !== 1 ? 's' : ''}
             </span>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
+            className="absolute right-3 top-2 sm:relative sm:right-auto sm:top-auto p-1.5 hover:bg-slate-700 rounded-lg transition-colors text-slate-400 hover:text-white"
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Contenido: Kanban por prioridad */}
-        <div className="flex-1 overflow-auto p-6 bg-slate-950">
-            <div className="grid grid-cols-3 gap-6 h-full">
-              {/* Columna: Urgente */}
-              <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-red-900/30 p-4">
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-red-900/50">
-                  <AlertTriangle size={20} className="text-red-500" />
-                  <h3 className="text-base font-bold text-red-400 uppercase tracking-wider">
-                    Urgente
-                  </h3>
-                  <span className="ml-auto bg-red-600/30 text-red-300 text-sm font-bold px-3 py-1 rounded-full">
-                    {eventsByPriority.urgente.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
+        {/* Contenido: Kanban por prioridad - Responsive */}
+        <div className="flex-1 overflow-auto p-3 sm:p-6 bg-slate-950">
+          {/* En móvil: columnas verticales colapsables | En desktop: grid 3 columnas */}
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 lg:gap-6 lg:h-full">
+            
+            {/* Columna: Urgente */}
+            <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-red-900/30">
+              {/* Header colapsable en móvil */}
+              <button 
+                onClick={() => toggleSection('urgente')}
+                className="flex items-center gap-2 p-3 sm:p-4 lg:pb-3 border-b-2 border-red-900/50 w-full text-left lg:cursor-default"
+              >
+                <AlertTriangle size={18} className="text-red-500 sm:w-5 sm:h-5" />
+                <h3 className="text-sm sm:text-base font-bold text-red-400 uppercase tracking-wider">
+                  Urgente
+                </h3>
+                <span className="ml-auto bg-red-600/30 text-red-300 text-xs sm:text-sm font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                  {eventsByPriority.urgente.length}
+                </span>
+                {/* Chevron solo en móvil */}
+                <span className="lg:hidden text-red-400 ml-2">
+                  {expandedSections.urgente ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
+              </button>
+              {/* Contenido colapsable */}
+              <div className={`overflow-hidden transition-all duration-300 ${
+                expandedSections.urgente ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+              }`}>
+                <div className="p-3 sm:p-4 pt-2 space-y-2 lg:overflow-y-auto lg:flex-1">
                   {eventsByPriority.urgente.length > 0 ? (
                     eventsByPriority.urgente.map(event => (
                       <EventCompactCard key={event.id} event={event} />
@@ -226,19 +252,32 @@ export default function EventDayModal({ date, events = [], onClose, onEditEvent,
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* Columna: Importante */}
-              <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-yellow-900/30 p-4">
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-yellow-900/50">
-                  <AlertCircle size={20} className="text-yellow-500" />
-                  <h3 className="text-base font-bold text-yellow-400 uppercase tracking-wider">
-                    Importante
-                  </h3>
-                  <span className="ml-auto bg-yellow-600/30 text-yellow-300 text-sm font-bold px-3 py-1 rounded-full">
-                    {eventsByPriority.importante.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
+            {/* Columna: Importante */}
+            <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-yellow-900/30">
+              {/* Header colapsable en móvil */}
+              <button 
+                onClick={() => toggleSection('importante')}
+                className="flex items-center gap-2 p-3 sm:p-4 lg:pb-3 border-b-2 border-yellow-900/50 w-full text-left lg:cursor-default"
+              >
+                <AlertCircle size={18} className="text-yellow-500 sm:w-5 sm:h-5" />
+                <h3 className="text-sm sm:text-base font-bold text-yellow-400 uppercase tracking-wider">
+                  Importante
+                </h3>
+                <span className="ml-auto bg-yellow-600/30 text-yellow-300 text-xs sm:text-sm font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                  {eventsByPriority.importante.length}
+                </span>
+                {/* Chevron solo en móvil */}
+                <span className="lg:hidden text-yellow-400 ml-2">
+                  {expandedSections.importante ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
+              </button>
+              {/* Contenido colapsable */}
+              <div className={`overflow-hidden transition-all duration-300 ${
+                expandedSections.importante ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+              }`}>
+                <div className="p-3 sm:p-4 pt-2 space-y-2 lg:overflow-y-auto lg:flex-1">
                   {eventsByPriority.importante.length > 0 ? (
                     eventsByPriority.importante.map(event => (
                       <EventCompactCard key={event.id} event={event} />
@@ -250,19 +289,32 @@ export default function EventDayModal({ date, events = [], onClose, onEditEvent,
                   )}
                 </div>
               </div>
+            </div>
 
-              {/* Columna: Normal */}
-              <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-slate-700 p-4">
-                <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-slate-700">
-                  <Calendar size={20} className="text-slate-400" />
-                  <h3 className="text-base font-bold text-slate-400 uppercase tracking-wider">
-                    Normal
-                  </h3>
-                  <span className="ml-auto bg-slate-700 text-slate-300 text-sm font-bold px-3 py-1 rounded-full">
-                    {eventsByPriority.normal.length}
-                  </span>
-                </div>
-                <div className="space-y-2">
+            {/* Columna: Normal */}
+            <div className="flex flex-col bg-slate-900/50 rounded-xl border-2 border-slate-700">
+              {/* Header colapsable en móvil */}
+              <button 
+                onClick={() => toggleSection('normal')}
+                className="flex items-center gap-2 p-3 sm:p-4 lg:pb-3 border-b-2 border-slate-700 w-full text-left lg:cursor-default"
+              >
+                <Calendar size={18} className="text-slate-400 sm:w-5 sm:h-5" />
+                <h3 className="text-sm sm:text-base font-bold text-slate-400 uppercase tracking-wider">
+                  Normal
+                </h3>
+                <span className="ml-auto bg-slate-700 text-slate-300 text-xs sm:text-sm font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
+                  {eventsByPriority.normal.length}
+                </span>
+                {/* Chevron solo en móvil */}
+                <span className="lg:hidden text-slate-400 ml-2">
+                  {expandedSections.normal ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
+              </button>
+              {/* Contenido colapsable */}
+              <div className={`overflow-hidden transition-all duration-300 ${
+                expandedSections.normal ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+              }`}>
+                <div className="p-3 sm:p-4 pt-2 space-y-2 lg:overflow-y-auto lg:flex-1">
                   {eventsByPriority.normal.length > 0 ? (
                     eventsByPriority.normal.map(event => (
                       <EventCompactCard key={event.id} event={event} />
@@ -275,6 +327,7 @@ export default function EventDayModal({ date, events = [], onClose, onEditEvent,
                 </div>
               </div>
             </div>
+          </div>
         </div>
       </div>
 
