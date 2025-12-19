@@ -614,8 +614,8 @@ export default function IncursionMonitorPanel() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleTestTelegram(dest.id)}
-                        disabled={saving || !config?.telegram_bot_token}
-                        className="p-2 text-cyan-400 hover:bg-cyan-900/30 rounded-lg transition-colors"
+                        disabled={saving}
+                        className="p-2 text-cyan-400 hover:bg-cyan-900/30 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
                         title="Probar envío"
                       >
                         <Send className="w-4 h-4" />

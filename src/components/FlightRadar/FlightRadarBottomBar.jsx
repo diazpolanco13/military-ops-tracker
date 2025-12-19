@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { 
-  Settings, 
-  CloudRain, 
   Filter, 
   BarChart3,
-  Clock,
   Plane
 } from 'lucide-react';
 import FlightRadarFiltersPanel from './FlightRadarFiltersPanel';
@@ -76,15 +73,6 @@ export default function FlightRadarBottomBar({
 
           <div className="w-px h-5 sm:h-6 bg-slate-700 mx-0.5 sm:mx-1"></div>
 
-          <button className="p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Configuración">
-            <Settings size={16} className="sm:w-[18px] sm:h-[18px]" />
-          </button>
-
-          {/* Ocultar en móvil muy pequeño para evitar overflow */}
-          <button className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Clima">
-            <CloudRain size={16} className="sm:w-[18px] sm:h-[18px]" />
-          </button>
-
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={`relative p-2 sm:p-2.5 rounded-full transition-all ${
@@ -106,10 +94,6 @@ export default function FlightRadarBottomBar({
             title="Inteligencia de Incursiones"
           >
             <BarChart3 size={16} className="sm:w-[18px] sm:h-[18px]" />
-          </button>
-
-          <button className="hidden sm:block p-2 sm:p-2.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-all" title="Historial">
-            <Clock size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>
