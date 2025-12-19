@@ -97,7 +97,7 @@ export default function FlightRadarBottomBar({
 
           <button 
             onClick={onOpenStats}
-            className="hidden xs:block p-2 sm:p-2.5 text-slate-400 hover:text-amber-400 hover:bg-amber-900/30 rounded-full transition-all" 
+            className="p-2 sm:p-2.5 text-slate-400 hover:text-amber-400 hover:bg-amber-900/30 rounded-full transition-all" 
             title="Inteligencia de Incursiones"
           >
             <BarChart3 size={16} className="sm:w-[18px] sm:h-[18px]" />
