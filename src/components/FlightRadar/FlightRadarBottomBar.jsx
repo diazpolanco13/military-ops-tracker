@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { 
   Filter, 
   BarChart3,
-  Plane
+  Plane,
+  Clock,
+  Calendar
 } from 'lucide-react';
 import FlightRadarFiltersPanel from './FlightRadarFiltersPanel';
 
@@ -21,6 +23,11 @@ export default function FlightRadarBottomBar({
   onOpenPanel, // Nueva prop para abrir el sidebar
   isPanelOpen = false,
   onOpenStats, // Prop para abrir panel de estadísticas
+  // Nuevas props para Timeline y Calendario
+  onToggleTimeline,
+  timelineVisible = false,
+  onToggleCalendar,
+  calendarVisible = false,
 }) {
   const [showFilters, setShowFilters] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -94,6 +101,34 @@ export default function FlightRadarBottomBar({
             title="Inteligencia de Incursiones"
           >
             <BarChart3 size={16} className="sm:w-[18px] sm:h-[18px]" />
+          </button>
+
+          <div className="w-px h-5 sm:h-6 bg-slate-700 mx-0.5 sm:mx-1"></div>
+
+          {/* Timeline */}
+          <button
+            onClick={onToggleTimeline}
+            className={`p-2 sm:p-2.5 rounded-full transition-all ${
+              timelineVisible 
+                ? 'text-cyan-400 bg-cyan-900/30' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Timeline de Eventos"
+          >
+            <Clock size={16} className="sm:w-[18px] sm:h-[18px]" />
+          </button>
+
+          {/* Calendario */}
+          <button
+            onClick={onToggleCalendar}
+            className={`p-2 sm:p-2.5 rounded-full transition-all ${
+              calendarVisible 
+                ? 'text-emerald-400 bg-emerald-900/30' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Calendario"
+          >
+            <Calendar size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>

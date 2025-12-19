@@ -150,12 +150,16 @@ function App() {
       
       <div className="h-screen">
         {/* Mapa ocupa todo el espacio */}
-        <MapContainer 
+        <MapContainer
           onRefetchNeeded={true}
           onTemplateDrop={handleTemplateDrop}
           showPalette={showPalette}
           onMapReady={setMapInstance}
           onViewTimeline={handleViewEntityTimeline}
+          timelineVisible={showEventTimeline}
+          onToggleTimeline={() => setShowEventTimeline(!showEventTimeline)}
+          calendarVisible={showCalendar}
+          onToggleCalendar={() => setShowCalendar(!showCalendar)}
         />
         
         {/* Paleta como overlay (fixed) */}

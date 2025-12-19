@@ -35,7 +35,17 @@ import IncursionStatsPanel from '../Analytics/IncursionStatsPanel';
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPalette, onMapReady, onViewTimeline }) {
+export default function MapContainer({ 
+  onRefetchNeeded, 
+  onTemplateDrop, 
+  showPalette, 
+  onMapReady, 
+  onViewTimeline,
+  timelineVisible = false,
+  onToggleTimeline,
+  calendarVisible = false,
+  onToggleCalendar
+}) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -979,6 +989,10 @@ export default function MapContainer({ onRefetchNeeded, onTemplateDrop, showPale
         onOpenPanel={() => setShowFlightRadarPanel(true)}
         isPanelOpen={showFlightRadarPanel}
         onOpenStats={() => setShowIncursionStats(true)}
+        timelineVisible={timelineVisible}
+        onToggleTimeline={onToggleTimeline}
+        calendarVisible={calendarVisible}
+        onToggleCalendar={onToggleCalendar}
       />
 
       {/* 🚢 Widget ShipRadar - Buques AIS */}

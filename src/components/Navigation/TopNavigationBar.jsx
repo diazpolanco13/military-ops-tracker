@@ -282,24 +282,6 @@ export default function TopNavigationBar({
           tooltip="Zonas de Interés"
         />
 
-        {/* Timeline de Eventos */}
-        <NavButton
-          icon={<Clock className="w-5 h-5" />}
-          label="Timeline"
-          active={timelineVisible}
-          onClick={onToggleTimeline}
-          tooltip="Timeline de Eventos"
-        />
-
-        {/* Calendario de Eventos */}
-        <NavButton
-          icon={<Calendar className="w-5 h-5" />}
-          label="Calendario"
-          active={calendarVisible}
-          onClick={onToggleCalendar}
-          tooltip="Vista de Calendario"
-        />
-
         {/* Separador - Oculto en móvil */}
         <div className="h-8 w-px bg-slate-700 hidden md:block" />
 
@@ -327,7 +309,7 @@ export default function TopNavigationBar({
       {showUserMenu && user && (
         <div 
           ref={userMenuRef}
-          className="fixed right-4 bg-slate-900/98 backdrop-blur-md border border-slate-700 rounded-lg shadow-2xl z-[100] overflow-hidden"
+          className="fixed right-4 bg-slate-900 border border-slate-600 rounded-lg shadow-2xl z-[100] overflow-hidden"
           style={{ top: '60px', width: '260px' }}
         >
           {/* Info del usuario */}
@@ -665,197 +647,122 @@ function ViewPanel({
     onClose();
   };
 
-  const VIEW_ACTIONS = [
-    {
-      id: 'toggle-ships',
-      title: shipsVisible ? 'Ocultar Embarcaciones' : 'Mostrar Embarcaciones',
-      description: shipsVisible ? 'Ocultar todos los buques del mapa' : 'Mostrar destructores, fragatas, portaaviones',
-      icon: Ship,
-      color: shipsVisible ? 'bg-blue-900/30' : 'bg-slate-700',
-      hoverColor: shipsVisible ? 'hover:bg-blue-900/50' : 'hover:bg-slate-600',
-      textColor: shipsVisible ? 'text-blue-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-aircraft',
-      title: aircraftVisible ? 'Ocultar Aeronaves' : 'Mostrar Aeronaves',
-      description: aircraftVisible ? 'Ocultar aviones, cazas, helicópteros' : 'Mostrar toda la aviación',
-      icon: Plane,
-      color: aircraftVisible ? 'bg-sky-900/30' : 'bg-slate-700',
-      hoverColor: aircraftVisible ? 'hover:bg-sky-900/50' : 'hover:bg-slate-600',
-      textColor: aircraftVisible ? 'text-sky-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-troops',
-      title: troopsVisible ? 'Ocultar Tropas' : 'Mostrar Tropas',
-      description: troopsVisible ? 'Ocultar personal militar e insurgentes' : 'Mostrar tropas e insurgentes',
-      icon: Users,
-      color: troopsVisible ? 'bg-amber-900/30' : 'bg-slate-700',
-      hoverColor: troopsVisible ? 'hover:bg-amber-900/50' : 'hover:bg-slate-600',
-      textColor: troopsVisible ? 'text-amber-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-vehicles',
-      title: vehiclesVisible ? 'Ocultar Vehículos' : 'Mostrar Vehículos',
-      description: vehiclesVisible ? 'Ocultar vehículos y tanques' : 'Mostrar blindados, tanques, APCs',
-      icon: Truck,
-      color: vehiclesVisible ? 'bg-gray-900/30' : 'bg-slate-700',
-      hoverColor: vehiclesVisible ? 'hover:bg-gray-900/50' : 'hover:bg-slate-600',
-      textColor: vehiclesVisible ? 'text-gray-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-places',
-      title: placesVisible ? 'Ocultar Instalaciones' : 'Mostrar Instalaciones',
-      description: placesVisible ? 'Ocultar bases, aeropuertos y lugares' : 'Mostrar bases militares y aeropuertos',
-      icon: MapPinned,
-      color: placesVisible ? 'bg-purple-900/30' : 'bg-slate-700',
-      hoverColor: placesVisible ? 'hover:bg-purple-900/50' : 'hover:bg-slate-600',
-      textColor: placesVisible ? 'text-purple-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-measurement',
-      title: measurementVisible ? 'Ocultar Medición' : 'Herramientas de Medición',
-      description: measurementVisible ? 'Cerrar herramientas' : 'Medir distancias, áreas y círculos',
-      icon: Ruler,
-      color: measurementVisible ? 'bg-cyan-900/30' : 'bg-slate-700',
-      hoverColor: measurementVisible ? 'hover:bg-cyan-900/50' : 'hover:bg-slate-600',
-      textColor: measurementVisible ? 'text-cyan-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-radar',
-      title: radarVisible ? 'Ocultar Radar' : 'Mostrar Radar',
-      description: radarVisible ? 'Desactivar sistema de radar' : 'Radar de detección en tiempo real',
-      icon: Radar,
-      color: radarVisible ? 'bg-green-900/30' : 'bg-slate-700',
-      hoverColor: radarVisible ? 'hover:bg-green-900/50' : 'hover:bg-slate-600',
-      textColor: radarVisible ? 'text-green-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-radar-mode',
-      title: radarCompact ? 'Radar Completo' : 'Radar Compacto',
-      description: radarCompact ? 'Expandir panel de control' : 'Minimizar radar (recomendado)',
-      icon: Activity,
-      color: radarCompact ? 'bg-cyan-900/30' : 'bg-blue-900/30',
-      hoverColor: radarCompact ? 'hover:bg-cyan-900/50' : 'hover:bg-blue-900/50',
-      textColor: radarCompact ? 'text-cyan-400' : 'text-blue-400',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-lock',
-      title: isLocked ? 'Desbloquear Movimiento' : 'Bloquear Movimiento',
-      description: isLocked ? 'Permitir mover entidades' : 'Evitar movimientos accidentales',
-      icon: isLocked ? Lock : Unlock,
-      color: isLocked ? 'bg-orange-900/30' : 'bg-green-900/30',
-      hoverColor: isLocked ? 'hover:bg-orange-900/50' : 'hover:bg-green-900/50',
-      textColor: isLocked ? 'text-orange-400' : 'text-green-400',
-      requiresSelection: false,
-    },
-    {
-      id: 'toggle-search',
-      title: searchVisible ? 'Ocultar Búsqueda' : 'Mostrar Búsqueda',
-      description: searchVisible ? 'Ocultar barra de búsqueda' : 'Mostrar barra de búsqueda de entidades',
-      icon: Search,
-      color: searchVisible ? 'bg-blue-900/30' : 'bg-slate-700',
-      hoverColor: searchVisible ? 'hover:bg-blue-900/50' : 'hover:bg-slate-600',
-      textColor: searchVisible ? 'text-blue-400' : 'text-slate-300',
-      requiresSelection: false,
-    },
-    {
-      id: 'hide',
-      title: 'Ocultar Seleccionadas',
-      description: 'Oculta las entidades del mapa sin eliminarlas',
-      icon: EyeOff,
-      color: 'bg-slate-700',
-      hoverColor: 'hover:bg-slate-600',
-      requiresSelection: true,
-    },
-    {
-      id: 'show-hidden',
-      title: 'Ver Entidades Ocultas',
-      description: 'Muestra panel con entidades ocultas',
-      icon: Eye,
-      color: 'bg-blue-900/30',
-      hoverColor: 'hover:bg-blue-900/50',
-      requiresSelection: false,
-    },
-    {
-      id: 'archive',
-      title: 'Archivar Seleccionadas',
-      description: 'Archiva entidades (se pueden restaurar)',
-      icon: Archive,
-      color: 'bg-yellow-900/30',
-      hoverColor: 'hover:bg-yellow-900/50',
-      textColor: 'text-yellow-400',
-      requiresSelection: true,
-    },
-    {
-      id: 'show-archived',
-      title: 'Ver Archivadas',
-      description: 'Panel de entidades archivadas',
-      icon: ArchiveRestore,
-      color: 'bg-yellow-900/30',
-      hoverColor: 'hover:bg-yellow-900/50',
-      textColor: 'text-yellow-400',
-      requiresSelection: false,
-    },
-    {
-      id: 'delete',
-      title: 'Eliminar Permanentemente',
-      description: '⚠️ No se puede deshacer',
-      icon: Trash2,
-      color: 'bg-red-900/30',
-      hoverColor: 'hover:bg-red-900/50',
-      textColor: 'text-red-400',
-      requiresSelection: true,
-    },
+  // Grupos organizados
+  const ENTITY_TOGGLES = [
+    { id: 'toggle-ships', label: 'Embarcaciones', icon: Ship, active: shipsVisible, color: 'blue' },
+    { id: 'toggle-aircraft', label: 'Aeronaves', icon: Plane, active: aircraftVisible, color: 'sky' },
+    { id: 'toggle-troops', label: 'Tropas', icon: Users, active: troopsVisible, color: 'amber' },
+    { id: 'toggle-vehicles', label: 'Vehículos', icon: Truck, active: vehiclesVisible, color: 'slate' },
+    { id: 'toggle-places', label: 'Instalaciones', icon: MapPinned, active: placesVisible, color: 'purple' },
   ];
 
+  const TOOLS = [
+    { id: 'toggle-measurement', label: 'Medición', icon: Ruler, active: measurementVisible, color: 'cyan' },
+    { id: 'toggle-radar', label: 'Radar', icon: Radar, active: radarVisible, color: 'green' },
+    { id: 'toggle-search', label: 'Búsqueda', icon: Search, active: searchVisible, color: 'blue' },
+    { id: 'toggle-lock', label: isLocked ? 'Bloqueado' : 'Desbloqueado', icon: isLocked ? Lock : Unlock, active: isLocked, color: 'orange' },
+  ];
+
+  const colorMap = {
+    blue: { active: 'bg-blue-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    sky: { active: 'bg-sky-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    amber: { active: 'bg-amber-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    slate: { active: 'bg-slate-500', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    purple: { active: 'bg-purple-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    cyan: { active: 'bg-cyan-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    green: { active: 'bg-emerald-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    orange: { active: 'bg-orange-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    yellow: { active: 'bg-yellow-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+    red: { active: 'bg-red-600', inactive: 'bg-slate-700 hover:bg-slate-600' },
+  };
+
+  const ToggleButton = ({ item }) => {
+    const Icon = item.icon;
+    const colors = colorMap[item.color] || colorMap.slate;
+    return (
+      <button
+        onClick={() => handleAction(item.id)}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+          item.active ? `${colors.active} text-white` : `${colors.inactive} text-slate-300`
+        }`}
+        title={item.active ? `Ocultar ${item.label}` : `Mostrar ${item.label}`}
+      >
+        <Icon className="w-3.5 h-3.5" />
+        <span>{item.label}</span>
+      </button>
+    );
+  };
+
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar" style={{ maxWidth: '100%' }}>
-      {VIEW_ACTIONS.map((action) => {
-        const ActionIcon = action.icon;
-        const isDisabled = action.requiresSelection && selectedCount === 0;
+    <div className="flex flex-col gap-3">
+      {/* Grupo 1: Capas de entidades */}
+      <div className="bg-slate-800 rounded-lg p-3">
+        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Capas del Mapa</div>
+        <div className="flex flex-wrap gap-1.5">
+          {ENTITY_TOGGLES.map(item => <ToggleButton key={item.id} item={item} />)}
+        </div>
+      </div>
 
-        return (
+      {/* Grupo 2: Herramientas */}
+      <div className="bg-slate-800 rounded-lg p-3">
+        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Herramientas</div>
+        <div className="flex flex-wrap gap-1.5">
+          {TOOLS.map(item => <ToggleButton key={item.id} item={item} />)}
+        </div>
+      </div>
+
+      {/* Grupo 3: Gestión de entidades */}
+      <div className="bg-slate-800 rounded-lg p-3">
+        <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">
+          Gestión {selectedCount > 0 && <span className="text-blue-400">({selectedCount} seleccionadas)</span>}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
           <button
-            key={action.id}
-            onClick={() => handleAction(action.id)}
-            disabled={isDisabled}
-            className={`flex-shrink-0 flex flex-col items-center justify-center gap-2 p-4 rounded-lg transition-all ${
-              isDisabled
-                ? 'opacity-40 cursor-not-allowed bg-slate-800/30'
-                : `${action.color} ${action.hoverColor} cursor-pointer`
+            onClick={() => handleAction('hide')}
+            disabled={selectedCount === 0}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedCount > 0 ? 'bg-slate-600 text-white hover:bg-slate-500' : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
             }`}
-            style={{ width: '200px', height: '140px' }}
           >
-            {/* Icono */}
-            <div className={`w-16 h-16 ${isDisabled ? 'bg-slate-700' : 'bg-slate-700/80'} rounded-lg flex items-center justify-center`}>
-              <ActionIcon className={`w-8 h-8 ${action.textColor || 'text-white'}`} />
-            </div>
-
-            {/* Texto */}
-            <div className="text-center">
-              <div className={`font-medium text-sm ${action.textColor || 'text-white'}`}>
-                {action.title}
-              </div>
-              <div className="text-xs text-slate-400 mt-1">
-                {action.description}
-              </div>
-              {isDisabled && (
-                <div className="text-xs text-yellow-500 mt-1">
-                  Selecciona entidades primero
-                </div>
-              )}
-            </div>
+            <EyeOff className="w-3.5 h-3.5" />
+            <span>Ocultar</span>
           </button>
-        );
-      })}
+          <button
+            onClick={() => handleAction('show-hidden')}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-blue-900/50 text-blue-300 hover:bg-blue-800/50 transition-all"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Ver ocultas</span>
+          </button>
+          <button
+            onClick={() => handleAction('archive')}
+            disabled={selectedCount === 0}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedCount > 0 ? 'bg-yellow-900/50 text-yellow-300 hover:bg-yellow-800/50' : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            <span>Archivar</span>
+          </button>
+          <button
+            onClick={() => handleAction('show-archived')}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-yellow-900/50 text-yellow-300 hover:bg-yellow-800/50 transition-all"
+          >
+            <ArchiveRestore className="w-3.5 h-3.5" />
+            <span>Ver archivadas</span>
+          </button>
+          <button
+            onClick={() => handleAction('delete')}
+            disabled={selectedCount === 0}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
+              selectedCount > 0 ? 'bg-red-900/50 text-red-300 hover:bg-red-800/50' : 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
+            }`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Eliminar</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
