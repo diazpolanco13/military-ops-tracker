@@ -135,3 +135,4 @@ export const getQuadrantColor = (quadrant) => {
   };
   return colors[quadrant] || '#64748b';
 };
+

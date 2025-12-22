@@ -985,10 +985,10 @@ export function getFlightCategory(flight) {
  * @returns {Array} - Vuelos filtrados
  */
 export function filterFlightsByCategory(flights, activeFilters = {}) {
-  // Si no hay filtros activos, mostrar todos
+  // Si no hay filtros activos, no mostrar ningún vuelo
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
   if (!hasActiveFilters) {
-    return flights;
+    return []; // ✅ Sin filtros = sin vuelos
   }
 
   return flights.filter(flight => {
