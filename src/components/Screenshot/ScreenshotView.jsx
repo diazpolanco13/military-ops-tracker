@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../lib/maplibre';
 import { supabase } from '../../lib/supabase';
 import { getFlightDetails } from '../../services/flightRadarService';
-import { Plane, Gauge, Navigation, MapPin, Shield, Compass } from 'lucide-react';
+import { Plane, Gauge, Navigation, MapPin, Shield, Compass, Clock, Activity } from 'lucide-react';
 
 // Colores para el gradiente de altitud del trail
 const ALTITUDE_COLORS = {
@@ -301,6 +301,42 @@ export default function ScreenshotView() {
   const airline = params.get('airline') || '';     // Operador (ej: "US Air Force", "US Navy")
   const originName = params.get('origin_name') || ''; // Nombre completo origen
   const destName = params.get('dest_name') || '';     // Nombre completo destino
+  
+  // ========================================
+  // NUEVOS PARÁMETROS PARA MODO SALIDA
+  // ========================================
+  const mode = params.get('mode') || 'entry';       // 'entry' = inicio, 'exit' = fin de incursión
+  const isExitMode = mode === 'exit';
+  
+  // Waypoints del recorrido (JSON codificado en URL)
+  const waypointsParam = params.get('waypoints');
+  const [urlWaypoints, setUrlWaypoints] = useState([]);
+  
+  // Estadísticas de la sesión (para modo exit)
+  const duration = params.get('duration') || '';           // Ej: "3min", "1h 25min"
+  const detectionCount = parseInt(params.get('detections')) || 0;
+  const avgAltitude = parseFloat(params.get('avg_alt')) || altitude;
+  const maxAltitude = parseFloat(params.get('max_alt')) || altitude;
+  const minAltitude = parseFloat(params.get('min_alt')) || altitude;
+  const avgSpeed = parseFloat(params.get('avg_speed')) || speed;
+  const maxSpeed = parseFloat(params.get('max_speed')) || speed;
+  const zoneName = params.get('zone_name') || 'Venezuela';
+  
+  // Parsear waypoints desde URL al cargar
+  useEffect(() => {
+    if (waypointsParam) {
+      try {
+        const decoded = decodeURIComponent(waypointsParam);
+        const parsed = JSON.parse(decoded);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log(`📸 Waypoints recibidos desde URL: ${parsed.length} puntos`);
+          setUrlWaypoints(parsed);
+        }
+      } catch (e) {
+        console.error('📸 Error parseando waypoints:', e);
+      }
+    }
+  }, [waypointsParam]);
 
   // Cargar límites de Venezuela desde Supabase
   const loadVenezuelaBoundaries = async (mapInstance) => {
@@ -506,6 +542,45 @@ export default function ScreenshotView() {
     };
   }, [lat, lon, zoom]);
 
+  // ========================================
+  // DIBUJAR TRAIL DESDE URL (MODO EXIT)
+  // ========================================
+  useEffect(() => {
+    if (!mapLoaded || !map.current || urlWaypoints.length < 2) return;
+    
+    console.log(`📸 Dibujando trail desde URL: ${urlWaypoints.length} waypoints (modo: ${mode})`);
+    
+    // Convertir waypoints al formato esperado por trailToGeoJSON
+    const trailData = urlWaypoints.map(wp => ({
+      lat: parseFloat(wp.lat || wp.latitude),
+      lng: parseFloat(wp.lon || wp.lng || wp.longitude),
+      alt: parseFloat(wp.alt || wp.altitude) || 0
+    }));
+    
+    drawTrailOnMap(map.current, trailData);
+    
+    // Ajustar el mapa para mostrar todo el trail si hay suficientes puntos
+    if (trailData.length >= 2) {
+      const lats = trailData.map(p => p.lat);
+      const lngs = trailData.map(p => p.lng);
+      const bounds = [
+        [Math.min(...lngs) - 0.5, Math.min(...lats) - 0.5], // SW
+        [Math.max(...lngs) + 0.5, Math.max(...lats) + 0.5]  // NE
+      ];
+      
+      try {
+        map.current.fitBounds(bounds, {
+          padding: { top: 80, bottom: 100, left: 50, right: 50 },
+          maxZoom: 7,
+          duration: 0
+        });
+        console.log('📸 Mapa ajustado a bounds del trail');
+      } catch (e) {
+        console.error('📸 Error ajustando bounds:', e);
+      }
+    }
+  }, [mapLoaded, urlWaypoints, mode]);
+
   // Buscar datos del vuelo y trail desde FlightRadar
   useEffect(() => {
     if (!callsign && !flightId) return;
@@ -668,11 +743,35 @@ export default function ScreenshotView() {
       />
 
       {/* Indicador de incursión - Esquina superior izquierda */}
-      <div className="absolute top-4 left-4 bg-red-600/95 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-red-400 shadow-lg shadow-red-500/30">
-        <span className="text-white font-bold text-base flex items-center gap-2">
-          🚨 INCURSIÓN DETECTADA
-        </span>
-      </div>
+      {isExitMode ? (
+        // Modo EXIT: Fin de incursión con resumen
+        <div className="absolute top-4 left-4 bg-emerald-600/95 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-emerald-400 shadow-lg shadow-emerald-500/30">
+          <span className="text-white font-bold text-base flex items-center gap-2">
+            ✅ FIN DE INCURSIÓN
+          </span>
+          {duration && (
+            <div className="flex items-center gap-3 mt-1 text-emerald-100 text-sm">
+              <span className="flex items-center gap-1">
+                <Clock size={12} />
+                {duration}
+              </span>
+              {detectionCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <Activity size={12} />
+                  {detectionCount} det.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Modo ENTRY: Incursión detectada
+        <div className="absolute top-4 left-4 bg-red-600/95 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-red-400 shadow-lg shadow-red-500/30">
+          <span className="text-white font-bold text-base flex items-center gap-2">
+            🚨 INCURSIÓN DETECTADA
+          </span>
+        </div>
+      )}
 
       {/* Panel de RUTA - Esquina superior derecha */}
       {hasRoute && (
@@ -755,24 +854,49 @@ export default function ScreenshotView() {
           {/* Separador */}
           <div className="w-px h-10 bg-slate-600" />
 
-          {/* Stats en línea */}
-          <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <Gauge size={12} className="text-blue-400" />
-              <span className="text-slate-400">Alt:</span>
-              <span className="text-white font-bold">{Math.round(displayAlt / 1000)}k ft</span>
+          {/* Stats en línea - Diferentes para modo Entry vs Exit */}
+          {isExitMode ? (
+            // Modo EXIT: Estadísticas de resumen
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <Gauge size={12} className="text-blue-400" />
+                <span className="text-slate-400">Alt prom:</span>
+                <span className="text-white font-bold">{Math.round(avgAltitude / 1000)}k ft</span>
+              </div>
+              <div className="flex items-center gap-1 text-slate-500">
+                <span className="text-[10px]">({Math.round(minAltitude / 1000)}k - {Math.round(maxAltitude / 1000)}k)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Navigation size={12} className="text-green-400" />
+                <span className="text-slate-400">Vel prom:</span>
+                <span className="text-white font-bold">{Math.round(avgSpeed)} kts</span>
+              </div>
+              {maxSpeed > avgSpeed && (
+                <div className="flex items-center gap-1 text-slate-500">
+                  <span className="text-[10px]">(máx: {Math.round(maxSpeed)})</span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1">
-              <Navigation size={12} className="text-green-400" />
-              <span className="text-slate-400">Vel:</span>
-              <span className="text-white font-bold">{speedKmh} km/h</span>
+          ) : (
+            // Modo ENTRY: Datos actuales
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <Gauge size={12} className="text-blue-400" />
+                <span className="text-slate-400">Alt:</span>
+                <span className="text-white font-bold">{Math.round(displayAlt / 1000)}k ft</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Navigation size={12} className="text-green-400" />
+                <span className="text-slate-400">Vel:</span>
+                <span className="text-white font-bold">{speedKmh} km/h</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Compass size={12} className="text-purple-400" />
+                <span className="text-slate-400">Rumbo:</span>
+                <span className="text-white font-bold">{displayHeading}° {getCardinal(displayHeading)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Compass size={12} className="text-purple-400" />
-              <span className="text-slate-400">Rumbo:</span>
-              <span className="text-white font-bold">{displayHeading}° {getCardinal(displayHeading)}</span>
-            </div>
-          </div>
+          )}
 
           {/* Separador */}
           <div className="w-px h-10 bg-slate-600" />
