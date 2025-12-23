@@ -1,19 +1,27 @@
-import { Waves, Palette, MapPin } from 'lucide-react';
+import { Waves, Palette, MapPin, AlertTriangle, PenTool } from 'lucide-react';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
 import { useUserRole } from '../../hooks/useUserRole';
 
 /**
  * 📍 Panel de Límites Territoriales
- * Incluye límites marítimos y futuras zonas personalizadas
+ * Incluye límites marítimos, zona en reclamación y zonas personalizadas
  */
 export default function ZonesPanel({ onClose, onOpenMaritimeConfig }) {
-  const { showBoundaries, toggleBoundaries } = useMaritimeBoundariesContext();
+  const { 
+    showBoundaries, 
+    toggleBoundaries,
+    showEsequiboClaim,
+    toggleEsequiboClaim,
+    isEsequiboEditing,
+    toggleEsequiboEditing
+  } = useMaritimeBoundariesContext();
   const { isAdmin } = useUserRole();
 
   return (
     <div className="bg-slate-800 rounded-lg p-3">
+      {/* Límites Marítimos */}
       <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Límites Marítimos</div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-3">
         {/* Toggle Límites */}
         <button
           onClick={toggleBoundaries}
@@ -44,7 +52,53 @@ export default function ZonesPanel({ onClose, onOpenMaritimeConfig }) {
             <span className="text-xs font-medium">Gestor de Países</span>
           </button>
         )}
+      </div>
 
+      {/* Zona en Reclamación */}
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Zona en Reclamación</div>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {/* Toggle Guayana Esequiba */}
+        <button
+          onClick={toggleEsequiboClaim}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+            showEsequiboClaim 
+              ? 'bg-amber-600 text-white' 
+              : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+          }`}
+          title={showEsequiboClaim ? 'Ocultar Guayana Esequiba' : 'Mostrar territorio en reclamación'}
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span className="text-xs font-medium">
+            {showEsequiboClaim ? 'Esequibo Visible' : 'Guayana Esequiba'}
+          </span>
+        </button>
+
+        {/* Botón Editar Polígono - Solo visible para admins */}
+        {isAdmin() && (
+          <button
+            onClick={() => {
+              if (!showEsequiboClaim) toggleEsequiboClaim();
+              toggleEsequiboEditing();
+              onClose();
+            }}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+              isEsequiboEditing 
+                ? 'bg-yellow-500 text-black animate-pulse' 
+                : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+            }`}
+            title={isEsequiboEditing ? 'Cerrar editor de polígono' : 'Editar polígono del Esequibo'}
+          >
+            <PenTool className="w-4 h-4" />
+            <span className="text-xs font-medium">
+              {isEsequiboEditing ? 'Editando...' : 'Editar Polígono'}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* Zonas Personalizadas */}
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2 font-semibold">Otras Zonas</div>
+      <div className="flex flex-wrap gap-2">
         {/* Zonas Personalizadas (próximamente) - Solo visible para admins */}
         {isAdmin() && (
           <button

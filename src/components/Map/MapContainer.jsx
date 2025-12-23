@@ -4,6 +4,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAP_CONFIG, MAPBOX_TOKEN } from '../../lib/maplibre';
 import EntityMarker from './EntityMarker';
 import MaritimeBoundariesLayer from './MaritimeBoundariesLayer';
+import EsequiboClaimLayer from './EsequiboClaimLayer';
+import EsequiboPolygonEditor from './EsequiboPolygonEditor';
 import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
 import { useMaritimeBoundariesCached } from '../../hooks/useMaritimeBoundariesCached';
@@ -155,7 +157,8 @@ export default function MapContainer({
   });
 
   // 🌊 Obtener configuración de límites marítimos desde BD
-  const { showBoundaries } = useMaritimeBoundariesContext();
+  // 🗺️ Incluye estado de Zona en Reclamación (Guayana Esequiba)
+  const { showBoundaries, showEsequiboClaim, isEsequiboEditing, toggleEsequiboEditing } = useMaritimeBoundariesContext();
   const { settings, loading: loadingMaritime, updateTrigger, refetch: refetchSettings } = useMaritimeSettings();
 
   // Escuchar cambios en maritime settings para refrescar
@@ -797,6 +800,23 @@ export default function MapContainer({
           visible={showBoundaries}
           colorMap={colorMap}
           opacityMap={opacityMap}
+        />
+      )}
+
+      {/* 🗺️ Capa de Zona en Reclamación - Guayana Esequiba */}
+      {mapLoaded && !isEsequiboEditing && (
+        <EsequiboClaimLayer
+          map={map.current}
+          visible={showEsequiboClaim}
+        />
+      )}
+
+      {/* ✏️ Editor de Polígono del Esequibo (modo edición manual) */}
+      {mapLoaded && isEsequiboEditing && (
+        <EsequiboPolygonEditor
+          map={map.current}
+          visible={isEsequiboEditing}
+          onClose={toggleEsequiboEditing}
         />
       )}
 
