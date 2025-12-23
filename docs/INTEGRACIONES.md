@@ -194,13 +194,30 @@ POST https://api.telegram.org/bot{token}/sendMessage
 POST https://api.telegram.org/bot{token}/sendPhoto
 ```
 
+### Tipos de Alerta
+
+#### 🚨 Entrada (Incursión Detectada)
+- **Edge Function**: `military-airspace-monitor` (v33)
+- **Screenshot**: Mapa con trail del vuelo (si disponible de FR24 API)
+- **Template**: `telegram_entry_template`
+- **Badge**: "🚨 INCURSIÓN DETECTADA"
+
+#### ✅ Salida (Fin de Incursión)
+- **Edge Function**: `incursion-session-closer` (v8)
+- **Screenshot**: Mapa con trail completo + panel de estadísticas
+- **Template**: `telegram_exit_template`
+- **Badge**: "✅ FIN DE INCURSIÓN"
+- **Datos incluidos**: Duración, detecciones, altitud (avg/max/min), velocidad (avg/max)
+
 ---
 
 ## Screenshot Service
 
 ### Arquitectura
 ```
-military-airspace-monitor → Screenshot Service → Telegram (foto)
+military-airspace-monitor ──┐
+                            ├──→ Screenshot Service ──→ Telegram (foto con trail)
+incursion-session-closer ───┘
 ```
 
 ### Configuración
@@ -209,27 +226,71 @@ SCREENSHOT_SERVICE_URL=https://operativus.net/screenshot
 SCREENSHOT_AUTH_TOKEN=xxx
 ```
 
-### Flujo
-1. Se detecta incursión
-2. Edge Function llama a Screenshot Service con datos del vuelo
-3. Screenshot Service abre SAE-RADAR en modo screenshot
-4. Puppeteer toma captura del mapa con el vuelo
-5. Retorna imagen base64
-6. Edge Function envía foto a Telegram como caption
+### Flujo - Alerta de Entrada (Incursión Detectada)
+1. `military-airspace-monitor` detecta incursión
+2. Obtiene trail del vuelo desde API FR24 (si disponible)
+3. Llama a Screenshot Service con `mode=entry` y waypoints
+4. Screenshot Service abre SAE-RADAR en modo screenshot
+5. Puppeteer toma captura del mapa con el vuelo y trail
+6. Retorna imagen base64
+7. Edge Function envía foto a Telegram
 
-### URL de Screenshot
+### Flujo - Alerta de Salida (Fin de Incursión)
+1. `incursion-session-closer` detecta sesión inactiva
+2. Recupera todos los waypoints de la sesión desde `incursion_waypoints`
+3. Calcula estadísticas (duración, detecciones, alt/vel promedio/max/min)
+4. Llama a Screenshot Service con `mode=exit`, waypoints y estadísticas
+5. Screenshot Service renderiza mapa con trail completo y panel de resumen
+6. Retorna imagen base64
+7. Edge Function envía foto a Telegram con resumen
+
+### URL de Screenshot - Entrada
 ```
 https://maps.operativus.net?screenshot=true&screenshot_token=xxx
 &flight=ICAO24&callsign=XXX&lat=10.5&lon=-66.9
 &alt=14000&speed=174&heading=65&type=P8
+&mode=entry&waypoints=[...]
+```
+
+### URL de Screenshot - Salida
+```
+https://maps.operativus.net?screenshot=true&screenshot_token=xxx
+&flight=ICAO24&callsign=XXX&lat=10.5&lon=-66.9
+&mode=exit&waypoints=[...]
+&duration=45min&detections=12
+&avg_alt=25000&max_alt=28000&min_alt=22000
+&avg_speed=480&max_speed=520&zone_name=EEZ%20Venezuela
 ```
 
 ### Componente `ScreenshotView.jsx`
 - Se activa cuando `screenshot=true` en URL
 - Bypasea autenticación
 - Muestra mapa con límites de Venezuela
-- Panel compacto con datos del vuelo
-- Trail del vuelo si está disponible
+- **Modo Entry**: Badge "🚨 INCURSIÓN DETECTADA", zoom cercano
+- **Modo Exit**: Badge "✅ FIN DE INCURSIÓN", zoom alejado (contexto regional)
+- Trail del vuelo dibujado desde waypoints (línea cyan con gradiente)
+- Panel de estadísticas en modo exit (duración, detecciones, altitud, velocidad)
+
+### Parámetros del Screenshot Service (POST Body)
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `flight` | string | ICAO24 hex code |
+| `callsign` | string | Callsign del vuelo |
+| `lat`, `lon` | number | Última posición |
+| `alt`, `speed`, `heading` | number | Datos de vuelo |
+| `type` | string | Tipo de aeronave |
+| `mode` | string | `entry` o `exit` |
+| `waypoints` | array | Array de {lat, lon, alt} |
+| `duration` | string | Duración (solo exit) |
+| `detections` | number | Número detecciones (solo exit) |
+| `avg_alt`, `max_alt`, `min_alt` | number | Estadísticas altitud (solo exit) |
+| `avg_speed`, `max_speed` | number | Estadísticas velocidad (solo exit) |
+| `zone_name` | string | Nombre zona violada (solo exit) |
+
+### Limitaciones
+- Máximo 100 waypoints por screenshot (reducción automática)
+- Timeout de 10 segundos mínimo para modo exit
+- Límite de 10MB en body JSON
 
 ---
 

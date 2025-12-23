@@ -58,7 +58,7 @@ src/
 │                     SUPABASE EDGE FUNCTIONS                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │ flightradar-proxy  │  military-airspace-monitor  │  ship-positions  │
-│      (v19)         │          (v31)              │       (v3)       │
+│      (v19)         │          (v33)              │       (v3)       │
 └─────────┬──────────┴────────────┬───────────────┴─────────┬─────────┘
           │                       │                         │
           ▼                       ▼                         ▼
@@ -80,8 +80,10 @@ src/
 - **Sesiones**: Agrupan múltiples detecciones del mismo vuelo
 - **Waypoints**: Registran cada posición durante la incursión
 - **Alertas Telegram**: Automáticas al iniciar/finalizar incursión
-- **Screenshots**: Captura del mapa con el vuelo detectado
-- **Estadísticas**: Patrones horarios, semanales, por cuadrante
+- **Screenshots con Trail**: Captura del mapa mostrando la trayectoria completa del vuelo
+  - **Entrada**: Obtiene trail desde API FR24 si disponible
+  - **Salida**: Usa waypoints almacenados + estadísticas de sesión
+- **Estadísticas**: Patrones horarios, semanales, por cuadrante, duración, altitud, velocidad
 
 ### 3. Sistema de Buques (ShipRadar)
 - **Fuente**: AISStream.io WebSocket
@@ -103,8 +105,8 @@ src/
 | Función | Versión | Propósito | Frecuencia |
 |---------|---------|-----------|------------|
 | `flightradar-proxy` | v19 | Proxy para datos de vuelos | On-demand |
-| `military-airspace-monitor` | v31 | Detectar incursiones + Telegram | Cron 3min |
-| `incursion-session-closer` | v7 | Cerrar sesiones inactivas | Cron 5min |
+| `military-airspace-monitor` | v33 | Detectar incursiones + Telegram con trail | Cron 3min |
+| `incursion-session-closer` | v8 | Cerrar sesiones + screenshot con trail | Cron 5min |
 | `ship-positions` | v3 | Posiciones de buques | On-demand |
 | `aisstream-collector` | v6 | Recolector AIS | Cron 1min |
 | `test-incursion-alert` | v5 | Simular alertas (debug) | Manual |
@@ -145,8 +147,13 @@ SCREENSHOT_AUTH_TOKEN=xxx
 ### Screenshot Service
 - **URL**: `https://operativus.net/screenshot`
 - **Tecnología**: Node.js + Puppeteer
+- **Versión**: v1.5.0
 - **Propósito**: Generar capturas del mapa para alertas Telegram
 - **Repositorio**: `sae-screenshot-service` (GitHub)
+- **Características**:
+  - Soporte para modo `entry` (incursión detectada) y `exit` (fin de incursión)
+  - Renderizado de trail con hasta 100 waypoints
+  - Estadísticas de sesión en modo exit (duración, detecciones, altitud, velocidad)
 
 ### Dokploy
 - **URL Panel**: `operativus.net`

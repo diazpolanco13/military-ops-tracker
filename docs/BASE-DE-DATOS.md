@@ -93,7 +93,7 @@ Agrupa todas las detecciones de un vuelo mientras está en la zona.
 | entry_quadrant | TEXT | NE, NW, SE, SW |
 
 ### `incursion_waypoints` - Posiciones Durante Incursión
-Cada punto detectado durante una incursión.
+Cada punto detectado durante una incursión. **Usado para generar el trail visual en screenshots de salida.**
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -104,6 +104,8 @@ Cada punto detectado durante una incursión.
 | speed | INTEGER | Velocidad en kts |
 | heading | INTEGER | Rumbo |
 | detected_at | TIMESTAMPTZ | Timestamp |
+
+> **Uso en Screenshots**: Al cerrar una sesión (`incursion-session-closer`), se recuperan todos los waypoints ordenados por `detected_at` para renderizar el trail completo en el screenshot de salida.
 
 ### `incursion_monitor_config` - Configuración del Monitor
 Una sola fila con configuración global.
@@ -118,6 +120,8 @@ Una sola fila con configuración global.
 | telegram_destinations | JSONB | Array de destinos Telegram |
 | telegram_entry_template | TEXT | Template mensaje entrada |
 | telegram_exit_template | TEXT | Template mensaje salida |
+| screenshot_service_url | TEXT | URL del servicio de screenshots |
+| screenshot_auth_token | TEXT | Token de autenticación para screenshots |
 
 ---
 
