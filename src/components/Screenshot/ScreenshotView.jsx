@@ -52,7 +52,7 @@ export default function ScreenshotView() {
   const callsign = params.get('callsign');
   const lat = parseFloat(params.get('lat')) || 10.5;
   const lon = parseFloat(params.get('lon')) || -66.9;
-  const zoom = parseFloat(params.get('zoom')) || 6; // Zoom moderado para ver contexto y avión
+  const zoom = parseFloat(params.get('zoom')) || 5; // Zoom alejado para ver todo el territorio
   const altitude = parseFloat(params.get('alt')) || 0;
   const speed = parseFloat(params.get('speed')) || 0;
   const heading = parseFloat(params.get('heading')) || 0;
