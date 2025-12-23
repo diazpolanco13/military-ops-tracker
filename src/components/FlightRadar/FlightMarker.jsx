@@ -21,21 +21,21 @@ const getAircraftSVG = (category, color, heading) => {
   `;
 
   switch (category) {
-    // ✈️ CAZA / COMBAT - Silueta tipo F-16 estilo FlightRadar24
+    // ✈️ CAZA / COMBAT - Silueta compacta estilo FlightRadar24 (idéntico)
     case 'combat':
       return `
-        <svg width="28" height="28" viewBox="0 0 100 100" style="${baseStyle}">
-          <!-- Fuselaje -->
-          <path d="M50 5 L55 30 L55 70 L50 95 L45 70 L45 30 Z" 
-                fill="${color}" stroke="#000" stroke-width="2"/>
-          <!-- Alas principales (delta) -->
-          <path d="M50 35 L85 65 L80 70 L55 55 L55 55 L45 55 L20 70 L15 65 Z" 
-                fill="${color}" stroke="#000" stroke-width="2"/>
-          <!-- Estabilizadores traseros -->
-          <path d="M50 75 L65 90 L60 92 L50 85 L40 92 L35 90 Z" 
-                fill="${color}" stroke="#000" stroke-width="2"/>
-          <!-- Cabina -->
-          <ellipse cx="50" cy="25" rx="4" ry="10" fill="#1e3a5f" stroke="#000" stroke-width="1"/>
+        <svg width="28" height="28" viewBox="0 0 32 32" style="${baseStyle}">
+          <!-- Fuselaje central -->
+          <path d="M16 2 L18 8 L18 24 L16 30 L14 24 L14 8 Z" 
+                fill="${color}" stroke="#000" stroke-width="0.8"/>
+          <!-- Alas delta principales -->
+          <path d="M16 10 L28 20 L26 22 L18 16 L14 16 L6 22 L4 20 Z" 
+                fill="${color}" stroke="#000" stroke-width="0.8"/>
+          <!-- Estabilizadores traseros pequeños -->
+          <path d="M16 24 L20 28 L19 29 L16 27 L13 29 L12 28 Z" 
+                fill="${color}" stroke="#000" stroke-width="0.6"/>
+          <!-- Cabina (cristal oscuro) -->
+          <ellipse cx="16" cy="7" rx="1.5" ry="3" fill="#1a1a2e" stroke="#000" stroke-width="0.4"/>
         </svg>
       `;
 
