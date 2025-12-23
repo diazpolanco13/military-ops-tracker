@@ -2,9 +2,58 @@ import { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../lib/maplibre';
+import { Plane, MapPin, Gauge, Navigation, Shield, Flag } from 'lucide-react';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
+
+// Colores por categoría
+const getCategoryColor = (category) => {
+  const colors = {
+    military: '#ef4444',
+    combat: '#dc2626',
+    surveillance: '#f97316',
+    tanker: '#eab308',
+    transport: '#22c55e',
+    passenger: '#3b82f6',
+    cargo: '#8b5cf6',
+    helicopter: '#06b6d4',
+    default: '#64748b'
+  };
+  return colors[category] || colors.default;
+};
+
+// Nombre del país por prefijo ICAO24
+const getCountryByICAO24 = (icao24) => {
+  if (!icao24) return { name: 'Desconocido', flag: '🏳️' };
+  const prefix = icao24.substring(0, 2).toUpperCase();
+  const countries = {
+    'A0': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A1': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A2': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A3': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A4': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A5': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A6': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A7': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A8': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'A9': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AA': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AB': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AC': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AD': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AE': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+    'AF': { name: 'Estados Unidos', flag: '🇺🇸', military: true },
+  };
+  return countries[prefix] || { name: 'Desconocido', flag: '🏳️' };
+};
+
+// Obtener dirección cardinal desde grados
+const getCardinal = (degrees) => {
+  const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const index = Math.round(degrees / 45) % 8;
+  return cardinals[index];
+};
 
 /**
  * 📸 SCREENSHOT VIEW - Vista simplificada para capturas de pantalla
@@ -197,55 +246,126 @@ export default function ScreenshotView() {
         style={{ width: '100%', height: '100%' }}
       />
 
-      {/* Panel de información del vuelo */}
-      {(callsign || flightId || flightData) && (
-        <div className="absolute top-4 right-4 bg-slate-800/95 backdrop-blur-sm rounded-lg border border-slate-600 p-4 min-w-[280px] shadow-xl">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-2xl">✈️</span>
-            <div>
-              <h3 className="text-white font-bold text-lg">
-                {flightData?.callsign || callsign || flightId || 'Aeronave'}
-              </h3>
-              <p className="text-slate-400 text-sm">
-                {flightData?.type || 'Vuelo Militar'}
-              </p>
+      {/* Panel de información del vuelo - Estilo FlightDetailsPanel */}
+      {(callsign || flightId || flightData) && (() => {
+        const color = getCategoryColor('military');
+        const countryInfo = getCountryByICAO24(flightData?.hex || flightId);
+        const altitude = flightData?.alt || params.get('alt') || 0;
+        const speed = flightData?.gspeed || params.get('speed') || 0;
+        const heading = flightData?.track || params.get('heading') || 0;
+        const aircraftType = flightData?.type || params.get('type') || 'Aeronave Militar';
+        const registration = flightData?.reg || params.get('reg') || 'N/A';
+        
+        return (
+          <div 
+            className="absolute bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:bottom-auto sm:top-20 bg-slate-900/95 backdrop-blur-xl rounded-2xl border border-slate-600 shadow-2xl overflow-hidden sm:w-[340px]"
+            style={{
+              boxShadow: '0 10px 40px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)'
+            }}
+          >
+            {/* Header con callsign y modelo */}
+            <div className="px-4 py-3 border-b border-slate-700/50">
+              <div className="flex items-center gap-3">
+                {/* Icono */}
+                <div 
+                  className="p-2.5 rounded-xl shrink-0"
+                  style={{ 
+                    backgroundColor: `${color}15`, 
+                    border: `2px solid ${color}`,
+                    boxShadow: `0 0 20px ${color}40`
+                  }}
+                >
+                  <Plane size={28} color={color} strokeWidth={2.5} />
+                </div>
+                
+                {/* Callsign y tipo */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-white tracking-tight">
+                      {flightData?.callsign || callsign || flightId || 'UNKNOWN'}
+                    </h1>
+                  </div>
+                  <p className="text-sm text-cyan-400 font-medium truncate">
+                    {aircraftType}
+                  </p>
+                  <span 
+                    className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    style={{ 
+                      backgroundColor: `${color}20`,
+                      color: color,
+                      border: `1px solid ${color}50`
+                    }}
+                  >
+                    <Shield size={10} /> MILITAR / GOBIERNO
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-px bg-slate-700/30">
+              <div className="bg-blue-500/10 p-3 text-center">
+                <p className="text-[10px] text-blue-400 uppercase font-medium flex items-center justify-center gap-1">
+                  <Gauge size={10} /> Altitud
+                </p>
+                <p className="text-lg font-bold text-white">{Math.round(altitude / 1000)}k</p>
+                <p className="text-[10px] text-slate-400">ft</p>
+              </div>
+              <div className="bg-green-500/10 p-3 text-center">
+                <p className="text-[10px] text-green-400 uppercase font-medium flex items-center justify-center gap-1">
+                  <Navigation size={10} /> Velocidad
+                </p>
+                <p className="text-lg font-bold text-white">{speed}</p>
+                <p className="text-[10px] text-slate-400">kts</p>
+              </div>
+              <div className="bg-purple-500/10 p-3 text-center">
+                <p className="text-[10px] text-purple-400 uppercase font-medium flex items-center justify-center gap-1">
+                  <Flag size={10} /> País
+                </p>
+                <p className="text-2xl">{countryInfo.flag}</p>
+                <p className="text-[10px] text-slate-400">{countryInfo.name}</p>
+              </div>
+            </div>
+
+            {/* Detalles adicionales */}
+            <div className="p-3 space-y-2 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 flex items-center gap-1">
+                  <MapPin size={12} /> Posición
+                </span>
+                <span className="font-mono text-white">
+                  {(flightData?.lat || lat)?.toFixed(4)}°, {(flightData?.lon || lon)?.toFixed(4)}°
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Rumbo</span>
+                <span className="font-mono text-white">{heading}° ({getCardinal(heading)})</span>
+              </div>
+              {registration !== 'N/A' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Registro</span>
+                  <span className="font-mono font-bold text-white">{registration}</span>
+                </div>
+              )}
+              {(flightData?.hex || flightId) && (
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">ICAO24</span>
+                  <span className="font-mono text-cyan-400">{(flightData?.hex || flightId)?.toUpperCase()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer con zona de incursión */}
+            <div className="px-3 py-2 bg-red-500/10 border-t border-red-500/30">
+              <div className="flex items-center justify-between">
+                <span className="text-red-400 text-xs font-medium">🌊 Zona de Incursión</span>
+                <span className="text-white text-xs font-bold">Espacio Aéreo Venezolano</span>
+              </div>
             </div>
           </div>
-          
-          <div className="space-y-2 text-sm">
-            {flightData?.hex && (
-              <div className="flex justify-between">
-                <span className="text-slate-400">ICAO24:</span>
-                <span className="text-white font-mono">{flightData.hex}</span>
-              </div>
-            )}
-            {(flightData?.alt || lat) && (
-              <div className="flex justify-between">
-                <span className="text-slate-400">Altitud:</span>
-                <span className="text-white">{flightData?.alt?.toLocaleString() || 'N/A'} ft</span>
-              </div>
-            )}
-            {flightData?.gspeed && (
-              <div className="flex justify-between">
-                <span className="text-slate-400">Velocidad:</span>
-                <span className="text-white">{flightData.gspeed} kts</span>
-              </div>
-            )}
-            {flightData?.track && (
-              <div className="flex justify-between">
-                <span className="text-slate-400">Rumbo:</span>
-                <span className="text-white">{flightData.track}°</span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-slate-400">Posición:</span>
-              <span className="text-white font-mono text-xs">
-                {(flightData?.lat || lat)?.toFixed(4)}°, {(flightData?.lon || lon)?.toFixed(4)}°
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Indicador de carga */}
       {loading && (
