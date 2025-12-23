@@ -201,27 +201,34 @@ export default function ScreenshotView() {
         
         // Agregar marcador del avión
         if (lat && lon) {
+          console.log('📸 Creando marcador en coordenadas:', { lat, lon });
+          
           const el = document.createElement('div');
+          el.className = 'flight-marker-screenshot';
           el.style.cssText = `
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            border: 4px solid #fef2f2;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #ef4444, #b91c1c);
+            border: 5px solid #ffffff;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.7), 0 0 40px rgba(239, 68, 68, 0.4);
-            font-size: 28px;
-            animation: pulse 2s infinite;
+            box-shadow: 0 4px 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(239, 68, 68, 0.5);
+            font-size: 30px;
+            z-index: 9999;
+            position: relative;
           `;
           el.innerHTML = '✈️';
           
-          new mapboxgl.Marker(el)
+          const marker = new mapboxgl.Marker({
+            element: el,
+            anchor: 'center'
+          })
             .setLngLat([lon, lat])
             .addTo(map.current);
             
-          console.log('📸 Marcador agregado en:', lon, lat);
+          console.log('📸 Marcador agregado en:', lon, lat, 'Marker:', marker);
         }
         
         setLoading(false);
