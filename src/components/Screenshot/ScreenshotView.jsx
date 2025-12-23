@@ -52,7 +52,7 @@ export default function ScreenshotView() {
   const callsign = params.get('callsign');
   const lat = parseFloat(params.get('lat')) || 10.5;
   const lon = parseFloat(params.get('lon')) || -66.9;
-  const zoom = parseFloat(params.get('zoom')) || 5; // Más alejado por defecto
+  const zoom = parseFloat(params.get('zoom')) || 6; // Zoom moderado para ver contexto y avión
   const altitude = parseFloat(params.get('alt')) || 0;
   const speed = parseFloat(params.get('speed')) || 0;
   const heading = parseFloat(params.get('heading')) || 0;
@@ -170,13 +170,18 @@ export default function ScreenshotView() {
     if (map.current) return;
     if (!mapContainer.current) return;
 
+    // Ajustar centro: mover ligeramente hacia abajo para que el avión quede centrado
+    // considerando el panel inferior que ocupa ~140px
+    const adjustedLat = lat - 1.5; // Mover el centro hacia abajo para que el avión suba en la vista
+    
     console.log('📸 Inicializando mapa en coordenadas:', lat, lon, 'zoom:', zoom);
+    console.log('📸 Centro ajustado:', adjustedLat, lon);
 
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: [lon, lat],
+        center: [lon, adjustedLat],
         zoom: zoom,
         attributionControl: false,
         preserveDrawingBuffer: true,
