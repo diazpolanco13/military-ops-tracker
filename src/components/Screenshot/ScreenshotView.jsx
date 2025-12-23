@@ -2,21 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../lib/maplibre';
-import { useFlightRadar } from '../../hooks/useFlightRadar';
-import FlightLayer from '../FlightRadar/FlightLayer';
-import FlightDetailsPanel from '../FlightRadar/FlightDetailsPanel';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
 /**
- * 📸 SCREENSHOT VIEW - Vista pública para capturas de pantalla
+ * 📸 SCREENSHOT VIEW - Vista simplificada para capturas de pantalla
  * 
  * Esta vista no requiere autenticación y está diseñada para
  * ser capturada por el servicio de screenshots para Telegram.
  * 
  * Parámetros URL:
- * - token: Token secreto de autorización
+ * - screenshot_token: Token secreto de autorización
  * - flight: ICAO24 hex del vuelo
  * - callsign: Callsign del vuelo
  * - lat: Latitud para centrar el mapa
@@ -27,8 +24,9 @@ export default function ScreenshotView() {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [selectedFlight, setSelectedFlight] = useState(null);
-  const [targetFlight, setTargetFlight] = useState(null);
+  const [flightData, setFlightData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Obtener parámetros de URL
   const params = new URLSearchParams(window.location.search);
@@ -38,39 +36,68 @@ export default function ScreenshotView() {
   const lon = parseFloat(params.get('lon')) || -66.9;
   const zoom = parseFloat(params.get('zoom')) || 7;
 
-  // Hook de FlightRadar - solo militar activo
-  const {
-    flights,
-    loading: flightsLoading,
-    categoryFilters,
-    setFilters,
-  } = useFlightRadar({
-    autoUpdate: true,
-    updateInterval: 5000, // Actualizar cada 5 segundos para capturar el vuelo
-    enabled: true,
-    militaryOnly: false,
-  });
-
-  // Activar solo militar al inicio
-  useEffect(() => {
-    setFilters({ military: true });
-  }, [setFilters]);
-
   // Inicializar mapa
   useEffect(() => {
     if (map.current) return;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [lon, lat],
-      zoom: zoom,
-      attributionControl: false,
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [lon, lat],
+        zoom: zoom,
+        attributionControl: false,
+      });
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-    });
+      map.current.on('load', () => {
+        console.log('📸 Mapa cargado');
+        setMapLoaded(true);
+        
+        // Agregar marcador si hay coordenadas
+        if (lat && lon) {
+          // Crear elemento del marcador
+          const el = document.createElement('div');
+          el.className = 'flight-marker';
+          el.innerHTML = `
+            <div style="
+              width: 40px;
+              height: 40px;
+              background: linear-gradient(135deg, #ef4444, #dc2626);
+              border: 3px solid #fef2f2;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+              animation: pulse 2s infinite;
+            ">
+              <span style="font-size: 20px;">✈️</span>
+            </div>
+          `;
+          
+          new mapboxgl.Marker(el)
+            .setLngLat([lon, lat])
+            .addTo(map.current);
+        }
+        
+        // Marcar como listo después de que el mapa cargue
+        setTimeout(() => {
+          window.screenshotReady = true;
+          document.body.classList.add('screenshot-ready');
+          console.log('📸 Screenshot listo');
+          setLoading(false);
+        }, 2000);
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Error de mapa:', e);
+        setError('Error cargando mapa');
+      });
+
+    } catch (e) {
+      console.error('Error inicializando mapa:', e);
+      setError(e.message);
+    }
 
     return () => {
       if (map.current) {
@@ -80,80 +107,137 @@ export default function ScreenshotView() {
     };
   }, [lat, lon, zoom]);
 
-  // Buscar y seleccionar el vuelo objetivo
+  // Buscar datos del vuelo desde FlightRadar (opcional)
   useEffect(() => {
-    if (!flights.length || selectedFlight) return;
+    if (!callsign && !flightId) {
+      setLoading(false);
+      return;
+    }
 
-    // Buscar por flightId (hex) o callsign
-    const target = flights.find(f => 
-      (flightId && f.hex?.toUpperCase() === flightId.toUpperCase()) ||
-      (callsign && f.callsign?.toUpperCase() === callsign.toUpperCase())
-    );
-
-    if (target) {
-      setTargetFlight(target);
-      setSelectedFlight(target);
-      
-      // Centrar mapa en el vuelo
-      if (map.current && target.lat && target.lon) {
-        map.current.flyTo({
-          center: [target.lon, target.lat],
-          zoom: 8,
-          duration: 1000
-        });
+    const fetchFlightData = async () => {
+      try {
+        // Intentar obtener datos del vuelo desde la Edge Function
+        const response = await fetch(
+          `https://oqhujdqbszbvozsuunkw.supabase.co/functions/v1/flightradar-proxy?bounds=27,1,-85,-58`,
+          {
+            headers: {
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xaHVqZHFic3pidm96c3V1bmt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mjg2ODI1MTMsImV4cCI6MjA0NDI1ODUxM30.D6hfs7gLMGdDfiST3IfTPjC9gqH9SFRzqiEryZqCcxw`,
+            }
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          const flights = data.data || [];
+          
+          // Buscar el vuelo específico
+          const flight = flights.find(f => 
+            (flightId && f.hex?.toUpperCase() === flightId.toUpperCase()) ||
+            (callsign && f.callsign?.toUpperCase().includes(callsign.toUpperCase()))
+          );
+          
+          if (flight) {
+            console.log('📸 Vuelo encontrado:', flight);
+            setFlightData(flight);
+            
+            // Centrar mapa en el vuelo real si tiene coordenadas
+            if (map.current && flight.lat && flight.lon) {
+              map.current.flyTo({
+                center: [flight.lon, flight.lat],
+                zoom: 8,
+                duration: 1000
+              });
+            }
+          } else {
+            console.log('📸 Vuelo no encontrado en datos actuales');
+          }
+        }
+      } catch (e) {
+        console.error('Error buscando vuelo:', e);
+        // No es crítico, continuamos sin datos del vuelo
       }
-    }
-  }, [flights, flightId, callsign, selectedFlight]);
+    };
 
-  // Marcar como listo para screenshot cuando el vuelo esté seleccionado
-  useEffect(() => {
-    if (selectedFlight && mapLoaded) {
-      // Agregar clase al body para indicar que está listo
-      document.body.classList.add('screenshot-ready');
-      
-      // También exponer en window para que Puppeteer pueda verificar
-      window.screenshotReady = true;
-      window.selectedFlight = selectedFlight;
-    }
-  }, [selectedFlight, mapLoaded]);
-
-  const flightsWithCategory = flights.filter(f => {
-    const hasActiveFilters = Object.values(categoryFilters).some(Boolean);
-    if (!hasActiveFilters) return false;
-    return categoryFilters[f.flightCategory] === true;
-  }).slice(0, 50);
+    fetchFlightData();
+  }, [callsign, flightId]);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-slate-900">
+      {/* Estilos para animación */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.8; }
+        }
+      `}</style>
+
       {/* Mapa a pantalla completa */}
       <div ref={mapContainer} className="absolute inset-0" />
 
-      {/* Capa de vuelos */}
-      {mapLoaded && map.current && (
-        <FlightLayer
-          map={map.current}
-          flights={flightsWithCategory}
-          onFlightClick={setSelectedFlight}
-          selectedFlight={selectedFlight}
-        />
-      )}
-
-      {/* Panel de detalles del vuelo */}
-      {selectedFlight && (
-        <FlightDetailsPanel
-          flight={selectedFlight}
-          onClose={() => {}} // No permitir cerrar en modo screenshot
-          compact={false}
-        />
+      {/* Panel de información del vuelo */}
+      {(callsign || flightId || flightData) && (
+        <div className="absolute top-4 right-4 bg-slate-800/95 backdrop-blur-sm rounded-lg border border-slate-600 p-4 min-w-[280px] shadow-xl">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">✈️</span>
+            <div>
+              <h3 className="text-white font-bold text-lg">
+                {flightData?.callsign || callsign || flightId || 'Aeronave'}
+              </h3>
+              <p className="text-slate-400 text-sm">
+                {flightData?.type || 'Vuelo Militar'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="space-y-2 text-sm">
+            {flightData?.hex && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">ICAO24:</span>
+                <span className="text-white font-mono">{flightData.hex}</span>
+              </div>
+            )}
+            {(flightData?.alt || lat) && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Altitud:</span>
+                <span className="text-white">{flightData?.alt?.toLocaleString() || 'N/A'} ft</span>
+              </div>
+            )}
+            {flightData?.gspeed && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Velocidad:</span>
+                <span className="text-white">{flightData.gspeed} kts</span>
+              </div>
+            )}
+            {flightData?.track && (
+              <div className="flex justify-between">
+                <span className="text-slate-400">Rumbo:</span>
+                <span className="text-white">{flightData.track}°</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-slate-400">Posición:</span>
+              <span className="text-white font-mono text-xs">
+                {(flightData?.lat || lat)?.toFixed(4)}°, {(flightData?.lon || lon)?.toFixed(4)}°
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Indicador de carga */}
-      {flightsLoading && !selectedFlight && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 z-10">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-white">Buscando vuelo {callsign || flightId}...</p>
+            <p className="text-white">Cargando mapa...</p>
           </div>
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-4 py-2 rounded-lg">
+          {error}
         </div>
       )}
 
@@ -166,12 +250,9 @@ export default function ScreenshotView() {
       </div>
 
       {/* Indicador de incursión */}
-      {selectedFlight && (
-        <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-red-400 animate-pulse">
-          <span className="text-white font-bold">🚨 INCURSIÓN DETECTADA</span>
-        </div>
-      )}
+      <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-red-400 animate-pulse">
+        <span className="text-white font-bold">🚨 INCURSIÓN DETECTADA</span>
+      </div>
     </div>
   );
 }
-
