@@ -11,7 +11,8 @@ import AddEventModal from './components/Timeline/AddEventModal';
 import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
 import GlobalAddEventButton from './components/Common/GlobalAddEventButton';
-import { useState, useEffect } from 'react';
+import ScreenshotView from './components/Screenshot/ScreenshotView';
+import { useState, useEffect, useMemo } from 'react';
 import { Shapes } from 'lucide-react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
@@ -24,8 +25,26 @@ import { DrawingToolsProvider } from './stores/DrawingToolsContext';
 import './utils/loadGADMBoundaries';
 import './utils/loadTerrestrialBoundaries';
 
+// 📸 Token secreto para modo screenshot (cambiar en producción)
+const SCREENSHOT_TOKEN = import.meta.env.VITE_SCREENSHOT_TOKEN || 'sae-screenshot-secret-2025';
+
 function App() {
   const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
+  
+  // 📸 Detectar modo screenshot desde URL
+  const isScreenshotMode = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('screenshot_token');
+    const hasScreenshotFlag = params.get('screenshot') === 'true';
+    
+    // Validar token secreto para acceso sin login
+    if (hasScreenshotFlag && token === SCREENSHOT_TOKEN) {
+      console.log('📸 Modo Screenshot activado');
+      return true;
+    }
+    return false;
+  }, []);
+  
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
   const [showPalette, setShowPalette] = useState(false); // Paleta oculta por defecto
@@ -100,6 +119,11 @@ function App() {
     setPreSelectedEntityId(entityId);
     setShowEventTimeline(true);
   };
+
+  // 📸 Modo Screenshot - Vista pública sin autenticación
+  if (isScreenshotMode) {
+    return <ScreenshotView />;
+  }
 
   // 🔐 Mostrar pantalla de carga mientras verifica autenticación
   if (authLoading) {
