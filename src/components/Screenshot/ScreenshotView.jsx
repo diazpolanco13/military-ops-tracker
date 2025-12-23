@@ -543,7 +543,7 @@ export default function ScreenshotView() {
   }, [lat, lon, zoom]);
 
   // ========================================
-  // DIBUJAR TRAIL DESDE URL (MODO EXIT)
+  // DIBUJAR TRAIL DESDE URL (ENTRY o EXIT)
   // ========================================
   useEffect(() => {
     if (!mapLoaded || !map.current || urlWaypoints.length < 2) return;
@@ -559,14 +559,16 @@ export default function ScreenshotView() {
     
     drawTrailOnMap(map.current, trailData);
     
-    // Ajustar el mapa para mostrar todo el trail con más contexto regional
+    // Ajustar el mapa para mostrar el trail con contexto regional
     if (trailData.length >= 2) {
       const lats = trailData.map(p => p.lat);
       const lngs = trailData.map(p => p.lng);
       
-      // Agregar margen más amplio para ver el contexto de Venezuela
-      const latMargin = 2.5; // ~275km de margen vertical
-      const lngMargin = 3.0; // ~330km de margen horizontal
+      // Márgenes diferentes según el modo:
+      // - EXIT: márgenes más amplios para ver todo el recorrido
+      // - ENTRY: márgenes moderados, centrado en la posición actual
+      const latMargin = isExitMode ? 2.5 : 1.5;
+      const lngMargin = isExitMode ? 3.0 : 2.0;
       
       const bounds = [
         [Math.min(...lngs) - lngMargin, Math.min(...lats) - latMargin], // SW
@@ -576,15 +578,15 @@ export default function ScreenshotView() {
       try {
         map.current.fitBounds(bounds, {
           padding: { top: 100, bottom: 120, left: 80, right: 80 },
-          maxZoom: 5, // Zoom más alejado para ver todo el contexto
+          maxZoom: isExitMode ? 5 : 6, // Zoom más cercano para entry
           duration: 0
         });
-        console.log('📸 Mapa ajustado a bounds del trail (zoom alejado)');
+        console.log(`📸 Mapa ajustado a bounds del trail (modo: ${mode})`);
       } catch (e) {
         console.error('📸 Error ajustando bounds:', e);
       }
     }
-  }, [mapLoaded, urlWaypoints, mode]);
+  }, [mapLoaded, urlWaypoints, mode, isExitMode]);
 
   // Buscar datos del vuelo y trail desde FlightRadar
   useEffect(() => {
