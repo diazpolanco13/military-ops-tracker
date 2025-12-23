@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../lib/maplibre';
 import { supabase } from '../../lib/supabase';
-import { Plane, Gauge, Navigation } from 'lucide-react';
+import { Plane, Gauge, Navigation, MapPin, Shield, Compass } from 'lucide-react';
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -340,7 +340,7 @@ export default function ScreenshotView() {
         </span>
       </div>
 
-      {/* Panel inferior tipo Bottom Sheet - Estilo de la app */}
+      {/* Panel inferior tipo Bottom Sheet - Estilo completo de la app */}
       <div 
         className="absolute inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-600 rounded-t-2xl shadow-2xl"
         style={{
@@ -353,8 +353,8 @@ export default function ScreenshotView() {
           <div className="w-12 h-1 bg-slate-600 rounded-full" />
         </div>
 
-        {/* Contenido del panel */}
-        <div className="px-4 pb-4">
+        {/* Header: Callsign, tipo y stats rápidos */}
+        <div className="px-4 pb-3 border-b border-slate-700/50">
           <div className="flex items-center gap-3">
             {/* Icono de avión */}
             <div 
@@ -386,53 +386,114 @@ export default function ScreenshotView() {
                   border: '1px solid rgba(239, 68, 68, 0.5)'
                 }}
               >
-                🎖️ {countryInfo.name.toUpperCase()}
+                🎖️ UNITED STATES - AIR FORCE
               </span>
             </div>
 
             {/* Stats rápidos */}
             <div className="flex items-center gap-4">
-              {/* Altitud */}
               <div className="text-center">
-                <p className="text-[10px] text-blue-400 uppercase font-medium flex items-center gap-1">
-                  <Gauge size={10} /> Alt
-                </p>
-                <p className="text-lg font-bold text-white">{Math.round(displayAlt / 1000)}k</p>
-                <p className="text-[10px] text-slate-400">ft</p>
+                <p className="text-[10px] text-slate-400 uppercase font-medium">Alt</p>
+                <p className="text-lg font-bold text-white">{Math.round(displayAlt / 1000)}k ft</p>
               </div>
-              {/* Velocidad */}
               <div className="text-center">
-                <p className="text-[10px] text-green-400 uppercase font-medium flex items-center gap-1">
-                  <Navigation size={10} /> Vel
-                </p>
-                <p className="text-lg font-bold text-white">{speedKmh}</p>
-                <p className="text-[10px] text-slate-400">km/h</p>
+                <p className="text-[10px] text-slate-400 uppercase font-medium">Vel</p>
+                <p className="text-lg font-bold text-white">{speedKmh} km/h</p>
               </div>
-              {/* País */}
               <div className="text-center">
-                <p className="text-[10px] text-purple-400 uppercase font-medium">País</p>
+                <p className="text-[10px] text-slate-400 uppercase font-medium">País</p>
                 <p className="text-2xl">{countryInfo.flag}</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Línea separadora */}
-          <div className="h-px bg-slate-700/50 my-3" />
-
-          {/* Info adicional en una línea */}
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <div className="flex items-center gap-4">
-              <span>📍 {displayLat.toFixed(4)}°, {displayLon.toFixed(4)}°</span>
-              <span>🧭 {displayHeading}° ({getCardinal(displayHeading)})</span>
-              {displayReg && <span>✈️ {displayReg}</span>}
+        {/* Grid de información detallada - 2 columnas */}
+        <div className="grid grid-cols-2 gap-3 p-4">
+          {/* Columna 1: AERONAVE */}
+          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Plane size={14} className="text-purple-400" />
+              <span className="text-[10px] font-bold text-purple-300 uppercase">Aeronave</span>
             </div>
-            <span className="text-red-400 font-medium">🌊 Espacio Aéreo Venezolano</span>
+            <p className="text-sm font-bold text-white mb-2">{displayType}</p>
+            
+            <div className="space-y-1.5 text-xs">
+              {displayReg && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Registro</span>
+                  <span className="font-mono font-bold text-white">{displayReg}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">País</span>
+                <span className="font-bold text-white flex items-center gap-1">
+                  <span>{countryInfo.flag}</span>
+                  <span className="text-cyan-400">{countryInfo.name}</span>
+                  {countryInfo.military && <span className="text-[8px] text-red-400">(MIL)</span>}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Categoría</span>
+                <span className="font-semibold flex items-center gap-1 text-red-400">
+                  <Shield size={10} /> Militar/Gobierno
+                </span>
+              </div>
+              {(flightData?.hex || flightId) && (
+                <div className="flex justify-between">
+                  <span className="text-slate-400">ICAO24</span>
+                  <span className="font-mono text-cyan-400">{(flightData?.hex || flightId)?.toUpperCase()}</span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Columna 2: POSICIÓN */}
+          <div className="bg-slate-800/40 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <MapPin size={14} className="text-yellow-500" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Posición</span>
+            </div>
+            
+            <div className="space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Latitud</span>
+                <span className="font-mono text-white">{displayLat.toFixed(5)}°</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Longitud</span>
+                <span className="font-mono text-white">{displayLon.toFixed(5)}°</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Rumbo</span>
+                <span className="font-mono text-white flex items-center gap-1">
+                  <Compass size={10} className="text-purple-400" />
+                  {displayHeading}° ({getCardinal(displayHeading)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Altitud</span>
+                <span className="font-mono text-white">{displayAlt.toLocaleString()} ft ({(displayAlt * 0.3048 / 1000).toFixed(1)} km)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Velocidad</span>
+                <span className="font-mono text-white">{speedKmh} km/h ({displaySpeed} kts)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer: Zona de incursión */}
+        <div className="px-4 py-2 bg-red-500/10 border-t border-red-500/30 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-red-400 text-xs font-medium">🌊 Zona de Incursión</span>
+          </div>
+          <span className="text-white text-xs font-bold">Espacio Aéreo Venezolano</span>
         </div>
       </div>
 
       {/* Watermark SAE-RADAR - Esquina inferior izquierda, encima del panel */}
-      <div className="absolute bottom-[140px] left-4 bg-slate-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-slate-700">
+      <div className="absolute bottom-[280px] left-4 bg-slate-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-slate-700">
         <span className="text-white font-bold text-sm">SAE-RADAR</span>
         <span className="text-slate-400 text-xs ml-2">
           {new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
