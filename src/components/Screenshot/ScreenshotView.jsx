@@ -233,7 +233,7 @@ export default function ScreenshotView() {
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [CARACAS_LON, CARACAS_LAT],
         zoom: zoom,
         attributionControl: false,
