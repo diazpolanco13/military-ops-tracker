@@ -294,6 +294,13 @@ export default function ScreenshotView() {
   const heading = parseFloat(params.get('heading')) || 0;
   const aircraftType = params.get('type') || 'Aeronave Militar';
   const registration = params.get('reg') || '';
+  
+  // Parámetros adicionales para ruta y operador
+  const origin = params.get('origin') || '';       // Aeropuerto de origen (ej: "POS")
+  const destination = params.get('dest') || '';    // Aeropuerto de destino (ej: "PUJ")
+  const airline = params.get('airline') || '';     // Operador (ej: "US Air Force", "US Navy")
+  const originName = params.get('origin_name') || ''; // Nombre completo origen
+  const destName = params.get('dest_name') || '';     // Nombre completo destino
 
   // Cargar límites de Venezuela desde Supabase
   const loadVenezuelaBoundaries = async (mapInstance) => {
@@ -615,6 +622,29 @@ export default function ScreenshotView() {
   const displayReg = flightData?.reg || registration;
   const countryInfo = getCountryByICAO24(flightData?.hex || flightId);
   const speedKmh = Math.round(displaySpeed * 1.852);
+  
+  // Datos de ruta y operador
+  const displayOrigin = flightData?.origin?.code || origin || '';
+  const displayDest = flightData?.destination?.code || destination || '';
+  const displayOriginName = flightData?.origin?.name || originName || '';
+  const displayDestName = flightData?.destination?.name || destName || '';
+  const displayAirline = flightData?.airline?.name || airline || '';
+  const hasRoute = displayOrigin || displayDest;
+  
+  // Determinar categoría del operador
+  const getOperatorCategory = () => {
+    const op = displayAirline.toUpperCase();
+    if (op.includes('AIR FORCE') || op.includes('USAF')) return { label: 'US AIR FORCE', icon: '✈️', color: '#3b82f6' };
+    if (op.includes('NAVY') || op.includes('USN')) return { label: 'US NAVY', icon: '⚓', color: '#0ea5e9' };
+    if (op.includes('MARINE') || op.includes('USMC')) return { label: 'US MARINES', icon: '🎖️', color: '#dc2626' };
+    if (op.includes('COAST GUARD') || op.includes('USCG')) return { label: 'COAST GUARD', icon: '🛟', color: '#f97316' };
+    if (op.includes('ARMY')) return { label: 'US ARMY', icon: '🪖', color: '#65a30d' };
+    if (countryInfo.military) return { label: 'MILITAR/GOV', icon: '🎖️', color: '#ef4444' };
+    return { label: 'MILITAR', icon: '⚠️', color: '#f59e0b' };
+  };
+  
+  const operatorInfo = getOperatorCategory();
+  const category = getCategoryFromType(displayType);
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-slate-900">
@@ -644,7 +674,47 @@ export default function ScreenshotView() {
         </span>
       </div>
 
-      {/* Panel inferior COMPACTO - Barra minimalista */}
+      {/* Panel de RUTA - Esquina superior derecha */}
+      {hasRoute && (
+        <div className="absolute top-4 right-4 bg-slate-900/95 backdrop-blur-xl rounded-xl border-2 border-yellow-500/50 shadow-lg overflow-hidden" style={{ minWidth: '200px' }}>
+          {/* Header */}
+          <div className="bg-yellow-500/20 px-3 py-1.5 border-b border-yellow-500/30">
+            <span className="text-yellow-400 font-bold text-xs flex items-center gap-1">
+              ✈️ RUTA DE VUELO
+            </span>
+          </div>
+          
+          {/* Contenido de ruta */}
+          <div className="px-4 py-3 flex items-center justify-between gap-4">
+            {/* Origen */}
+            <div className="text-center">
+              <p className="text-slate-400 text-[10px] uppercase">Origen</p>
+              <p className="text-white font-bold text-xl">{displayOrigin || '???'}</p>
+              {displayOriginName && (
+                <p className="text-slate-400 text-[9px] max-w-[80px] truncate">{displayOriginName}</p>
+              )}
+            </div>
+            
+            {/* Flecha */}
+            <div className="flex items-center gap-1 text-yellow-400">
+              <div className="w-8 h-0.5 bg-yellow-400/50" />
+              <span className="text-lg">✈</span>
+              <div className="w-8 h-0.5 bg-yellow-400/50" />
+            </div>
+            
+            {/* Destino */}
+            <div className="text-center">
+              <p className="text-slate-400 text-[10px] uppercase">Destino</p>
+              <p className="text-white font-bold text-xl">{displayDest || '???'}</p>
+              {displayDestName && (
+                <p className="text-slate-400 text-[9px] max-w-[80px] truncate">{displayDestName}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Panel inferior COMPACTO - Barra con info completa */}
       <div 
         className="absolute inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-600"
         style={{
@@ -653,17 +723,15 @@ export default function ScreenshotView() {
       >
         {/* Una sola fila compacta con toda la info esencial */}
         <div className="px-4 py-3 flex items-center gap-4">
-          {/* Icono + Callsign */}
+          {/* Icono SVG según categoría + Callsign */}
           <div className="flex items-center gap-2">
             <div 
-              className="p-1.5 rounded-lg shrink-0"
-              style={{ 
-                backgroundColor: 'rgba(239, 68, 68, 0.2)', 
-                border: '2px solid #ef4444'
+              className="shrink-0 flex items-center justify-center"
+              style={{ width: '40px', height: '40px' }}
+              dangerouslySetInnerHTML={{ 
+                __html: getAircraftSVGForScreenshot(category, displayHeading).replace('width="48"', 'width="36"').replace('height="48"', 'height="36"')
               }}
-            >
-              <Plane size={20} color="#ef4444" strokeWidth={2.5} />
-            </div>
+            />
             <div>
               <h1 className="text-lg font-bold text-white leading-none">{displayCallsign}</h1>
               <p className="text-xs text-cyan-400 truncate max-w-[150px]">{displayType}</p>
@@ -671,7 +739,21 @@ export default function ScreenshotView() {
           </div>
 
           {/* Separador */}
-          <div className="w-px h-8 bg-slate-600" />
+          <div className="w-px h-10 bg-slate-600" />
+
+          {/* Operador/Fuerza + País */}
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{countryInfo.flag}</span>
+            <div>
+              <p className="text-xs font-bold flex items-center gap-1" style={{ color: operatorInfo.color }}>
+                {operatorInfo.icon} {operatorInfo.label}
+              </p>
+              <p className="text-[10px] text-slate-400">{countryInfo.name}</p>
+            </div>
+          </div>
+
+          {/* Separador */}
+          <div className="w-px h-10 bg-slate-600" />
 
           {/* Stats en línea */}
           <div className="flex items-center gap-3 text-xs">
@@ -693,7 +775,7 @@ export default function ScreenshotView() {
           </div>
 
           {/* Separador */}
-          <div className="w-px h-8 bg-slate-600" />
+          <div className="w-px h-10 bg-slate-600" />
 
           {/* Posición */}
           <div className="flex items-center gap-1 text-xs">
@@ -704,14 +786,19 @@ export default function ScreenshotView() {
           {/* Spacer */}
           <div className="flex-1" />
 
-          {/* País + Zona */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{countryInfo.flag}</span>
-            <div className="text-right">
-              <p className="text-xs text-red-400 font-bold flex items-center gap-1">
-                <Shield size={10} /> MIL/GOV
+          {/* Registro + Zona Venezuela */}
+          <div className="flex items-center gap-2 text-right">
+            {displayReg && (
+              <div className="bg-slate-800 px-2 py-1 rounded border border-slate-600">
+                <p className="text-[10px] text-slate-400">Registro</p>
+                <p className="text-xs text-white font-mono font-bold">{displayReg}</p>
+              </div>
+            )}
+            <div className="bg-red-900/50 px-2 py-1 rounded border border-red-500/50">
+              <p className="text-[10px] text-red-400 flex items-center gap-1">
+                <Shield size={8} /> ZONA
               </p>
-              <p className="text-[10px] text-slate-400">🇻🇪 Espacio Aéreo VEN</p>
+              <p className="text-xs text-white font-bold">🇻🇪 VEN</p>
             </div>
           </div>
         </div>
