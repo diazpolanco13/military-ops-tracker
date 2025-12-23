@@ -46,11 +46,12 @@ export default function ScreenshotView() {
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'mapbox://styles/mapbox/satellite-streets-v12', // Satélite para mejor visualización
         center: [lon, lat],
         zoom: zoom,
         attributionControl: false,
         preserveDrawingBuffer: true, // Importante para screenshots
+        fadeDuration: 0, // Sin fade para carga más rápida
       });
 
       map.current.on('style.load', () => {
@@ -173,16 +174,28 @@ export default function ScreenshotView() {
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-slate-900">
-      {/* Estilos para animación */}
+      {/* Estilos para animación y mapa */}
       <style>{`
         @keyframes pulse {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.1); opacity: 0.8; }
         }
+        .mapboxgl-map {
+          width: 100% !important;
+          height: 100% !important;
+        }
+        .mapboxgl-canvas {
+          width: 100% !important;
+          height: 100% !important;
+        }
       `}</style>
 
       {/* Mapa a pantalla completa */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div 
+        ref={mapContainer} 
+        className="absolute inset-0 z-0"
+        style={{ width: '100%', height: '100%' }}
+      />
 
       {/* Panel de información del vuelo */}
       {(callsign || flightId || flightData) && (
