@@ -559,22 +559,27 @@ export default function ScreenshotView() {
     
     drawTrailOnMap(map.current, trailData);
     
-    // Ajustar el mapa para mostrar todo el trail si hay suficientes puntos
+    // Ajustar el mapa para mostrar todo el trail con más contexto regional
     if (trailData.length >= 2) {
       const lats = trailData.map(p => p.lat);
       const lngs = trailData.map(p => p.lng);
+      
+      // Agregar margen más amplio para ver el contexto de Venezuela
+      const latMargin = 2.5; // ~275km de margen vertical
+      const lngMargin = 3.0; // ~330km de margen horizontal
+      
       const bounds = [
-        [Math.min(...lngs) - 0.5, Math.min(...lats) - 0.5], // SW
-        [Math.max(...lngs) + 0.5, Math.max(...lats) + 0.5]  // NE
+        [Math.min(...lngs) - lngMargin, Math.min(...lats) - latMargin], // SW
+        [Math.max(...lngs) + lngMargin, Math.max(...lats) + latMargin]  // NE
       ];
       
       try {
         map.current.fitBounds(bounds, {
-          padding: { top: 80, bottom: 100, left: 50, right: 50 },
-          maxZoom: 7,
+          padding: { top: 100, bottom: 120, left: 80, right: 80 },
+          maxZoom: 5, // Zoom más alejado para ver todo el contexto
           duration: 0
         });
-        console.log('📸 Mapa ajustado a bounds del trail');
+        console.log('📸 Mapa ajustado a bounds del trail (zoom alejado)');
       } catch (e) {
         console.error('📸 Error ajustando bounds:', e);
       }
