@@ -3,7 +3,60 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '../../lib/maplibre';
 import { supabase } from '../../lib/supabase';
+import { getFlightDetails } from '../../services/flightRadarService';
 import { Plane, Gauge, Navigation, MapPin, Shield, Compass } from 'lucide-react';
+
+// Colores para el gradiente de altitud del trail
+const ALTITUDE_COLORS = {
+  low: '#ef4444',      // Rojo - baja altitud
+  medium: '#f59e0b',   // Naranja - media
+  high: '#22c55e',     // Verde - alta
+};
+
+/**
+ * Convertir trail a GeoJSON con segmentos coloreados por altitud
+ */
+function trailToGeoJSON(trail) {
+  if (!trail || trail.length < 2) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  const coordinates = trail
+    .filter(point => point.lat && point.lng)
+    .map(point => [point.lng, point.lat, point.alt || 0]);
+
+  if (coordinates.length < 2) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  const features = [];
+  
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const start = coordinates[i];
+    const end = coordinates[i + 1];
+    const avgAlt = ((start[2] || 0) + (end[2] || 0)) / 2;
+    
+    let color;
+    if (avgAlt < 10000) {
+      color = ALTITUDE_COLORS.low;
+    } else if (avgAlt < 25000) {
+      color = ALTITUDE_COLORS.medium;
+    } else {
+      color = ALTITUDE_COLORS.high;
+    }
+
+    features.push({
+      type: 'Feature',
+      properties: { altitude: avgAlt, color, index: i },
+      geometry: {
+        type: 'LineString',
+        coordinates: [[start[0], start[1]], [end[0], end[1]]]
+      }
+    });
+  }
+
+  return { type: 'FeatureCollection', features };
+}
 
 // Configurar token de Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -262,12 +315,13 @@ export default function ScreenshotView() {
     };
   }, [lat, lon, zoom]);
 
-  // Buscar datos del vuelo desde FlightRadar (opcional)
+  // Buscar datos del vuelo y trail desde FlightRadar
   useEffect(() => {
     if (!callsign && !flightId) return;
 
     const fetchFlightData = async () => {
       try {
+        // Primero buscar el vuelo en la lista activa
         const response = await fetch(
           `https://oqhujdqbszbvozsuunkw.supabase.co/functions/v1/flightradar-proxy?bounds=27,1,-85,-58`,
           {
@@ -290,12 +344,15 @@ export default function ScreenshotView() {
             console.log('📸 Vuelo encontrado:', flight);
             setFlightData(flight);
             
-            if (map.current && flight.lat && flight.lon) {
-              map.current.flyTo({
-                center: [flight.lon, flight.lat],
-                zoom: 6,
-                duration: 1000
-              });
+            // Obtener detalles del vuelo incluyendo el trail
+            if (flight.id) {
+              console.log('📸 Obteniendo trail para vuelo:', flight.id);
+              const details = await getFlightDetails(flight.id);
+              
+              if (details?.trail && details.trail.length > 0 && map.current) {
+                console.log(`📸 Trail obtenido: ${details.trail.length} puntos`);
+                drawTrailOnMap(map.current, details.trail);
+              }
             }
           }
         }
@@ -306,6 +363,62 @@ export default function ScreenshotView() {
 
     fetchFlightData();
   }, [callsign, flightId]);
+
+  // Función para dibujar el trail en el mapa
+  const drawTrailOnMap = (mapInstance, trail) => {
+    if (!mapInstance || !trail || trail.length < 2) return;
+
+    const TRAIL_SOURCE_ID = 'screenshot-trail-source';
+    const TRAIL_LAYER_ID = 'screenshot-trail-layer';
+    const TRAIL_OUTLINE_ID = 'screenshot-trail-outline';
+
+    try {
+      // Remover capas existentes si las hay
+      if (mapInstance.getLayer(TRAIL_LAYER_ID)) mapInstance.removeLayer(TRAIL_LAYER_ID);
+      if (mapInstance.getLayer(TRAIL_OUTLINE_ID)) mapInstance.removeLayer(TRAIL_OUTLINE_ID);
+      if (mapInstance.getSource(TRAIL_SOURCE_ID)) mapInstance.removeSource(TRAIL_SOURCE_ID);
+
+      const geojson = trailToGeoJSON(trail);
+      console.log(`📸 Dibujando trail: ${geojson.features.length} segmentos`);
+
+      // Agregar source
+      mapInstance.addSource(TRAIL_SOURCE_ID, {
+        type: 'geojson',
+        data: geojson
+      });
+
+      // Capa de outline (sombra)
+      mapInstance.addLayer({
+        id: TRAIL_OUTLINE_ID,
+        type: 'line',
+        source: TRAIL_SOURCE_ID,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': '#000000',
+          'line-width': 6,
+          'line-opacity': 0.5,
+          'line-blur': 1
+        }
+      });
+
+      // Capa principal del trail
+      mapInstance.addLayer({
+        id: TRAIL_LAYER_ID,
+        type: 'line',
+        source: TRAIL_SOURCE_ID,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 4,
+          'line-opacity': 0.9
+        }
+      });
+
+      console.log('📸 Trail dibujado exitosamente');
+    } catch (e) {
+      console.error('📸 Error dibujando trail:', e);
+    }
+  };
 
   // Datos para mostrar
   const displayCallsign = flightData?.callsign || callsign || flightId || 'UNKNOWN';
