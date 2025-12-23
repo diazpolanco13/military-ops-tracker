@@ -460,162 +460,83 @@ export default function ScreenshotView() {
         </span>
       </div>
 
-      {/* Panel inferior tipo Bottom Sheet - Estilo completo de la app */}
+      {/* Panel inferior COMPACTO - Barra minimalista */}
       <div 
-        className="absolute inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-600 rounded-t-2xl shadow-2xl"
+        className="absolute inset-x-0 bottom-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-600"
         style={{
-          boxShadow: '0 -10px 40px -5px rgba(0, 0, 0, 0.5)',
-          background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)'
+          boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.4)'
         }}
       >
-        {/* Handle decorativo */}
-        <div className="flex justify-center py-2">
-          <div className="w-12 h-1 bg-slate-600 rounded-full" />
-        </div>
-
-        {/* Header: Callsign, tipo y stats rápidos */}
-        <div className="px-4 pb-3 border-b border-slate-700/50">
-          <div className="flex items-center gap-3">
-            {/* Icono de avión */}
+        {/* Una sola fila compacta con toda la info esencial */}
+        <div className="px-4 py-3 flex items-center gap-4">
+          {/* Icono + Callsign */}
+          <div className="flex items-center gap-2">
             <div 
-              className="p-2.5 rounded-xl shrink-0"
+              className="p-1.5 rounded-lg shrink-0"
               style={{ 
-                backgroundColor: 'rgba(239, 68, 68, 0.15)', 
-                border: '2px solid #ef4444',
-                boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
+                backgroundColor: 'rgba(239, 68, 68, 0.2)', 
+                border: '2px solid #ef4444'
               }}
             >
-              <Plane size={28} color="#ef4444" strokeWidth={2.5} />
+              <Plane size={20} color="#ef4444" strokeWidth={2.5} />
             </div>
-            
-            {/* Callsign y tipo */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white tracking-tight">
-                  {displayCallsign}
-                </h1>
-              </div>
-              <p className="text-sm text-cyan-400 font-medium truncate">
-                {displayType}
-              </p>
-              <span 
-                className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                style={{ 
-                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.5)'
-                }}
-              >
-                🎖️ UNITED STATES - AIR FORCE
-              </span>
-            </div>
-
-            {/* Stats rápidos */}
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400 uppercase font-medium">Alt</p>
-                <p className="text-lg font-bold text-white">{Math.round(displayAlt / 1000)}k ft</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400 uppercase font-medium">Vel</p>
-                <p className="text-lg font-bold text-white">{speedKmh} km/h</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400 uppercase font-medium">País</p>
-                <p className="text-2xl">{countryInfo.flag}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Grid de información detallada - 2 columnas */}
-        <div className="grid grid-cols-2 gap-3 p-4">
-          {/* Columna 1: AERONAVE */}
-          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Plane size={14} className="text-purple-400" />
-              <span className="text-[10px] font-bold text-purple-300 uppercase">Aeronave</span>
-            </div>
-            <p className="text-sm font-bold text-white mb-2">{displayType}</p>
-            
-            <div className="space-y-1.5 text-xs">
-              {displayReg && (
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Registro</span>
-                  <span className="font-mono font-bold text-white">{displayReg}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">País</span>
-                <span className="font-bold text-white flex items-center gap-1">
-                  <span>{countryInfo.flag}</span>
-                  <span className="text-cyan-400">{countryInfo.name}</span>
-                  {countryInfo.military && <span className="text-[8px] text-red-400">(MIL)</span>}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Categoría</span>
-                <span className="font-semibold flex items-center gap-1 text-red-400">
-                  <Shield size={10} /> Militar/Gobierno
-                </span>
-              </div>
-              {(flightData?.hex || flightId) && (
-                <div className="flex justify-between">
-                  <span className="text-slate-400">ICAO24</span>
-                  <span className="font-mono text-cyan-400">{(flightData?.hex || flightId)?.toUpperCase()}</span>
-                </div>
-              )}
+            <div>
+              <h1 className="text-lg font-bold text-white leading-none">{displayCallsign}</h1>
+              <p className="text-xs text-cyan-400 truncate max-w-[150px]">{displayType}</p>
             </div>
           </div>
 
-          {/* Columna 2: POSICIÓN */}
-          <div className="bg-slate-800/40 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <MapPin size={14} className="text-yellow-500" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Posición</span>
+          {/* Separador */}
+          <div className="w-px h-8 bg-slate-600" />
+
+          {/* Stats en línea */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1">
+              <Gauge size={12} className="text-blue-400" />
+              <span className="text-slate-400">Alt:</span>
+              <span className="text-white font-bold">{Math.round(displayAlt / 1000)}k ft</span>
             </div>
-            
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Latitud</span>
-                <span className="font-mono text-white">{displayLat.toFixed(5)}°</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Longitud</span>
-                <span className="font-mono text-white">{displayLon.toFixed(5)}°</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Rumbo</span>
-                <span className="font-mono text-white flex items-center gap-1">
-                  <Compass size={10} className="text-purple-400" />
-                  {displayHeading}° ({getCardinal(displayHeading)})
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Altitud</span>
-                <span className="font-mono text-white">{displayAlt.toLocaleString()} ft ({(displayAlt * 0.3048 / 1000).toFixed(1)} km)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Velocidad</span>
-                <span className="font-mono text-white">{speedKmh} km/h ({displaySpeed} kts)</span>
-              </div>
+            <div className="flex items-center gap-1">
+              <Navigation size={12} className="text-green-400" />
+              <span className="text-slate-400">Vel:</span>
+              <span className="text-white font-bold">{speedKmh} km/h</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Compass size={12} className="text-purple-400" />
+              <span className="text-slate-400">Rumbo:</span>
+              <span className="text-white font-bold">{displayHeading}° {getCardinal(displayHeading)}</span>
             </div>
           </div>
-        </div>
 
-        {/* Footer: Zona de incursión */}
-        <div className="px-4 py-2 bg-red-500/10 border-t border-red-500/30 flex items-center justify-between">
+          {/* Separador */}
+          <div className="w-px h-8 bg-slate-600" />
+
+          {/* Posición */}
+          <div className="flex items-center gap-1 text-xs">
+            <MapPin size={12} className="text-yellow-400" />
+            <span className="font-mono text-slate-300">{displayLat.toFixed(4)}°, {displayLon.toFixed(4)}°</span>
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* País + Zona */}
           <div className="flex items-center gap-2">
-            <span className="text-red-400 text-xs font-medium">🌊 Zona de Incursión</span>
+            <span className="text-2xl">{countryInfo.flag}</span>
+            <div className="text-right">
+              <p className="text-xs text-red-400 font-bold flex items-center gap-1">
+                <Shield size={10} /> MIL/GOV
+              </p>
+              <p className="text-[10px] text-slate-400">🇻🇪 Espacio Aéreo VEN</p>
+            </div>
           </div>
-          <span className="text-white text-xs font-bold">Espacio Aéreo Venezolano</span>
         </div>
       </div>
 
       {/* Watermark SAE-RADAR - Esquina inferior izquierda, encima del panel */}
-      <div className="absolute bottom-[280px] left-4 bg-slate-900/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-slate-700">
-        <span className="text-white font-bold text-sm">SAE-RADAR</span>
-        <span className="text-slate-400 text-xs ml-2">
+      <div className="absolute bottom-[60px] left-4 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-700">
+        <span className="text-white font-bold text-xs">SAE-RADAR</span>
+        <span className="text-slate-400 text-[10px] ml-2">
           {new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' })}
         </span>
       </div>
