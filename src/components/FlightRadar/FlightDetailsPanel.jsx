@@ -189,7 +189,31 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               )}
             </div>
 
-            {/* Stats rápidos en horizontal */}
+            {/* 🛫 RUTA COMPACTA - CENTRADA (Desktop) */}
+            {(flight.origin || flight.destination || details?.origin || details?.destination) && (
+              <div className="hidden sm:flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
+                <Route size={14} className="text-amber-400 shrink-0" />
+                <div className="text-center">
+                  <p className="text-sm font-bold text-white font-mono">
+                    {details?.origin?.code || flight.origin || '???'}
+                  </p>
+                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">
+                    {details?.origin?.city || ''}
+                  </p>
+                </div>
+                <span className="text-amber-400">→</span>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-white font-mono">
+                    {details?.destination?.code || flight.destination || '???'}
+                  </p>
+                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">
+                    {details?.destination?.city || ''}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Stats rápidos en horizontal (Desktop) */}
             <div className="hidden sm:flex items-center gap-3">
               {/* Altitud */}
               <div className="text-center">
@@ -209,8 +233,32 @@ export default function FlightDetailsPanel({ flight, onClose }) {
             </div>
           </div>
 
+          {/* 🛫 RUTA COMPACTA - CENTRADA (Móvil) */}
+          {(flight.origin || flight.destination || details?.origin || details?.destination) && (
+            <div className="sm:hidden flex items-center justify-center gap-3 mt-1 mx-3 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
+              <Route size={14} className="text-amber-400 shrink-0" />
+              <div className="text-center">
+                <p className="text-sm font-bold text-white font-mono">
+                  {details?.origin?.code || flight.origin || '???'}
+                </p>
+                <p className="text-[8px] text-slate-400 truncate max-w-[70px]">
+                  {details?.origin?.city || ''}
+                </p>
+              </div>
+              <span className="text-amber-400 text-lg">→</span>
+              <div className="text-center">
+                <p className="text-sm font-bold text-white font-mono">
+                  {details?.destination?.code || flight.destination || '???'}
+                </p>
+                <p className="text-[8px] text-slate-400 truncate max-w-[70px]">
+                  {details?.destination?.city || ''}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Stats en móvil - grid compacto */}
-          <div className="sm:hidden grid grid-cols-4 gap-2 mt-2">
+          <div className="sm:hidden grid grid-cols-4 gap-2 mt-1.5">
             <div className="bg-blue-500/10 rounded-md p-1.5 text-center">
               <p className="text-[8px] text-blue-300 uppercase">Alt</p>
               <p className="text-xs font-bold text-white">{Math.round(flight.altitude / 1000)}k</p>
