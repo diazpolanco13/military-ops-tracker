@@ -170,18 +170,18 @@ export default function ScreenshotView() {
     if (map.current) return;
     if (!mapContainer.current) return;
 
-    // Ajustar centro: mover ligeramente hacia abajo para que el avión quede centrado
-    // considerando el panel inferior que ocupa ~140px
-    const adjustedLat = lat - 1.5; // Mover el centro hacia abajo para que el avión suba en la vista
+    // Centro fijo en Caracas para contexto de Venezuela
+    const CARACAS_LAT = 10.4806;
+    const CARACAS_LON = -66.9036;
     
-    console.log('📸 Inicializando mapa en coordenadas:', lat, lon, 'zoom:', zoom);
-    console.log('📸 Centro ajustado:', adjustedLat, lon);
+    console.log('📸 Inicializando mapa centrado en Caracas');
+    console.log('📸 Posición del avión:', lat, lon);
 
     try {
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: [lon, adjustedLat],
+        center: [CARACAS_LON, CARACAS_LAT],
         zoom: zoom,
         attributionControl: false,
         preserveDrawingBuffer: true,
