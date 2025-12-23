@@ -39,6 +39,9 @@ export default function ScreenshotView() {
   // Inicializar mapa
   useEffect(() => {
     if (map.current) return;
+    if (!mapContainer.current) return;
+
+    console.log('📸 Inicializando mapa en coordenadas:', lat, lon);
 
     try {
       map.current = new mapboxgl.Map({
@@ -47,56 +50,63 @@ export default function ScreenshotView() {
         center: [lon, lat],
         zoom: zoom,
         attributionControl: false,
+        preserveDrawingBuffer: true, // Importante para screenshots
+      });
+
+      map.current.on('style.load', () => {
+        console.log('📸 Estilo del mapa cargado');
       });
 
       map.current.on('load', () => {
-        console.log('📸 Mapa cargado');
+        console.log('📸 Mapa completamente cargado');
         setMapLoaded(true);
+        setLoading(false);
         
         // Agregar marcador si hay coordenadas
         if (lat && lon) {
           // Crear elemento del marcador
           const el = document.createElement('div');
           el.className = 'flight-marker';
-          el.innerHTML = `
-            <div style="
-              width: 40px;
-              height: 40px;
-              background: linear-gradient(135deg, #ef4444, #dc2626);
-              border: 3px solid #fef2f2;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
-              animation: pulse 2s infinite;
-            ">
-              <span style="font-size: 20px;">✈️</span>
-            </div>
+          el.style.cssText = `
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: 4px solid #fef2f2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+            font-size: 24px;
           `;
+          el.innerHTML = '✈️';
           
           new mapboxgl.Marker(el)
             .setLngLat([lon, lat])
             .addTo(map.current);
+            
+          console.log('📸 Marcador agregado en:', lon, lat);
         }
         
-        // Marcar como listo después de que el mapa cargue
-        setTimeout(() => {
+        // Marcar como listo después de que las tiles carguen
+        map.current.once('idle', () => {
+          console.log('📸 Mapa idle - tiles cargadas');
           window.screenshotReady = true;
           document.body.classList.add('screenshot-ready');
           console.log('📸 Screenshot listo');
-          setLoading(false);
-        }, 2000);
+        });
       });
 
       map.current.on('error', (e) => {
-        console.error('Error de mapa:', e);
-        setError('Error cargando mapa');
+        console.error('📸 Error de mapa:', e);
+        setError('Error cargando mapa: ' + (e.error?.message || 'desconocido'));
+        setLoading(false);
       });
 
     } catch (e) {
-      console.error('Error inicializando mapa:', e);
+      console.error('📸 Error inicializando mapa:', e);
       setError(e.message);
+      setLoading(false);
     }
 
     return () => {
