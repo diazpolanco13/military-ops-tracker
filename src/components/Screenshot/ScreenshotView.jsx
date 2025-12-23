@@ -83,6 +83,189 @@ const getCardinal = (degrees) => {
 };
 
 /**
+ * 🎨 ICONOS SVG POR CATEGORÍA MILITAR - VERSIÓN SCREENSHOT
+ * Estilo FlightRadar24 - Cada tipo tiene su silueta distintiva
+ * Tamaños más grandes para visibilidad en screenshots
+ */
+const getAircraftSVGForScreenshot = (category, heading) => {
+  const color = '#ef4444'; // Rojo para alertas
+  const size = 48; // Tamaño grande para screenshots
+  const baseStyle = `
+    transform: rotate(${heading}deg);
+    transform-origin: center center;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.8));
+  `;
+
+  switch (category) {
+    // ✈️ CAZA / COMBAT - Silueta tipo F-16 estilo FlightRadar24
+    case 'combat':
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Fuselaje -->
+          <path d="M50 5 L55 30 L55 70 L50 95 L45 70 L45 30 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Alas principales (delta) -->
+          <path d="M50 35 L85 65 L80 70 L55 55 L55 55 L45 55 L20 70 L15 65 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Estabilizadores traseros -->
+          <path d="M50 75 L65 90 L60 92 L50 85 L40 92 L35 90 Z" 
+                fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Cabina -->
+          <ellipse cx="50" cy="25" rx="5" ry="12" fill="#1e3a5f" stroke="#fff" stroke-width="2"/>
+        </svg>
+      `;
+
+    // 💣 BOMBARDERO - Silueta grande tipo B-52
+    case 'bomber':
+      return `
+        <svg width="${size + 10}" height="${size + 10}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Fuselaje largo -->
+          <path d="M50 2 L54 20 L54 80 L50 98 L46 80 L46 20 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Alas largas -->
+          <path d="M50 30 L95 55 L92 60 L54 45 L46 45 L8 60 L5 55 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Estabilizador vertical -->
+          <path d="M50 70 L50 85 L55 95 L50 90 L45 95 L50 85 Z" 
+                fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Motores -->
+          <ellipse cx="30" cy="48" rx="4" ry="7" fill="#333" stroke="#fff" stroke-width="1"/>
+          <ellipse cx="40" cy="42" rx="4" ry="7" fill="#333" stroke="#fff" stroke-width="1"/>
+          <ellipse cx="60" cy="42" rx="4" ry="7" fill="#333" stroke="#fff" stroke-width="1"/>
+          <ellipse cx="70" cy="48" rx="4" ry="7" fill="#333" stroke="#fff" stroke-width="1"/>
+        </svg>
+      `;
+
+    // ⛽ TANQUERO - KC-135 style
+    case 'tanker':
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Fuselaje ancho -->
+          <ellipse cx="50" cy="50" rx="10" ry="42" fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Alas -->
+          <path d="M50 35 L90 55 L88 62 L52 45 L48 45 L12 62 L10 55 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Cola T -->
+          <path d="M50 82 L50 98 L62 94 L50 90 L38 94 Z" 
+                fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Boom de reabastecimiento -->
+          <line x1="50" y1="95" x2="50" y2="100" stroke="#fff" stroke-width="4"/>
+        </svg>
+      `;
+
+    // 👁️ VIGILANCIA / AWACS - Con radome distintivo
+    case 'surveillance':
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Fuselaje -->
+          <ellipse cx="50" cy="50" rx="9" ry="40" fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Alas -->
+          <path d="M50 38 L88 55 L85 62 L52 48 L48 48 L15 62 L12 55 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Cola -->
+          <path d="M50 84 L50 98 L58 94 L50 90 L42 94 Z" 
+                fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Radome/Disco AWACS (distintivo) -->
+          <ellipse cx="50" cy="45" rx="22" ry="5" fill="#1e3a5f" stroke="#fff" stroke-width="3"/>
+          <ellipse cx="50" cy="45" rx="16" ry="3" fill="#3b82f6" stroke="none"/>
+        </svg>
+      `;
+
+    // 🚁 HELICÓPTERO
+    case 'helicopter':
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Rotor principal -->
+          <line x1="8" y1="22" x2="92" y2="22" stroke="${color}" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="50" cy="22" r="7" fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Cabina -->
+          <ellipse cx="50" cy="45" rx="22" ry="18" fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Ventana -->
+          <ellipse cx="50" cy="42" rx="12" ry="9" fill="#1e3a5f" stroke="#fff" stroke-width="2"/>
+          <!-- Cola -->
+          <rect x="45" y="62" width="10" height="30" fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Rotor cola -->
+          <ellipse cx="50" cy="94" rx="14" ry="4" fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Patines -->
+          <line x1="26" y1="60" x2="26" y2="72" stroke="${color}" stroke-width="4"/>
+          <line x1="74" y1="60" x2="74" y2="72" stroke="${color}" stroke-width="4"/>
+          <line x1="16" y1="72" x2="38" y2="72" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+          <line x1="62" y1="72" x2="84" y2="72" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+      `;
+
+    // 👔 VIP - Jet ejecutivo
+    case 'vip':
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Fuselaje elegante -->
+          <path d="M50 5 L55 25 L55 75 L50 95 L45 75 L45 25 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Alas swept-back -->
+          <path d="M50 40 L82 62 L77 66 L53 52 L47 52 L23 66 L18 62 Z" 
+                fill="${color}" stroke="#fff" stroke-width="3"/>
+          <!-- Cola T -->
+          <path d="M50 78 L50 94 L58 90 L50 86 L42 90 Z" 
+                fill="${color}" stroke="#fff" stroke-width="2"/>
+          <!-- Ventanas -->
+          <line x1="47" y1="30" x2="47" y2="62" stroke="#3b82f6" stroke-width="3"/>
+          <line x1="53" y1="30" x2="53" y2="62" stroke="#3b82f6" stroke-width="3"/>
+        </svg>
+      `;
+
+    // ✈️ TRANSPORTE / DEFAULT - Avión genérico
+    case 'transport':
+    default:
+      return `
+        <svg width="${size}" height="${size}" viewBox="0 0 24 24" 
+             fill="${color}" stroke="#fff" stroke-width="1.5" 
+             stroke-linecap="round" stroke-linejoin="round"
+             style="${baseStyle.replace(heading + 'deg', (heading - 45) + 'deg')}">
+          <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+        </svg>
+      `;
+  }
+};
+
+// Determinar categoría basado en tipo de aeronave
+const getCategoryFromType = (type) => {
+  if (!type) return 'transport';
+  const t = type.toUpperCase();
+  
+  // Cazas
+  if (t.includes('F15') || t.includes('F16') || t.includes('F22') || t.includes('F35') || 
+      t.includes('F18') || t.includes('F14') || t.includes('EUFI') || t.includes('TYPN')) {
+    return 'combat';
+  }
+  // Bombarderos
+  if (t.includes('B52') || t.includes('B1') || t.includes('B2')) {
+    return 'bomber';
+  }
+  // Tanqueros
+  if (t.includes('KC135') || t.includes('KC10') || t.includes('KC46')) {
+    return 'tanker';
+  }
+  // Vigilancia/AWACS
+  if (t.includes('P8') || t.includes('P3') || t.includes('E3') || t.includes('E6') || 
+      t.includes('E2') || t.includes('E8') || t.includes('RC135') || t.includes('RQ4') || 
+      t.includes('U2') || t.includes('MQ9') || t.includes('DH8') || t.includes('DASH')) {
+    return 'surveillance';
+  }
+  // Helicópteros
+  if (t.includes('H60') || t.includes('H47') || t.includes('H64') || t.includes('H53') || 
+      t.includes('UH') || t.includes('CH') || t.includes('AH') || t.includes('MH') || 
+      t.includes('V22') || t.includes('OSPREY')) {
+    return 'helicopter';
+  }
+  // VIP
+  if (t.includes('C32') || t.includes('C37') || t.includes('GLF') || t.includes('GLEX')) {
+    return 'vip';
+  }
+  
+  return 'transport';
+};
+
+/**
  * 📸 SCREENSHOT VIEW - Vista simplificada para capturas de pantalla
  * 
  * Diseño similar al FlightDetailsPanel de la app principal:
@@ -252,27 +435,28 @@ export default function ScreenshotView() {
         // Cargar límites de Venezuela
         await loadVenezuelaBoundaries(map.current);
         
-        // Agregar marcador del avión
+        // Agregar marcador del avión con icono según categoría
         if (lat && lon) {
           console.log('📸 Creando marcador en coordenadas:', { lat, lon });
+          
+          // Determinar categoría de la aeronave
+          const category = getCategoryFromType(aircraftType);
+          console.log('📸 Categoría detectada:', category, 'para tipo:', aircraftType);
           
           const el = document.createElement('div');
           el.className = 'flight-marker-screenshot';
           el.style.cssText = `
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            border: 5px solid #ffffff;
-            border-radius: 50%;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(239, 68, 68, 0.5);
-            font-size: 30px;
             z-index: 9999;
             position: relative;
           `;
-          el.innerHTML = '✈️';
+          
+          // Usar el icono SVG según la categoría
+          el.innerHTML = getAircraftSVGForScreenshot(category, heading);
           
           const marker = new mapboxgl.Marker({
             element: el,
@@ -281,7 +465,7 @@ export default function ScreenshotView() {
             .setLngLat([lon, lat])
             .addTo(map.current);
             
-          console.log('📸 Marcador agregado en:', lon, lat, 'Marker:', marker);
+          console.log('📸 Marcador agregado en:', lon, lat, 'Categoría:', category, 'Marker:', marker);
         }
         
         setLoading(false);
