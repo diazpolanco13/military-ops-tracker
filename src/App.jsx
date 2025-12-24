@@ -12,6 +12,7 @@ import SearchBar from './components/Search/SearchBar';
 import LoginPage from './components/Auth/LoginPage';
 import GlobalAddEventButton from './components/Common/GlobalAddEventButton';
 import ScreenshotView from './components/Screenshot/ScreenshotView';
+import SituationScreenshotView from './components/Screenshot/SituationScreenshotView';
 import { useState, useEffect, useMemo } from 'react';
 import { Shapes } from 'lucide-react';
 import { useCreateEntity } from './hooks/useCreateEntity';
@@ -32,18 +33,21 @@ function App() {
   const { user, loading: authLoading, isAuthenticated, signOut } = useAuth();
   
   // 📸 Detectar modo screenshot desde URL
-  const isScreenshotMode = useMemo(() => {
+  const screenshotMode = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('screenshot_token');
     const hasScreenshotFlag = params.get('screenshot') === 'true';
+    const mode = params.get('mode') || 'entry'; // 'entry', 'exit', 'situation'
     
     // Validar token secreto para acceso sin login
     if (hasScreenshotFlag && token === SCREENSHOT_TOKEN) {
-      console.log('📸 Modo Screenshot activado');
-      return true;
+      console.log(`📸 Modo Screenshot activado: ${mode}`);
+      return mode;
     }
-    return false;
+    return null;
   }, []);
+  
+  const isScreenshotMode = screenshotMode !== null;
   
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [dropPosition, setDropPosition] = useState(null);
@@ -122,6 +126,11 @@ function App() {
 
   // 📸 Modo Screenshot - Vista pública sin autenticación
   if (isScreenshotMode) {
+    // Modo situación: múltiples aeronaves
+    if (screenshotMode === 'situation') {
+      return <SituationScreenshotView />;
+    }
+    // Modo individual: entry/exit
     return <ScreenshotView />;
   }
 
