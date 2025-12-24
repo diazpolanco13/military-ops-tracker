@@ -50,6 +50,7 @@ import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
 import ZonesPanel from './ZonesPanel';
 import WeatherLayersPanel from '../Weather/WeatherLayersPanel';
 import LogoutConfirmModal from '../Auth/LogoutConfirmModal';
+import ChangePasswordModal from '../Auth/ChangePasswordModal';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -109,6 +110,7 @@ export default function TopNavigationBar({
   const [showSettingsPanel, setShowSettingsPanel] = useState(false);
   const [showMaritimePanel, setShowMaritimePanel] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
@@ -352,6 +354,23 @@ export default function TopNavigationBar({
               </button>
             )}
 
+            {/* Cambiar Contraseña */}
+            <button
+              onClick={() => {
+                setShowChangePasswordModal(true);
+                setShowUserMenu(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-left group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-purple-600/20 flex items-center justify-center group-hover:bg-purple-600/30 transition-colors">
+                <Lock className="w-4 h-4 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <div className="text-white text-sm font-medium">Cambiar Contraseña</div>
+                <div className="text-slate-500 text-xs">Actualizar tu clave de acceso</div>
+              </div>
+            </button>
+
             {/* Cerrar Sesión */}
             <button
               onClick={() => {
@@ -469,6 +488,13 @@ export default function TopNavigationBar({
             onSignOut();
           }}
           onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
+
+      {/* Modal de Cambio de Contraseña */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          onClose={() => setShowChangePasswordModal(false)}
         />
       )}
     </>

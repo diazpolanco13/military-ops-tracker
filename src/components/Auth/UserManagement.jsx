@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Users, Trash2, Mail, Lock, Shield, AlertCircle, CheckCircle, Eye, EyeOff, User, Briefcase, Building2, Edit2, X, Crown, UserCheck, Eye as EyeIcon } from 'lucide-react';
+import { UserPlus, Users, Trash2, Mail, Lock, Shield, AlertCircle, CheckCircle, Eye, EyeOff, User, Briefcase, Building2, Edit2, X, Crown, UserCheck, Eye as EyeIcon, KeyRound } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 /**
@@ -23,6 +23,10 @@ export default function UserManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [creating, setCreating] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(null); // userId del usuario al que se le resetea
+  const [newPasswordForReset, setNewPasswordForReset] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -295,6 +299,70 @@ export default function UserManagement() {
       setError(err.message || 'Error al actualizar usuario');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  // Abrir modal de reset de contraseña
+  const handleOpenResetPassword = (user) => {
+    setResettingPassword(user);
+    setNewPasswordForReset('');
+    setShowResetPassword(true);
+    setError(null);
+    setSuccess(null);
+  };
+
+  // Resetear contraseña de un usuario (solo admin)
+  const handleResetPassword = async () => {
+    if (!resettingPassword || !newPasswordForReset) return;
+
+    setResetting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (newPasswordForReset.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres');
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No hay sesión activa');
+
+      const response = await fetch(
+        'https://oqhujdqbszbvozsuunkw.supabase.co/functions/v1/admin-users',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'reset_password',
+            userId: resettingPassword.id,
+            newPassword: newPasswordForReset
+          })
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al resetear contraseña');
+      }
+
+      console.log('✅ Contraseña reseteada para:', resettingPassword.email);
+      setSuccess(`Contraseña de ${resettingPassword.email} actualizada exitosamente`);
+      
+      // Cerrar modal después de 2 segundos
+      setTimeout(() => {
+        setShowResetPassword(false);
+        setResettingPassword(null);
+        setNewPasswordForReset('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('❌ Error reseteando contraseña:', err);
+      setError(err.message || 'Error al resetear contraseña');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -865,7 +933,14 @@ export default function UserManagement() {
                 </div>
 
                 {/* Acciones */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleOpenResetPassword(user)}
+                    className="p-2 text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 rounded-lg transition-colors"
+                    title="Resetear contraseña"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => handleEditUser(user)}
                     className="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-colors"
@@ -912,6 +987,133 @@ export default function UserManagement() {
           </li>
         </ul>
       </div>
+
+      {/* Modal de Reset de Contraseña */}
+      {showResetPassword && resettingPassword && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-slate-800 rounded-xl border border-purple-700/50 w-full max-w-md shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Resetear Contraseña</h2>
+                  <p className="text-xs text-slate-400 truncate max-w-[200px]">{resettingPassword.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowResetPassword(false);
+                  setResettingPassword(null);
+                  setNewPasswordForReset('');
+                  setError(null);
+                  setSuccess(null);
+                }}
+                disabled={resetting}
+                className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6 space-y-4">
+              {/* Mensaje de éxito */}
+              {success && (
+                <div className="p-4 bg-green-900/30 border border-green-700/50 rounded-lg flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <p className="text-green-300 text-sm">{success}</p>
+                </div>
+              )}
+
+              {/* Mensaje de error */}
+              {error && (
+                <div className="p-4 bg-red-900/30 border border-red-700/50 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              )}
+
+              {!success && (
+                <>
+                  <p className="text-slate-300 text-sm">
+                    Ingresa la nueva contraseña para el usuario <strong className="text-white">{resettingPassword.nombre || resettingPassword.email}</strong>
+                  </p>
+
+                  {/* Nueva contraseña */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Nueva Contraseña
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={newPasswordForReset}
+                        onChange={(e) => setNewPasswordForReset(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        className="w-full pl-10 pr-12 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        disabled={resetting}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">La contraseña debe tener al menos 6 caracteres</p>
+                  </div>
+                </>
+              )}
+
+              {/* Botones */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetPassword(false);
+                    setResettingPassword(null);
+                    setNewPasswordForReset('');
+                    setError(null);
+                    setSuccess(null);
+                  }}
+                  disabled={resetting}
+                  className="flex-1 py-3 rounded-lg font-medium transition-all bg-slate-700 hover:bg-slate-600 text-white disabled:opacity-50"
+                >
+                  {success ? 'Cerrar' : 'Cancelar'}
+                </button>
+                {!success && (
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={resetting || !newPasswordForReset || newPasswordForReset.length < 6}
+                    className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                      resetting || !newPasswordForReset || newPasswordForReset.length < 6
+                        ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50'
+                    }`}
+                  >
+                    {resetting ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Reseteando...</span>
+                      </div>
+                    ) : (
+                      'Resetear Contraseña'
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
