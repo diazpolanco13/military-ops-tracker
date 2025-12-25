@@ -27,8 +27,17 @@ export default function EsequiboClaimLayer({ map, visible = true }) {
     if (!map) return;
 
     const { source, fillLayer, lineLayer, labelLayer } = layersRef.current;
+    let mounted = true;
 
     const addLayers = () => {
+      if (!mounted) return;
+      
+      // Verificar nuevamente que el estilo esté cargado
+      if (!map.isStyleLoaded()) {
+        console.log('⏳ Esequibo: Esperando estilo del mapa...');
+        return;
+      }
+      
       console.log('🗺️ Adding Esequibo claim zone layer...');
 
       // Remover capas existentes primero
@@ -71,26 +80,6 @@ export default function EsequiboClaimLayer({ map, visible = true }) {
         },
       });
 
-      // Capa de etiqueta - DESHABILITADA por solicitud del usuario
-      // map.addLayer({
-      //   id: labelLayer,
-      //   type: 'symbol',
-      //   source: source,
-      //   layout: {
-      //     visibility: visible ? 'visible' : 'none',
-      //     'text-field': 'Zona en Reclamación',
-      //     'text-font': ['DIN Pro Medium', 'Arial Unicode MS Regular'],
-      //     'text-size': 12,
-      //     'text-max-width': 10,
-      //   },
-      //   paint: {
-      //     'text-color': '#fbbf24',
-      //     'text-halo-color': '#1e293b',
-      //     'text-halo-width': 2,
-      //     'text-opacity': 0.9,
-      //   },
-      // });
-
       console.log('✅ Esequibo claim zone layers added:', {
         fillLayer,
         lineLayer,
@@ -119,48 +108,75 @@ export default function EsequiboClaimLayer({ map, visible = true }) {
     const removeLayers = () => {
       const { source, fillLayer, lineLayer, labelLayer } = layersRef.current;
       
-      [labelLayer, lineLayer, fillLayer].forEach(layer => {
-        if (map.getLayer(layer)) map.removeLayer(layer);
-      });
-      
-      if (map.getSource(source)) map.removeSource(source);
+      try {
+        [labelLayer, lineLayer, fillLayer].forEach(layer => {
+          if (map.getLayer(layer)) map.removeLayer(layer);
+        });
+        
+        if (map.getSource(source)) map.removeSource(source);
+      } catch (e) {
+        // Ignorar errores durante limpieza
+      }
     };
 
     // Manejar cambios de estilo del mapa
     const handleStyleLoad = () => {
       console.log('🗺️ Style loaded, re-adding Esequibo layer');
-      addLayers();
+      // Pequeño delay para asegurar que el estilo está completamente listo
+      setTimeout(addLayers, 50);
     };
 
-    // Esperar a que el mapa esté cargado
-    if (!map.isStyleLoaded()) {
-      map.once('load', addLayers);
-      return;
-    }
+    // 🔧 FIX: Usar idle como respaldo para asegurar que el mapa está listo
+    const handleIdle = () => {
+      if (!map.getSource(source)) {
+        addLayers();
+      }
+    };
 
-    addLayers();
+    // Intentar agregar inmediatamente si el estilo está cargado
+    if (map.isStyleLoaded()) {
+      addLayers();
+    } else {
+      // Si no, esperar al evento load
+      map.once('load', addLayers);
+    }
+    
+    // 🔧 FIX: También escuchar idle como respaldo
+    map.once('idle', handleIdle);
     map.on('style.load', handleStyleLoad);
 
     return () => {
+      mounted = false;
       map.off('style.load', handleStyleLoad);
+      map.off('idle', handleIdle);
       removeLayers();
     };
-  }, [map]);
+  }, [map, visible]);
 
-  // 👁️ Toggle visibilidad
+  // 👁️ Toggle visibilidad (efecto separado para cambios de visible sin recrear capas)
   useEffect(() => {
     if (!map) return;
-
+    
+    // Solo actualizar visibilidad si las capas existen
     const { fillLayer, lineLayer, labelLayer } = layersRef.current;
     const visibility = visible ? 'visible' : 'none';
 
-    [fillLayer, lineLayer, labelLayer].forEach(layer => {
-      if (map.getLayer(layer)) {
-        map.setLayoutProperty(layer, 'visibility', visibility);
-      }
-    });
+    // Pequeño delay para asegurar que las capas se han creado
+    const updateVisibility = () => {
+      [fillLayer, lineLayer, labelLayer].forEach(layer => {
+        try {
+          if (map.getLayer(layer)) {
+            map.setLayoutProperty(layer, 'visibility', visibility);
+          }
+        } catch (e) {
+          // Ignorar errores si la capa no existe aún
+        }
+      });
+      console.log('👁️ Esequibo layer visibility:', visible);
+    };
 
-    console.log('👁️ Esequibo layer visibility:', visible);
+    // Ejecutar después de un frame para asegurar sincronización
+    requestAnimationFrame(updateVisibility);
   }, [map, visible]);
 
   return null; // Componente no renderiza nada en React

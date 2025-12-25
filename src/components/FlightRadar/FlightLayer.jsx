@@ -224,8 +224,18 @@ export default function FlightLayer({
   // Inicializar: cargar iconos y crear capas
   useEffect(() => {
     if (!map || initializedRef.current) return;
+    
+    let mounted = true;
 
     const init = async () => {
+      if (!mounted) return;
+      
+      // 🔧 FIX: Verificar que el estilo esté realmente cargado
+      if (!map.isStyleLoaded()) {
+        console.log('⏳ FlightLayer: Esperando estilo del mapa...');
+        return;
+      }
+      
       try {
         // Cargar iconos SVG para cada categoría (normal y seleccionado)
         const iconPromises = [];
@@ -252,6 +262,8 @@ export default function FlightLayer({
         }
 
         const icons = await Promise.all(iconPromises);
+        
+        if (!mounted) return;
         
         // Agregar todos los iconos a Mapbox
         for (const { name, img } of icons) {
@@ -385,21 +397,33 @@ export default function FlightLayer({
       }
     };
 
+    // 🔧 FIX: Estrategia robusta de inicialización
     if (map.isStyleLoaded()) {
       init();
     } else {
       map.once('load', init);
     }
+    
+    // 🔧 FIX: Usar idle como respaldo para asegurar inicialización
+    const handleIdle = () => {
+      if (!initializedRef.current) {
+        init();
+      }
+    };
+    map.once('idle', handleIdle);
 
     // Reinicializar al cambiar estilo
     const handleStyleLoad = () => {
       initializedRef.current = false;
-      init();
+      // Pequeño delay para asegurar que el estilo está listo
+      setTimeout(init, 50);
     };
     map.on('style.load', handleStyleLoad);
 
     return () => {
+      mounted = false;
       map.off('style.load', handleStyleLoad);
+      map.off('idle', handleIdle);
       
       // Limpiar todo al desmontar
       try {
