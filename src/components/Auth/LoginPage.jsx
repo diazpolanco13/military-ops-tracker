@@ -3,8 +3,9 @@ import { Lock, Mail, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 /**
- * 🔐 Página de Login
+ * 🔐 Página de Login con Auditoría
  * Autenticación con Supabase Auth
+ * Registra intentos fallidos de login
  */
 export default function LoginPage({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -12,6 +13,64 @@ export default function LoginPage({ onLoginSuccess }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  /**
+   * Registrar intento de login fallido (sin sesión activa)
+   */
+  const logFailedLogin = async (attemptEmail, errorMessage) => {
+    try {
+      const userAgent = navigator.userAgent;
+      const ua = userAgent.toLowerCase();
+      
+      // Parser básico
+      const deviceType = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop';
+      let browser = 'unknown';
+      if (ua.includes('firefox')) browser = 'Firefox';
+      else if (ua.includes('edg/')) browser = 'Edge';
+      else if (ua.includes('chrome')) browser = 'Chrome';
+      else if (ua.includes('safari')) browser = 'Safari';
+      
+      let os = 'unknown';
+      if (ua.includes('windows')) os = 'Windows';
+      else if (ua.includes('mac os x')) os = 'macOS';
+      else if (ua.includes('android')) os = 'Android';
+      else if (ua.includes('iphone')) os = 'iOS';
+
+      // Obtener IP
+      let ipAddress = null;
+      try {
+        const response = await fetch('https://api.ipify.org?format=json', {
+          signal: AbortSignal.timeout(3000)
+        });
+        const data = await response.json();
+        ipAddress = data.ip;
+      } catch { /* ignore */ }
+
+      // Insertar directamente en la tabla (sin usar RPC porque no hay sesión)
+      await supabase.from('user_audit_logs').insert({
+        user_id: null, // No hay usuario autenticado
+        event_type: 'login_failed',
+        event_category: 'auth',
+        event_description: `Intento de login fallido para ${attemptEmail}`,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        device_type: deviceType,
+        browser: browser,
+        os: os,
+        metadata: { 
+          email: attemptEmail,
+          url: window.location.href,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        success: false,
+        error_message: errorMessage,
+      });
+
+      console.log('📋 Auditoría: login_failed registrado');
+    } catch (auditError) {
+      console.error('Error registrando auditoría de login fallido:', auditError);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,9 +83,14 @@ export default function LoginPage({ onLoginSuccess }) {
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        // Registrar intento fallido
+        await logFailedLogin(email, signInError.message);
+        throw signInError;
+      }
 
       console.log('✅ Login exitoso:', data.user.email);
+      // El evento de login exitoso se registra en useAuth via onAuthStateChange
       
       // Notificar al componente padre
       if (onLoginSuccess) {
