@@ -317,13 +317,32 @@ export default function FlightTrailLayer({
 
   /**
    * Fetch trail y datos de destino cuando cambia el vuelo seleccionado
+   * También limpia cuando se deselecciona
    */
   useEffect(() => {
-    // Limpiar si no hay vuelo seleccionado
+    // LIMPIAR si no hay vuelo seleccionado
     if (!selectedFlight?.id || !showTrail) {
-      setTrail([]);
-      setDestinationAirport(null);
-      lastFlightIdRef.current = null;
+      // Solo limpiar si había algo antes
+      if (lastFlightIdRef.current !== null || trail.length > 0) {
+        console.log('🧹 Limpiando trail - vuelo deseleccionado');
+        setTrail([]);
+        setDestinationAirport(null);
+        lastFlightIdRef.current = null;
+        
+        // Limpiar sources del mapa
+        if (map && initializedRef.current) {
+          const emptyGeoJSON = { type: 'FeatureCollection', features: [] };
+          try {
+            const trailSource = map.getSource(TRAIL_SOURCE_ID);
+            const gapSource = map.getSource(GAP_SOURCE_ID);
+            const predictionSource = map.getSource(PREDICTION_SOURCE_ID);
+            
+            if (trailSource) trailSource.setData(emptyGeoJSON);
+            if (gapSource) gapSource.setData(emptyGeoJSON);
+            if (predictionSource) predictionSource.setData(emptyGeoJSON);
+          } catch (e) { /* ignore */ }
+        }
+      }
       return;
     }
 
@@ -354,6 +373,9 @@ export default function FlightTrailLayer({
     // Fetch async
     getFlightDetails(flightId)
       .then(details => {
+        // Verificar que todavía estamos en el mismo vuelo
+        if (lastFlightIdRef.current !== flightId) return;
+        
         if (details?.trail && Array.isArray(details.trail)) {
           console.log(`✅ Trail recibido: ${details.trail.length} puntos`);
           setTrail(details.trail);
@@ -364,29 +386,52 @@ export default function FlightTrailLayer({
       })
       .catch(error => {
         console.error('❌ Error fetching trail:', error);
-        setTrail([]);
+        if (lastFlightIdRef.current === flightId) {
+          setTrail([]);
+        }
       });
 
-  }, [selectedFlight?.id, selectedFlight?.destination, showTrail]);
+  }, [selectedFlight?.id, selectedFlight?.destination, showTrail, map]);
 
   /**
    * Actualizar datos del trail en el mapa
    * Solo se actualiza cuando cambia el trail, NO cuando cambia selectedFlight
    */
   useEffect(() => {
-    if (!map || !initializedRef.current || trail.length === 0) return;
+    if (!map || trail.length === 0) return;
 
-    try {
-      // Actualizar trail principal
-      const trailSource = map.getSource(TRAIL_SOURCE_ID);
-      if (trailSource) {
-        const geojson = trailToGeoJSON(trail);
-        trailSource.setData(geojson);
-        console.log(`🗺️ Trail actualizado en mapa: ${geojson.features.length} segmentos`);
+    const updateTrail = () => {
+      try {
+        const trailSource = map.getSource(TRAIL_SOURCE_ID);
+        if (trailSource) {
+          const geojson = trailToGeoJSON(trail);
+          trailSource.setData(geojson);
+          console.log(`🗺️ Trail actualizado en mapa: ${geojson.features.length} segmentos`);
+        } else {
+          console.log('⚠️ Trail source no encontrado, reintentando...');
+          // Si el source no existe, esperar un poco y reintentar
+          setTimeout(updateTrail, 200);
+        }
+      } catch (e) {
+        console.error('Error actualizando trail:', e);
       }
-    } catch (e) {
-      console.error('Error actualizando trail:', e);
+    };
+
+    // Si las capas no están inicializadas, esperar
+    if (!initializedRef.current) {
+      console.log('⏳ Esperando inicialización de capas para trail...');
+      const checkInit = setInterval(() => {
+        if (initializedRef.current || map.getSource(TRAIL_SOURCE_ID)) {
+          clearInterval(checkInit);
+          updateTrail();
+        }
+      }, 100);
+      // Timeout de seguridad
+      setTimeout(() => clearInterval(checkInit), 5000);
+      return;
     }
+
+    updateTrail();
   }, [map, trail]);
 
   /**
@@ -394,33 +439,42 @@ export default function FlightTrailLayer({
    * Estas SÍ necesitan actualizarse cuando cambia la posición del avión
    */
   useEffect(() => {
-    if (!map || !initializedRef.current || !selectedFlight) return;
+    if (!map || !selectedFlight || trail.length === 0) return;
 
-    try {
-      // Actualizar línea de gap (transponder apagado)
-      const gapSource = map.getSource(GAP_SOURCE_ID);
-      if (gapSource && trail.length > 0) {
-        const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
-        gapSource.setData(gapGeoJSON);
-      }
-
-      // Actualizar línea de predicción hacia destino
-      const predictionSource = map.getSource(PREDICTION_SOURCE_ID);
-      if (predictionSource && destinationAirport) {
-        // Solo mostrar predicción si hay gap detectado
-        const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
-        const hasGap = gapGeoJSON.features.length > 0 || selectedFlight.signal?.isTransponderActive === false;
-        
-        if (hasGap && trail.length > 0) {
-          const predictionGeoJSON = createPredictionLineGeoJSON(selectedFlight, destinationAirport);
-          predictionSource.setData(predictionGeoJSON);
-        } else {
-          predictionSource.setData({ type: 'FeatureCollection', features: [] });
+    const updateGapAndPrediction = () => {
+      try {
+        // Actualizar línea de gap (transponder apagado)
+        const gapSource = map.getSource(GAP_SOURCE_ID);
+        if (gapSource) {
+          const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
+          gapSource.setData(gapGeoJSON);
+          if (gapGeoJSON.features.length > 0) {
+            console.log(`⚫ Gap actualizado`);
+          }
         }
+
+        // Actualizar línea de predicción hacia destino
+        const predictionSource = map.getSource(PREDICTION_SOURCE_ID);
+        if (predictionSource && destinationAirport) {
+          const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
+          const hasGap = gapGeoJSON.features.length > 0 || selectedFlight.signal?.isTransponderActive === false;
+          
+          if (hasGap) {
+            const predictionGeoJSON = createPredictionLineGeoJSON(selectedFlight, destinationAirport);
+            predictionSource.setData(predictionGeoJSON);
+            console.log(`📍 Predicción actualizada hacia ${destinationAirport.code}`);
+          } else {
+            predictionSource.setData({ type: 'FeatureCollection', features: [] });
+          }
+        }
+      } catch (e) {
+        console.error('Error actualizando gap/prediction:', e);
       }
-    } catch (e) {
-      console.error('Error actualizando gap/prediction:', e);
-    }
+    };
+
+    // Pequeño delay para asegurar que el trail ya se actualizó
+    const timeoutId = setTimeout(updateGapAndPrediction, 50);
+    return () => clearTimeout(timeoutId);
   }, [map, trail, selectedFlight?.latitude, selectedFlight?.longitude, destinationAirport]);
 
   /**

@@ -477,11 +477,11 @@ export default function FlightLayer({
     }
   }, [map, flights, selectedFlight, getGeoJSON]);
 
-  // Manejar clicks
+  // Manejar clicks en vuelos
   useEffect(() => {
     if (!map) return;
 
-    const handleClick = (e) => {
+    const handleFlightClick = (e) => {
       const features = map.queryRenderedFeatures(e.point, {
         layers: [FLIGHTS_LAYER_ID, FLIGHTS_SELECTED_LAYER_ID]
       });
@@ -500,8 +500,8 @@ export default function FlightLayer({
 
     const setup = () => {
       if (map.getLayer(FLIGHTS_LAYER_ID)) {
-        map.on('click', FLIGHTS_LAYER_ID, handleClick);
-        map.on('click', FLIGHTS_SELECTED_LAYER_ID, handleClick);
+        map.on('click', FLIGHTS_LAYER_ID, handleFlightClick);
+        map.on('click', FLIGHTS_SELECTED_LAYER_ID, handleFlightClick);
         map.on('mouseenter', FLIGHTS_LAYER_ID, setCursor);
         map.on('mouseleave', FLIGHTS_LAYER_ID, resetCursor);
       }
@@ -515,13 +515,45 @@ export default function FlightLayer({
 
     return () => {
       try {
-        map.off('click', FLIGHTS_LAYER_ID, handleClick);
-        map.off('click', FLIGHTS_SELECTED_LAYER_ID, handleClick);
+        map.off('click', FLIGHTS_LAYER_ID, handleFlightClick);
+        map.off('click', FLIGHTS_SELECTED_LAYER_ID, handleFlightClick);
         map.off('mouseenter', FLIGHTS_LAYER_ID, setCursor);
         map.off('mouseleave', FLIGHTS_LAYER_ID, resetCursor);
       } catch (e) {}
     };
   }, [map, flights, onFlightClick]);
+
+  // Click en mapa (no en vuelo) → deseleccionar vuelo
+  useEffect(() => {
+    if (!map || !selectedFlight || !onFlightClick) return;
+
+    const handleMapClick = (e) => {
+      // Verificar si el click fue en un vuelo
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: [FLIGHTS_LAYER_ID, FLIGHTS_SELECTED_LAYER_ID].filter(id => map.getLayer(id))
+      });
+
+      // Si no hay vuelos en el punto clickeado, deseleccionar
+      if (features.length === 0) {
+        onFlightClick(null);
+      }
+    };
+
+    // Usar setTimeout para que este handler se ejecute después del específico
+    const setup = () => {
+      map.on('click', handleMapClick);
+    };
+
+    // Esperar un tick para registrar después de los handlers de capa
+    const timeoutId = setTimeout(setup, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      try {
+        map.off('click', handleMapClick);
+      } catch (e) {}
+    };
+  }, [map, selectedFlight, onFlightClick]);
 
   return null;
 }
