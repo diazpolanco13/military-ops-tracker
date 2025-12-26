@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { getFlightDetails } from '../../services/flightRadarService';
+import { getFlightDetails, getAirportCoordinates } from '../../services/flightRadarService';
 
 /**
  * 🛫 CAPA DE TRAYECTORIA DE VUELO - ESTILO FLIGHTRADAR24
@@ -7,15 +7,22 @@ import { getFlightDetails } from '../../services/flightRadarService';
  * Dibuja la línea de trayectoria del vuelo seleccionado
  * usando el historial de posiciones (trail) de la API
  * 
- * La línea se gradúa de color según la altitud:
- * - Rojo = Baja altitud
- * - Amarillo = Media altitud  
- * - Verde = Alta altitud
+ * TIPOS DE LÍNEAS:
+ * 1. Trail normal: Coloreado por altitud (rojo/naranja/verde) - datos ADS-B reales
+ * 2. Línea negra continua: Transponder apagado (gap entre trail y posición actual)
+ * 3. Línea negra punteada: Predicción de ruta hacia destino
  */
 
 const TRAIL_SOURCE_ID = 'flight-trail-source';
 const TRAIL_LAYER_ID = 'flight-trail-layer';
 const TRAIL_OUTLINE_LAYER_ID = 'flight-trail-outline';
+
+// Nuevas capas para transponder apagado y predicción
+const GAP_SOURCE_ID = 'flight-gap-source';
+const GAP_LAYER_ID = 'flight-gap-layer';
+const PREDICTION_SOURCE_ID = 'flight-prediction-source';
+const PREDICTION_LAYER_ID = 'flight-prediction-layer';
+
 const FLIGHTS_LAYER_ID = 'flights-layer';
 
 // Colores para el gradiente de altitud
@@ -24,6 +31,9 @@ const ALTITUDE_COLORS = {
   medium: '#f59e0b',   // Naranja - media
   high: '#22c55e',     // Verde - alta
 };
+
+// Color para transponder apagado
+const TRANSPONDER_OFF_COLOR = '#1f2937'; // Gris oscuro/negro
 
 /**
  * Convertir trail a GeoJSON con segmentos coloreados por altitud
@@ -75,6 +85,106 @@ function trailToGeoJSON(trail) {
   return { type: 'FeatureCollection', features };
 }
 
+/**
+ * Crear GeoJSON para línea de gap (transponder apagado)
+ * Conecta el último punto del trail con la posición actual del avión
+ */
+function createGapLineGeoJSON(trail, currentPosition) {
+  if (!trail || trail.length === 0 || !currentPosition) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  // Ordenar trail cronológicamente (el más reciente puede estar primero)
+  const sortedTrail = [...trail]
+    .filter(p => p.lat && p.lng && p.ts)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (sortedTrail.length === 0) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  const lastTrailPoint = sortedTrail[sortedTrail.length - 1];
+  
+  // Calcular diferencia temporal
+  const currentTs = currentPosition.timestamp || (Date.now() / 1000);
+  const timeDiff = currentTs - lastTrailPoint.ts;
+  
+  // Solo dibujar gap si hay más de 60 segundos de diferencia
+  if (timeDiff < 60) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  // Calcular distancia en km
+  const R = 6371;
+  const lat1 = lastTrailPoint.lat * Math.PI / 180;
+  const lat2 = currentPosition.latitude * Math.PI / 180;
+  const deltaLat = (currentPosition.latitude - lastTrailPoint.lat) * Math.PI / 180;
+  const deltaLon = (currentPosition.longitude - lastTrailPoint.lng) * Math.PI / 180;
+  const a = Math.sin(deltaLat/2) * Math.sin(deltaLat/2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(deltaLon/2) * Math.sin(deltaLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const distance = R * c;
+
+  // Solo dibujar si la distancia es significativa (>1km)
+  if (distance < 1) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  console.log(`⚫ Gap detectado: ${(timeDiff/60).toFixed(1)} min, ${distance.toFixed(1)} km`);
+
+  return {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {
+        type: 'gap',
+        timeDiff: timeDiff,
+        distance: distance,
+        gapMinutes: (timeDiff / 60).toFixed(1)
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [lastTrailPoint.lng, lastTrailPoint.lat],
+          [currentPosition.longitude, currentPosition.latitude]
+        ]
+      }
+    }]
+  };
+}
+
+/**
+ * Crear GeoJSON para línea de predicción hacia destino
+ * Línea punteada desde posición actual hasta aeropuerto de destino
+ */
+function createPredictionLineGeoJSON(currentPosition, destinationAirport) {
+  if (!currentPosition || !destinationAirport) {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
+  console.log(`📍 Predicción: ${currentPosition.latitude.toFixed(2)}, ${currentPosition.longitude.toFixed(2)} → ${destinationAirport.name}`);
+
+  return {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {
+        type: 'prediction',
+        destination: destinationAirport.name,
+        destinationCode: destinationAirport.code
+      },
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [currentPosition.longitude, currentPosition.latitude],
+          [destinationAirport.lng, destinationAirport.lat]
+        ]
+      }
+    }]
+  };
+}
+
 export default function FlightTrailLayer({ 
   map, 
   selectedFlight,
@@ -83,6 +193,7 @@ export default function FlightTrailLayer({
   const initializedRef = useRef(false);
   const lastFlightIdRef = useRef(null);
   const [trail, setTrail] = useState([]);
+  const [destinationAirport, setDestinationAirport] = useState(null);
 
   /**
    * Inicializar capas en el mapa
@@ -92,15 +203,13 @@ export default function FlightTrailLayer({
 
     const init = () => {
       try {
-        // Crear source vacío
-        if (!map.getSource(TRAIL_SOURCE_ID)) {
-          map.addSource(TRAIL_SOURCE_ID, {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] }
-          });
-        }
-
+        const emptyGeoJSON = { type: 'FeatureCollection', features: [] };
         const beforeLayerId = map.getLayer(FLIGHTS_LAYER_ID) ? FLIGHTS_LAYER_ID : undefined;
+
+        // ===== SOURCE Y CAPAS DEL TRAIL PRINCIPAL =====
+        if (!map.getSource(TRAIL_SOURCE_ID)) {
+          map.addSource(TRAIL_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
+        }
 
         // Capa de outline (sombra)
         if (!map.getLayer(TRAIL_OUTLINE_LAYER_ID)) {
@@ -133,8 +242,49 @@ export default function FlightTrailLayer({
           }, beforeLayerId);
         }
 
+        // ===== SOURCE Y CAPA PARA GAP (Transponder apagado) =====
+        if (!map.getSource(GAP_SOURCE_ID)) {
+          map.addSource(GAP_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
+        }
+
+        // ===== SOURCE Y CAPA PARA PREDICCIÓN (Ruta al destino) =====
+        if (!map.getSource(PREDICTION_SOURCE_ID)) {
+          map.addSource(PREDICTION_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
+        }
+
+        // Línea punteada para predicción (primero, queda más abajo)
+        if (!map.getLayer(PREDICTION_LAYER_ID)) {
+          map.addLayer({
+            id: PREDICTION_LAYER_ID,
+            type: 'line',
+            source: PREDICTION_SOURCE_ID,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': TRANSPONDER_OFF_COLOR,
+              'line-width': 2,
+              'line-opacity': 0.6,
+              'line-dasharray': [4, 4]
+            }
+          });
+        }
+
+        // Línea negra continua para gap (encima de predicción)
+        if (!map.getLayer(GAP_LAYER_ID)) {
+          map.addLayer({
+            id: GAP_LAYER_ID,
+            type: 'line',
+            source: GAP_SOURCE_ID,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': TRANSPONDER_OFF_COLOR,
+              'line-width': 3,
+              'line-opacity': 0.8
+            }
+          });
+        }
+
         initializedRef.current = true;
-        console.log('✅ FlightTrailLayer: Capas inicializadas');
+        console.log('✅ FlightTrailLayer: Capas inicializadas (trail + gap + prediction)');
       } catch (error) {
         console.error('❌ Error inicializando FlightTrailLayer:', error);
       }
@@ -156,21 +306,26 @@ export default function FlightTrailLayer({
     return () => {
       map.off('style.load', handleStyleLoad);
       try {
-        if (map.getLayer(TRAIL_LAYER_ID)) map.removeLayer(TRAIL_LAYER_ID);
-        if (map.getLayer(TRAIL_OUTLINE_LAYER_ID)) map.removeLayer(TRAIL_OUTLINE_LAYER_ID);
-        if (map.getSource(TRAIL_SOURCE_ID)) map.removeSource(TRAIL_SOURCE_ID);
+        // Limpiar todas las capas
+        [TRAIL_LAYER_ID, TRAIL_OUTLINE_LAYER_ID, GAP_LAYER_ID, PREDICTION_LAYER_ID].forEach(layerId => {
+          if (map.getLayer(layerId)) map.removeLayer(layerId);
+        });
+        [TRAIL_SOURCE_ID, GAP_SOURCE_ID, PREDICTION_SOURCE_ID].forEach(sourceId => {
+          if (map.getSource(sourceId)) map.removeSource(sourceId);
+        });
         initializedRef.current = false;
       } catch (e) { /* ignore */ }
     };
   }, [map]);
 
   /**
-   * Fetch trail cuando cambia el vuelo seleccionado
+   * Fetch trail y datos de destino cuando cambia el vuelo seleccionado
    */
   useEffect(() => {
     // Limpiar si no hay vuelo seleccionado
     if (!selectedFlight?.id || !showTrail) {
       setTrail([]);
+      setDestinationAirport(null);
       lastFlightIdRef.current = null;
       return;
     }
@@ -184,6 +339,20 @@ export default function FlightTrailLayer({
 
     console.log('🛫 Fetching trail for flight:', flightId);
     lastFlightIdRef.current = flightId;
+
+    // Obtener coordenadas del destino si está declarado
+    if (selectedFlight.destination) {
+      const destAirport = getAirportCoordinates(selectedFlight.destination);
+      if (destAirport) {
+        console.log(`🛬 Destino encontrado: ${selectedFlight.destination} - ${destAirport.name}`);
+        setDestinationAirport({ ...destAirport, code: selectedFlight.destination });
+      } else {
+        console.log(`⚠️ Destino ${selectedFlight.destination} no está en la base de datos`);
+        setDestinationAirport(null);
+      }
+    } else {
+      setDestinationAirport(null);
+    }
 
     // Fetch async
     getFlightDetails(flightId)
@@ -201,7 +370,7 @@ export default function FlightTrailLayer({
         setTrail([]);
       });
 
-  }, [selectedFlight?.id, showTrail]);
+  }, [selectedFlight?.id, selectedFlight?.destination, showTrail]);
 
   /**
    * Actualizar datos del trail en el mapa
@@ -210,16 +379,46 @@ export default function FlightTrailLayer({
     if (!map || !initializedRef.current) return;
 
     try {
-      const source = map.getSource(TRAIL_SOURCE_ID);
-      if (source) {
+      // Actualizar trail principal
+      const trailSource = map.getSource(TRAIL_SOURCE_ID);
+      if (trailSource) {
         const geojson = trailToGeoJSON(trail);
-        source.setData(geojson);
+        trailSource.setData(geojson);
         console.log(`🗺️ Trail actualizado en mapa: ${geojson.features.length} segmentos`);
+      }
+
+      // Actualizar línea de gap (transponder apagado)
+      const gapSource = map.getSource(GAP_SOURCE_ID);
+      if (gapSource && selectedFlight) {
+        const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
+        gapSource.setData(gapGeoJSON);
+        if (gapGeoJSON.features.length > 0) {
+          console.log(`⚫ Línea de gap actualizada (transponder apagado)`);
+        }
+      }
+
+      // Actualizar línea de predicción hacia destino
+      const predictionSource = map.getSource(PREDICTION_SOURCE_ID);
+      if (predictionSource && selectedFlight && destinationAirport) {
+        // Solo mostrar predicción si el transponder parece apagado (hay gap)
+        const gapExists = trail.length > 0 && selectedFlight.signal?.isTransponderActive === false;
+        
+        if (gapExists || (trail.length > 0 && createGapLineGeoJSON(trail, selectedFlight).features.length > 0)) {
+          const predictionGeoJSON = createPredictionLineGeoJSON(selectedFlight, destinationAirport);
+          predictionSource.setData(predictionGeoJSON);
+          if (predictionGeoJSON.features.length > 0) {
+            console.log(`📍 Línea de predicción hacia ${destinationAirport.code}`);
+          }
+        } else {
+          predictionSource.setData({ type: 'FeatureCollection', features: [] });
+        }
+      } else if (predictionSource) {
+        predictionSource.setData({ type: 'FeatureCollection', features: [] });
       }
     } catch (e) {
       console.error('Error actualizando trail:', e);
     }
-  }, [map, trail]);
+  }, [map, trail, selectedFlight, destinationAirport]);
 
   /**
    * Ocultar/mostrar capas según showTrail
@@ -229,15 +428,25 @@ export default function FlightTrailLayer({
 
     try {
       const visibility = showTrail && trail.length > 0 ? 'visible' : 'none';
+      const gapVisibility = showTrail && selectedFlight ? 'visible' : 'none';
       
+      // Trail principal
       if (map.getLayer(TRAIL_LAYER_ID)) {
         map.setLayoutProperty(TRAIL_LAYER_ID, 'visibility', visibility);
       }
       if (map.getLayer(TRAIL_OUTLINE_LAYER_ID)) {
         map.setLayoutProperty(TRAIL_OUTLINE_LAYER_ID, 'visibility', visibility);
       }
+      
+      // Gap y predicción
+      if (map.getLayer(GAP_LAYER_ID)) {
+        map.setLayoutProperty(GAP_LAYER_ID, 'visibility', gapVisibility);
+      }
+      if (map.getLayer(PREDICTION_LAYER_ID)) {
+        map.setLayoutProperty(PREDICTION_LAYER_ID, 'visibility', gapVisibility);
+      }
     } catch (e) { /* ignore */ }
-  }, [map, showTrail, trail.length]);
+  }, [map, showTrail, trail.length, selectedFlight]);
 
   return null;
 }

@@ -594,6 +594,159 @@ function isMilitaryFlight(flight) {
 }
 
 /**
+ * 📡 TIPOS DE SEÑAL DE TRANSPONDER
+ * 
+ * El campo [7] de la API indica el tipo de señal:
+ * - "F-BDWY1" o similar = Señal ADS-B real/válida
+ * - "F-EST" = Estimated (posición estimada, transponder apagado)
+ * - "F-MLAT" = Multilateración (señal débil, triangulación)
+ * - "" (vacío) = Sin información de señal
+ */
+export const SIGNAL_TYPES = {
+  ADSB: 'adsb',        // Señal ADS-B directa (transponder activo)
+  ESTIMATED: 'estimated', // Posición estimada (transponder apagado)
+  MLAT: 'mlat',        // Multilateración (señal débil)
+  UNKNOWN: 'unknown',  // Desconocido
+};
+
+/**
+ * Detectar tipo de señal del transponder
+ * @param {string} signalField - Campo [7] de la API
+ * @returns {Object} - { type, isTransponderActive, label, color }
+ */
+export function detectSignalType(signalField) {
+  const field = (signalField || '').toUpperCase();
+  
+  if (field.includes('EST')) {
+    return {
+      type: SIGNAL_TYPES.ESTIMATED,
+      isTransponderActive: false,
+      label: 'OFF',
+      labelEn: 'Transponder Off',
+      color: '#ef4444', // Rojo
+      icon: '📍',
+      description: 'Transponder apagado - posición estimada'
+    };
+  }
+  
+  if (field.includes('MLAT')) {
+    return {
+      type: SIGNAL_TYPES.MLAT,
+      isTransponderActive: true, // Técnicamente activo pero débil
+      label: 'MLAT',
+      labelEn: 'Multilateration',
+      color: '#f59e0b', // Naranja
+      icon: '📶',
+      description: 'Señal débil - multilateración'
+    };
+  }
+  
+  if (field.startsWith('F-') || field.length > 0) {
+    return {
+      type: SIGNAL_TYPES.ADSB,
+      isTransponderActive: true,
+      label: 'ON',
+      labelEn: 'ADS-B Active',
+      color: '#22c55e', // Verde
+      icon: '✅',
+      description: 'Transponder activo - señal ADS-B'
+    };
+  }
+  
+  return {
+    type: SIGNAL_TYPES.UNKNOWN,
+    isTransponderActive: null,
+    label: '?',
+    labelEn: 'Unknown',
+    color: '#6b7280', // Gris
+    icon: '❓',
+    description: 'Estado de transponder desconocido'
+  };
+}
+
+/**
+ * 🛫 BASE DE DATOS DE AEROPUERTOS (Caribe y región)
+ * Coordenadas para dibujar líneas de predicción al destino
+ */
+export const AIRPORTS_DB = {
+  // Panamá
+  'BLB': { lat: 8.9148, lng: -79.5996, name: 'Balboa Panama Pacifico', city: 'Panama City', country: 'PA' },
+  'PTY': { lat: 9.0714, lng: -79.3835, name: 'Tocumen International', city: 'Panama City', country: 'PA' },
+  
+  // Curazao / ABC
+  'CUR': { lat: 12.1889, lng: -68.9598, name: 'Hato International', city: 'Willemstad', country: 'CW' },
+  'AUA': { lat: 12.5014, lng: -70.0152, name: 'Queen Beatrix International', city: 'Oranjestad', country: 'AW' },
+  'BON': { lat: 12.1310, lng: -68.2685, name: 'Flamingo International', city: 'Kralendijk', country: 'BQ' },
+  
+  // Venezuela
+  'CCS': { lat: 10.6031, lng: -66.9906, name: 'Simón Bolívar International', city: 'Caracas', country: 'VE' },
+  'MAR': { lat: 10.5583, lng: -71.7279, name: 'La Chinita International', city: 'Maracaibo', country: 'VE' },
+  'VLN': { lat: 10.1500, lng: -67.9283, name: 'Arturo Michelena', city: 'Valencia', country: 'VE' },
+  
+  // Colombia
+  'BOG': { lat: 4.7016, lng: -74.1469, name: 'El Dorado International', city: 'Bogotá', country: 'CO' },
+  'CTG': { lat: 10.4424, lng: -75.5130, name: 'Rafael Núñez International', city: 'Cartagena', country: 'CO' },
+  'BAQ': { lat: 10.8896, lng: -74.7808, name: 'Ernesto Cortissoz', city: 'Barranquilla', country: 'CO' },
+  'MDE': { lat: 6.1644, lng: -75.4231, name: 'José María Córdova', city: 'Medellín', country: 'CO' },
+  
+  // Puerto Rico / USVI
+  'SJU': { lat: 18.4394, lng: -66.0018, name: 'Luis Muñoz Marín', city: 'San Juan', country: 'PR' },
+  'STT': { lat: 18.3373, lng: -64.9734, name: 'Cyril E. King', city: 'Charlotte Amalie', country: 'VI' },
+  
+  // República Dominicana
+  'SDQ': { lat: 18.4297, lng: -69.6689, name: 'Las Américas', city: 'Santo Domingo', country: 'DO' },
+  'PUJ': { lat: 18.5674, lng: -68.3634, name: 'Punta Cana International', city: 'Punta Cana', country: 'DO' },
+  
+  // Trinidad y Tobago
+  'POS': { lat: 10.5954, lng: -61.3372, name: 'Piarco International', city: 'Port of Spain', country: 'TT' },
+  
+  // Jamaica
+  'KIN': { lat: 17.9357, lng: -76.7875, name: 'Norman Manley', city: 'Kingston', country: 'JM' },
+  'MBJ': { lat: 18.5037, lng: -77.9134, name: 'Sangster International', city: 'Montego Bay', country: 'JM' },
+  
+  // Cuba
+  'HAV': { lat: 22.9892, lng: -82.4091, name: 'José Martí International', city: 'Havana', country: 'CU' },
+  
+  // USA - Florida / Bases Militares
+  'MIA': { lat: 25.7959, lng: -80.2870, name: 'Miami International', city: 'Miami', country: 'US' },
+  'FLL': { lat: 26.0726, lng: -80.1527, name: 'Fort Lauderdale-Hollywood', city: 'Fort Lauderdale', country: 'US' },
+  'TPA': { lat: 27.9755, lng: -82.5332, name: 'Tampa International', city: 'Tampa', country: 'US' },
+  'JAX': { lat: 30.4941, lng: -81.6879, name: 'Jacksonville International', city: 'Jacksonville', country: 'US' },
+  'MCO': { lat: 28.4294, lng: -81.3090, name: 'Orlando International', city: 'Orlando', country: 'US' },
+  
+  // Bases Militares USA
+  'NQX': { lat: 24.5757, lng: -81.6897, name: 'NAS Key West', city: 'Key West', country: 'US' },
+  'NPA': { lat: 30.3527, lng: -87.3186, name: 'NAS Pensacola', city: 'Pensacola', country: 'US' },
+  'NJK': { lat: 32.8292, lng: -115.6714, name: 'NAF El Centro', city: 'El Centro', country: 'US' },
+  
+  // Honduras
+  'SAP': { lat: 15.4526, lng: -87.9236, name: 'Ramón Villeda Morales', city: 'San Pedro Sula', country: 'HN' },
+  'TGU': { lat: 14.0609, lng: -87.2172, name: 'Toncontín International', city: 'Tegucigalpa', country: 'HN' },
+  
+  // Costa Rica
+  'SJO': { lat: 9.9939, lng: -84.2088, name: 'Juan Santamaría', city: 'San José', country: 'CR' },
+  
+  // Guatemala
+  'GUA': { lat: 14.5833, lng: -90.5275, name: 'La Aurora International', city: 'Guatemala City', country: 'GT' },
+  
+  // Guyana
+  'GEO': { lat: 6.4985, lng: -58.2541, name: 'Cheddi Jagan International', city: 'Georgetown', country: 'GY' },
+  
+  // Surinam
+  'PBM': { lat: 5.4528, lng: -55.1878, name: 'Johan Adolf Pengel', city: 'Paramaribo', country: 'SR' },
+};
+
+/**
+ * Obtener coordenadas de un aeropuerto por código IATA
+ * @param {string} iataCode - Código IATA del aeropuerto
+ * @returns {Object|null} - { lat, lng, name, city, country } o null
+ */
+export function getAirportCoordinates(iataCode) {
+  if (!iataCode) return null;
+  return AIRPORTS_DB[iataCode.toUpperCase()] || null;
+}
+
+/**
  * Parsear datos de vuelo desde formato FlightRadar24
  * 
  * ✅ Formato REAL verificado (data-cloud.flightradar24.com):
@@ -604,7 +757,7 @@ function isMilitaryFlight(flight) {
  * [4]  altitude (feet)
  * [5]  speed (knots)
  * [6]  squawk (transponder code)
- * [7]  registration (INVÁLIDO - siempre "F-BDWY1")
+ * [7]  signalType - CLAVE: "F-EST" = estimado, "F-BDWY1" = ADS-B activo
  * [8]  aircraftType (ej: "C17", "B738", "A320")
  * [9]  callsign (identificador del vuelo)
  * [10] timestamp (unix)
@@ -631,12 +784,16 @@ function parseFlightData(flightId, flightData) {
 
   const icao24 = flightData[0] || '';
   const aircraftType = flightData[8] || 'UNKNOWN';
+  const signalField = flightData[7] || '';
   
   // Detectar país por ICAO24
   const countryInfo = getCountryByICAO24(icao24);
   
   // Obtener modelo de aeronave
   const modelInfo = getAircraftModel(aircraftType);
+  
+  // 📡 Detectar estado del transponder
+  const signalInfo = detectSignalType(signalField);
 
   return {
     // Identificación
@@ -673,6 +830,17 @@ function parseFlightData(flightId, flightData) {
     
     // Estado
     onGround: flightData[14] === 1,
+    
+    // 📡 ESTADO DEL TRANSPONDER (NUEVO)
+    signal: {
+      raw: signalField,
+      type: signalInfo.type,
+      isTransponderActive: signalInfo.isTransponderActive,
+      label: signalInfo.label,
+      color: signalInfo.color,
+      icon: signalInfo.icon,
+      description: signalInfo.description,
+    },
     
     // 🌍 PAÍS (detectado por ICAO24)
     country: {
@@ -1024,6 +1192,10 @@ export default {
   getCategoryColor,
   getFlightCategory,
   filterFlightsByCategory,
+  detectSignalType,
+  getAirportCoordinates,
   CARIBBEAN_BOUNDS,
+  AIRPORTS_DB,
+  SIGNAL_TYPES,
 };
 

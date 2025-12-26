@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Plane, Navigation, Clock, Gauge, MapPin, Activity, Wind, Loader2, Flag, Shield, Route, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Plane, Navigation, Clock, Gauge, MapPin, Activity, Wind, Loader2, Flag, Shield, Route, ChevronUp, ChevronDown, Radio, WifiOff } from 'lucide-react';
 import { 
   feetToMeters, 
   knotsToKmh, 
@@ -7,6 +7,7 @@ import {
   getFlightDetails,
   getCountryByICAO24,
   getAircraftModel,
+  SIGNAL_TYPES,
 } from '../../services/flightRadarService';
 
 // Determinar si es helicóptero basado en el tipo
@@ -231,6 +232,30 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                 <p className="text-lg">{countryInfo.flag}</p>
               </div>
             </div>
+
+            {/* 📡 INDICADOR DE TRANSPONDER - Desktop */}
+            {flight.signal && (
+              <div 
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+                style={{
+                  backgroundColor: `${flight.signal.color}15`,
+                  borderColor: `${flight.signal.color}50`
+                }}
+                title={flight.signal.description}
+              >
+                {flight.signal.isTransponderActive ? (
+                  <Radio size={14} style={{ color: flight.signal.color }} className="animate-pulse" />
+                ) : (
+                  <WifiOff size={14} style={{ color: flight.signal.color }} />
+                )}
+                <span 
+                  className="text-[10px] font-bold uppercase"
+                  style={{ color: flight.signal.color }}
+                >
+                  {flight.signal.label}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 🛫 RUTA COMPACTA - CENTRADA (Móvil) */}
@@ -258,7 +283,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
           )}
 
           {/* Stats en móvil - grid compacto */}
-          <div className="sm:hidden grid grid-cols-4 gap-2 mt-1.5">
+          <div className="sm:hidden grid grid-cols-5 gap-1.5 mt-1.5">
             <div className="bg-blue-500/10 rounded-md p-1.5 text-center">
               <p className="text-[8px] text-blue-300 uppercase">Alt</p>
               <p className="text-xs font-bold text-white">{Math.round(flight.altitude / 1000)}k</p>
@@ -275,6 +300,21 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               <p className="text-[8px] text-cyan-300 uppercase">País</p>
               <p className="text-sm">{countryInfo.flag}</p>
             </div>
+            {/* 📡 INDICADOR DE TRANSPONDER - Móvil */}
+            {flight.signal && (
+              <div 
+                className="rounded-md p-1.5 text-center"
+                style={{ backgroundColor: `${flight.signal.color}15` }}
+                title={flight.signal.description}
+              >
+                <p className="text-[8px] uppercase" style={{ color: flight.signal.color }}>
+                  {flight.signal.isTransponderActive ? '📡' : '📵'}
+                </p>
+                <p className="text-[9px] font-bold" style={{ color: flight.signal.color }}>
+                  {flight.signal.label}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -355,6 +395,26 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                     <div className="flex justify-between">
                       <span className="text-slate-400">Squawk</span>
                       <span className="font-mono font-bold text-green-400">{flight.aircraft.squawk}</span>
+                    </div>
+                  )}
+                  {/* 📡 Estado del Transponder */}
+                  {flight.signal && (
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-700/50 mt-1">
+                      <span className="text-slate-400">Transponder</span>
+                      <span 
+                        className="flex items-center gap-1.5 font-bold"
+                        style={{ color: flight.signal.color }}
+                      >
+                        {flight.signal.isTransponderActive ? (
+                          <Radio size={12} className="animate-pulse" />
+                        ) : (
+                          <WifiOff size={12} />
+                        )}
+                        {flight.signal.label}
+                        {flight.signal.type === SIGNAL_TYPES.ESTIMATED && (
+                          <span className="text-[9px] text-slate-500 ml-1">(posición estimada)</span>
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
