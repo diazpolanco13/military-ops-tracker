@@ -206,12 +206,50 @@ export default function FlightTrailLayer({
         const emptyGeoJSON = { type: 'FeatureCollection', features: [] };
         const beforeLayerId = map.getLayer(FLIGHTS_LAYER_ID) ? FLIGHTS_LAYER_ID : undefined;
 
-        // ===== SOURCE Y CAPAS DEL TRAIL PRINCIPAL =====
+        // ===== CREAR TODOS LOS SOURCES PRIMERO =====
         if (!map.getSource(TRAIL_SOURCE_ID)) {
           map.addSource(TRAIL_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
         }
+        if (!map.getSource(GAP_SOURCE_ID)) {
+          map.addSource(GAP_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
+        }
+        if (!map.getSource(PREDICTION_SOURCE_ID)) {
+          map.addSource(PREDICTION_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
+        }
 
-        // Capa de outline (sombra)
+        // ===== AÑADIR CAPAS EN ORDEN (de abajo hacia arriba) =====
+        // 1. Predicción (más abajo, punteada)
+        if (!map.getLayer(PREDICTION_LAYER_ID)) {
+          map.addLayer({
+            id: PREDICTION_LAYER_ID,
+            type: 'line',
+            source: PREDICTION_SOURCE_ID,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': TRANSPONDER_OFF_COLOR,
+              'line-width': 2,
+              'line-opacity': 0.7,
+              'line-dasharray': [4, 4]
+            }
+          }, beforeLayerId);
+        }
+
+        // 2. Gap (transponder apagado, continua negra)
+        if (!map.getLayer(GAP_LAYER_ID)) {
+          map.addLayer({
+            id: GAP_LAYER_ID,
+            type: 'line',
+            source: GAP_SOURCE_ID,
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': TRANSPONDER_OFF_COLOR,
+              'line-width': 3,
+              'line-opacity': 0.85
+            }
+          }, beforeLayerId);
+        }
+
+        // 3. Trail outline (sombra)
         if (!map.getLayer(TRAIL_OUTLINE_LAYER_ID)) {
           map.addLayer({
             id: TRAIL_OUTLINE_LAYER_ID,
@@ -227,7 +265,7 @@ export default function FlightTrailLayer({
           }, beforeLayerId);
         }
 
-        // Capa principal del trail
+        // 4. Trail principal (encima de todo, coloreado por altitud)
         if (!map.getLayer(TRAIL_LAYER_ID)) {
           map.addLayer({
             id: TRAIL_LAYER_ID,
@@ -240,47 +278,6 @@ export default function FlightTrailLayer({
               'line-opacity': 0.9
             }
           }, beforeLayerId);
-        }
-
-        // ===== SOURCE Y CAPA PARA GAP (Transponder apagado) =====
-        if (!map.getSource(GAP_SOURCE_ID)) {
-          map.addSource(GAP_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
-        }
-
-        // ===== SOURCE Y CAPA PARA PREDICCIÓN (Ruta al destino) =====
-        if (!map.getSource(PREDICTION_SOURCE_ID)) {
-          map.addSource(PREDICTION_SOURCE_ID, { type: 'geojson', data: emptyGeoJSON });
-        }
-
-        // Línea punteada para predicción (primero, queda más abajo)
-        if (!map.getLayer(PREDICTION_LAYER_ID)) {
-          map.addLayer({
-            id: PREDICTION_LAYER_ID,
-            type: 'line',
-            source: PREDICTION_SOURCE_ID,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': TRANSPONDER_OFF_COLOR,
-              'line-width': 2,
-              'line-opacity': 0.6,
-              'line-dasharray': [4, 4]
-            }
-          });
-        }
-
-        // Línea negra continua para gap (encima de predicción)
-        if (!map.getLayer(GAP_LAYER_ID)) {
-          map.addLayer({
-            id: GAP_LAYER_ID,
-            type: 'line',
-            source: GAP_SOURCE_ID,
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': TRANSPONDER_OFF_COLOR,
-              'line-width': 3,
-              'line-opacity': 0.8
-            }
-          });
         }
 
         initializedRef.current = true;
@@ -374,9 +371,10 @@ export default function FlightTrailLayer({
 
   /**
    * Actualizar datos del trail en el mapa
+   * Solo se actualiza cuando cambia el trail, NO cuando cambia selectedFlight
    */
   useEffect(() => {
-    if (!map || !initializedRef.current) return;
+    if (!map || !initializedRef.current || trail.length === 0) return;
 
     try {
       // Actualizar trail principal
@@ -386,51 +384,57 @@ export default function FlightTrailLayer({
         trailSource.setData(geojson);
         console.log(`🗺️ Trail actualizado en mapa: ${geojson.features.length} segmentos`);
       }
+    } catch (e) {
+      console.error('Error actualizando trail:', e);
+    }
+  }, [map, trail]);
 
+  /**
+   * Actualizar líneas de gap y predicción
+   * Estas SÍ necesitan actualizarse cuando cambia la posición del avión
+   */
+  useEffect(() => {
+    if (!map || !initializedRef.current || !selectedFlight) return;
+
+    try {
       // Actualizar línea de gap (transponder apagado)
       const gapSource = map.getSource(GAP_SOURCE_ID);
-      if (gapSource && selectedFlight) {
+      if (gapSource && trail.length > 0) {
         const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
         gapSource.setData(gapGeoJSON);
-        if (gapGeoJSON.features.length > 0) {
-          console.log(`⚫ Línea de gap actualizada (transponder apagado)`);
-        }
       }
 
       // Actualizar línea de predicción hacia destino
       const predictionSource = map.getSource(PREDICTION_SOURCE_ID);
-      if (predictionSource && selectedFlight && destinationAirport) {
-        // Solo mostrar predicción si el transponder parece apagado (hay gap)
-        const gapExists = trail.length > 0 && selectedFlight.signal?.isTransponderActive === false;
+      if (predictionSource && destinationAirport) {
+        // Solo mostrar predicción si hay gap detectado
+        const gapGeoJSON = createGapLineGeoJSON(trail, selectedFlight);
+        const hasGap = gapGeoJSON.features.length > 0 || selectedFlight.signal?.isTransponderActive === false;
         
-        if (gapExists || (trail.length > 0 && createGapLineGeoJSON(trail, selectedFlight).features.length > 0)) {
+        if (hasGap && trail.length > 0) {
           const predictionGeoJSON = createPredictionLineGeoJSON(selectedFlight, destinationAirport);
           predictionSource.setData(predictionGeoJSON);
-          if (predictionGeoJSON.features.length > 0) {
-            console.log(`📍 Línea de predicción hacia ${destinationAirport.code}`);
-          }
         } else {
           predictionSource.setData({ type: 'FeatureCollection', features: [] });
         }
-      } else if (predictionSource) {
-        predictionSource.setData({ type: 'FeatureCollection', features: [] });
       }
     } catch (e) {
-      console.error('Error actualizando trail:', e);
+      console.error('Error actualizando gap/prediction:', e);
     }
-  }, [map, trail, selectedFlight, destinationAirport]);
+  }, [map, trail, selectedFlight?.latitude, selectedFlight?.longitude, destinationAirport]);
 
   /**
    * Ocultar/mostrar capas según showTrail
+   * Solo depende de showTrail y si hay trail, NO de selectedFlight
    */
   useEffect(() => {
     if (!map || !initializedRef.current) return;
 
     try {
-      const visibility = showTrail && trail.length > 0 ? 'visible' : 'none';
-      const gapVisibility = showTrail && selectedFlight ? 'visible' : 'none';
+      const hasTrail = trail.length > 0;
+      const visibility = showTrail && hasTrail ? 'visible' : 'none';
       
-      // Trail principal
+      // Trail principal - visible si hay datos
       if (map.getLayer(TRAIL_LAYER_ID)) {
         map.setLayoutProperty(TRAIL_LAYER_ID, 'visibility', visibility);
       }
@@ -438,7 +442,9 @@ export default function FlightTrailLayer({
         map.setLayoutProperty(TRAIL_OUTLINE_LAYER_ID, 'visibility', visibility);
       }
       
-      // Gap y predicción
+      // Gap y predicción - siempre visible cuando showTrail está activo
+      // (los datos vacíos simplemente no se ven)
+      const gapVisibility = showTrail ? 'visible' : 'none';
       if (map.getLayer(GAP_LAYER_ID)) {
         map.setLayoutProperty(GAP_LAYER_ID, 'visibility', gapVisibility);
       }
@@ -446,7 +452,7 @@ export default function FlightTrailLayer({
         map.setLayoutProperty(PREDICTION_LAYER_ID, 'visibility', gapVisibility);
       }
     } catch (e) { /* ignore */ }
-  }, [map, showTrail, trail.length, selectedFlight]);
+  }, [map, showTrail, trail.length]);
 
   return null;
 }

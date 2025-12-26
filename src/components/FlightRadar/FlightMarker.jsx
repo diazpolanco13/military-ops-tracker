@@ -184,10 +184,13 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
     const heading = flight.heading || 0;
     const category = flight.category || 'transport';
     const isHeli = isHelicopter(flight.aircraft?.type);
+    
+    // Detectar si la posición es estimada (transponder apagado)
+    const isEstimated = flight.signal?.isTransponderActive === false;
 
     // Crear elemento del marcador
     const el = document.createElement('div');
-    el.className = 'flight-marker-simple';
+    el.className = `flight-marker-simple ${isEstimated ? 'estimated' : ''}`;
     el.style.cssText = `
       width: 32px;
       height: 32px;
@@ -197,9 +200,24 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
       align-items: center;
       justify-content: center;
       transform: scale(${isSelected ? 1.4 : 1});
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, opacity 0.3s ease;
       z-index: ${isSelected ? 1000 : 1};
+      opacity: ${isEstimated ? 0.6 : 1};
+      ${isEstimated ? 'animation: pulse-estimated 2s ease-in-out infinite;' : ''}
     `;
+    
+    // Añadir keyframes para el pulso si no existen
+    if (isEstimated && !document.getElementById('estimated-pulse-style')) {
+      const style = document.createElement('style');
+      style.id = 'estimated-pulse-style';
+      style.textContent = `
+        @keyframes pulse-estimated {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
 
     elementRef.current = el;
 
@@ -208,6 +226,11 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
       ? getAircraftSVG('helicopter', color, heading)
       : getAircraftSVG(category, color, heading);
 
+    // Tooltip con indicador de posición estimada
+    const tooltipContent = isEstimated 
+      ? `<span style="color: #fca5a5;">📍</span> ${flight.callsign || 'UNKNOWN'}`
+      : flight.callsign || 'UNKNOWN';
+    
     el.innerHTML = svgContent + `
       <div class="flight-tooltip" style="
         position: absolute;
@@ -221,12 +244,12 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
         font-size: 11px;
         font-family: monospace;
         border-radius: 4px;
-        border: 1px solid rgba(71, 85, 105, 1);
+        border: 1px solid ${isEstimated ? 'rgba(239, 68, 68, 0.5)' : 'rgba(71, 85, 105, 1)'};
         white-space: nowrap;
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.2s;
-      ">${flight.callsign || 'UNKNOWN'}</div>
+      ">${tooltipContent}</div>
     `;
 
     // Hover events
@@ -264,7 +287,7 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
     return () => {
       marker.remove();
     };
-  }, [flight.id, flight.latitude, flight.longitude, flight.heading, flight.callsign, flight.category, isSelected, map, onSelect]);
+  }, [flight.id, flight.latitude, flight.longitude, flight.heading, flight.callsign, flight.category, flight.signal?.isTransponderActive, isSelected, map, onSelect]);
 
   return null;
 }

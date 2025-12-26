@@ -204,13 +204,17 @@ export default function FlightLayer({
         // Ajuste de heading: transporte usa Lucide Plane (-45°), otros apuntan arriba (0°)
         const headingAdjust = category === 'transport' ? -45 : 0;
         
+        // Detectar si la posición es estimada (transponder apagado)
+        const isEstimated = flight.signal?.isTransponderActive === false;
+        
         return {
           type: 'Feature',
           properties: {
             id: flight.id,
-            callsign: flight.callsign || 'UNKNOWN',
+            callsign: isEstimated ? `📍 ${flight.callsign || 'UNKNOWN'}` : (flight.callsign || 'UNKNOWN'),
             category: category,
             heading: (flight.heading || 0) + headingAdjust,
+            isEstimated: isEstimated,
           },
           geometry: {
             type: 'Point',
@@ -315,6 +319,10 @@ export default function FlightLayer({
               'icon-allow-overlap': true,
               'icon-ignore-placement': true,
             },
+            paint: {
+              // Opacidad reducida para posiciones estimadas (transponder apagado)
+              'icon-opacity': ['case', ['get', 'isEstimated'], 0.5, 1],
+            },
             minzoom: 3,
           });
         }
@@ -335,18 +343,24 @@ export default function FlightLayer({
             },
             paint: {
               'text-color': [
-                'match',
-                ['get', 'category'],
-                'combat', CATEGORY_COLORS.combat,
-                'bomber', CATEGORY_COLORS.bomber,
-                'tanker', CATEGORY_COLORS.tanker,
-                'surveillance', CATEGORY_COLORS.surveillance,
-                'helicopter', CATEGORY_COLORS.helicopter,
-                'vip', CATEGORY_COLORS.vip,
-                CATEGORY_COLORS.transport  // default
+                'case',
+                ['get', 'isEstimated'],
+                '#fca5a5', // Rojo claro para estimados
+                [
+                  'match',
+                  ['get', 'category'],
+                  'combat', CATEGORY_COLORS.combat,
+                  'bomber', CATEGORY_COLORS.bomber,
+                  'tanker', CATEGORY_COLORS.tanker,
+                  'surveillance', CATEGORY_COLORS.surveillance,
+                  'helicopter', CATEGORY_COLORS.helicopter,
+                  'vip', CATEGORY_COLORS.vip,
+                  CATEGORY_COLORS.transport  // default
+                ]
               ],
               'text-halo-color': 'rgba(0,0,0,0.9)',
               'text-halo-width': 1.5,
+              'text-opacity': ['case', ['get', 'isEstimated'], 0.7, 1],
             },
             minzoom: 6,
           });

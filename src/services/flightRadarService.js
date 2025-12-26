@@ -621,11 +621,11 @@ export function detectSignalType(signalField) {
     return {
       type: SIGNAL_TYPES.ESTIMATED,
       isTransponderActive: false,
-      label: 'OFF',
-      labelEn: 'Transponder Off',
+      label: 'ESTIMADO',
+      labelEn: 'Estimated Position',
       color: '#ef4444', // Rojo
       icon: '📍',
-      description: 'Transponder apagado - posición estimada'
+      description: 'Posición estimada - sin señal de transponder'
     };
   }
   
