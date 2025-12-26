@@ -36,7 +36,7 @@ src/
 │   ├── Templates/         # Paleta de plantillas
 │   ├── Timeline/          # Eventos en timeline
 │   └── Weather/           # Capas meteorológicas
-├── hooks/                 # Hooks personalizados
+├── hooks/                 # Hooks personalizados (useMapLayers, useFlightRadar, etc.)
 ├── services/              # Servicios externos (FR24, AIS)
 ├── stores/                # Contexts de estado
 ├── config/                # Configuraciones (iconos i2)
@@ -75,6 +75,15 @@ src/
 - **Trail**: On-click (API pagada)
 - **Detección militar**: Por ICAO24 (prefijos AE/AF) y patrones de callsign
 - **Área de cobertura**: 27°N a 8°S, -85°W a -58°E (Caribe ampliado)
+- **Detección de transponder**: Identifica si la señal es ADS-B, MLAT o estimada
+- **Visualización de posición estimada**: 
+  - Icono semi-transparente (50%) cuando transponder apagado
+  - Badge "ESTIMADO" en rojo en panel de detalles
+  - Prefijo 📍 en etiqueta del callsign
+- **Trail con líneas de estado**:
+  - Línea coloreada por altitud (rojo/naranja/verde) - datos ADS-B reales
+  - Línea negra continua - gap donde transponder estuvo apagado
+  - Línea negra punteada - predicción de ruta hacia destino declarado
 
 ### 2. Sistema de Incursiones
 - **Sesiones**: Agrupan múltiples detecciones del mismo vuelo
@@ -125,6 +134,50 @@ Configurados en `incursion_monitor_config.telegram_destinations`:
 - **Tabla**: `military_callsign_patterns` (32 patrones)
 - **Tabla**: `military_aircraft_patterns` (18 tipos de aeronave)
 - **Prefijos ICAO24**: AE, AF (configurados en `incursion_monitor_config`)
+
+## Hooks Personalizados
+
+### useMapLayers
+Hook para sincronización robusta entre React y Mapbox GL JS.
+
+**Problema que resuelve:**
+- React y Mapbox tienen ciclos de vida independientes
+- Los useEffect de React pueden ejecutarse antes de que Mapbox esté listo
+- Las capas pueden no existir cuando intentamos actualizar datos
+
+**Uso:**
+```javascript
+const { isReady, setSourceData, clearAllSources } = useMapLayers(map, {
+  id: 'my-layer',
+  sources: [{ id: 'my-source' }],
+  layers: [{ id: 'my-layer', type: 'line', source: 'my-source', ... }],
+  beforeLayerId: 'flights-layer' // opcional
+});
+
+// Actualizar datos solo cuando isReady es true
+useEffect(() => {
+  if (!isReady) return;
+  setSourceData('my-source', geojsonData);
+}, [isReady, geojsonData]);
+```
+
+**Características:**
+- Espera automáticamente a que el mapa esté listo
+- Reintentos automáticos si los sources no existen
+- Cleanup automático al desmontar
+- Reinicialización cuando cambia el estilo del mapa
+
+### useFlightRadar
+Hook para gestionar datos de FlightRadar24.
+
+**Uso:**
+```javascript
+const { flights, loading, error, refetch } = useFlightRadar({
+  enabled: true,
+  filter: 'military',
+  refreshInterval: 30000
+});
+```
 
 ## Variables de Entorno
 

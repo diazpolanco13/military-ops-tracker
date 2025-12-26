@@ -85,6 +85,93 @@ const CATEGORIES = {
 };
 ```
 
+### Detección de Estado del Transponder
+
+La API de FlightRadar24 incluye un campo `signalType` (posición [7] en el array de datos) que indica el tipo de señal:
+
+| Valor API | Tipo | Estado | Descripción |
+|-----------|------|--------|-------------|
+| `F-BDWY1`, `F-...` | ADS-B | ✅ Activo | Señal directa del transponder |
+| `F-EST` | Estimated | ❌ Apagado | Posición calculada/proyectada |
+| `F-MLAT` | MLAT | ⚠️ Débil | Multilateración (triangulación) |
+| (vacío) | Unknown | ❓ | Sin información |
+
+**Implementación en `flightRadarService.js`:**
+```javascript
+export const SIGNAL_TYPES = {
+  ADSB: 'adsb',
+  ESTIMATED: 'estimated',
+  MLAT: 'mlat',
+  UNKNOWN: 'unknown',
+};
+
+export function detectSignalType(signalField) {
+  const field = (signalField || '').toUpperCase();
+  
+  if (field.includes('EST')) {
+    return { type: SIGNAL_TYPES.ESTIMATED, isTransponderActive: false, label: 'ESTIMADO' };
+  }
+  if (field.includes('MLAT')) {
+    return { type: SIGNAL_TYPES.MLAT, isTransponderActive: true, label: 'MLAT' };
+  }
+  if (field.startsWith('F-') || field.length > 0) {
+    return { type: SIGNAL_TYPES.ADSB, isTransponderActive: true, label: 'ON' };
+  }
+  return { type: SIGNAL_TYPES.UNKNOWN, isTransponderActive: null, label: '?' };
+}
+```
+
+### Visualización de Posición Estimada
+
+Cuando `signal.isTransponderActive === false`:
+
+| Elemento | Comportamiento |
+|----------|----------------|
+| Icono del avión | Opacidad 50% |
+| Etiqueta callsign | Prefijo 📍, color rojo claro |
+| Panel de detalles | Badge "ESTIMADO" en rojo |
+
+### Trail con Líneas de Estado
+
+El trail del vuelo incluye tres tipos de líneas:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ORIGEN                                       DESTINO   │
+│    ●━━━━━━━━━━━━━●──────────────●- - - - - - - - ●     │
+│    │             │              │                │      │
+│    │  Coloreado  │  Negra      │  Negra         │      │
+│    │  por altitud│  continua   │  punteada      │      │
+│    │  (ADS-B)    │  (gap)      │  (predicción)  │      │
+│    └─────────────┴─────────────┴────────────────┘      │
+└─────────────────────────────────────────────────────────┘
+```
+
+| Línea | Color | Estilo | Significado |
+|-------|-------|--------|-------------|
+| Trail normal | Rojo/Naranja/Verde | Continua | Datos ADS-B reales, color por altitud |
+| Gap | Negro (#1f2937) | Continua | Transponder apagado, sin datos reales |
+| Predicción | Negro (#1f2937) | Punteada | Ruta estimada hacia destino declarado |
+
+### Base de Datos de Aeropuertos (Predicción de Ruta)
+
+Para dibujar la línea de predicción, se usa una base de datos local de aeropuertos:
+
+```javascript
+// src/services/flightRadarService.js
+export const AIRPORTS_DB = {
+  'CUR': { lat: 12.1889, lng: -68.9598, name: 'Hato International', country: 'CW' },
+  'AUA': { lat: 12.5014, lng: -70.0152, name: 'Queen Beatrix International', country: 'AW' },
+  'BLB': { lat: 8.9148, lng: -79.5996, name: 'Balboa Panama Pacifico', country: 'PA' },
+  'PTY': { lat: 9.0714, lng: -79.3835, name: 'Tocumen International', country: 'PA' },
+  // ... más aeropuertos del Caribe
+};
+
+export function getAirportCoordinates(iataCode) {
+  return AIRPORTS_DB[iataCode] || null;
+}
+```
+
 ---
 
 ## AISStream.io (Buques)
