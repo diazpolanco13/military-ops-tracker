@@ -406,25 +406,51 @@ export default function FlightLayer({
 
         initializedRef.current = true;
         console.log('✅ FlightLayer: Iconos por categoría cargados correctamente', ALL_CATEGORIES);
+        
+        // 🔧 FIX CRÍTICO: Forzar actualización de datos inmediatamente después de inicializar
+        // Esto resuelve la condición de carrera donde los vuelos llegan antes de init()
+        const source = map.getSource(FLIGHTS_SOURCE_ID);
+        const selectedSource = map.getSource(FLIGHTS_SOURCE_ID + '-selected');
+        if (source) source.setData(getGeoJSON(false));
+        if (selectedSource) selectedSource.setData(getGeoJSON(true));
+        console.log('🔄 FlightLayer: Datos actualizados post-inicialización');
+        
       } catch (error) {
         console.error('❌ FlightLayer error:', error);
       }
     };
 
-    // 🔧 FIX: Estrategia robusta de inicialización
+    // 🔧 FIX: Estrategia robusta de inicialización con múltiples intentos
+    const tryInit = () => {
+      if (initializedRef.current) return;
+      if (map.isStyleLoaded()) {
+        init();
+      }
+    };
+    
+    // Intento inmediato si el estilo ya está cargado
     if (map.isStyleLoaded()) {
       init();
-    } else {
-      map.once('load', init);
     }
+    
+    // Escuchar evento load del mapa
+    map.once('load', tryInit);
     
     // 🔧 FIX: Usar idle como respaldo para asegurar inicialización
     const handleIdle = () => {
       if (!initializedRef.current) {
-        init();
+        tryInit();
       }
     };
     map.once('idle', handleIdle);
+    
+    // 🔧 FIX ADICIONAL: Retry con delay como último recurso
+    const retryTimeout = setTimeout(() => {
+      if (!initializedRef.current && map.isStyleLoaded()) {
+        console.log('⚠️ FlightLayer: Retry de inicialización...');
+        init();
+      }
+    }, 500);
 
     // Reinicializar al cambiar estilo
     const handleStyleLoad = () => {
@@ -436,8 +462,10 @@ export default function FlightLayer({
 
     return () => {
       mounted = false;
+      clearTimeout(retryTimeout);
       map.off('style.load', handleStyleLoad);
       map.off('idle', handleIdle);
+      map.off('load', tryInit);
       
       // Limpiar todo al desmontar
       try {
@@ -464,16 +492,20 @@ export default function FlightLayer({
 
   // Actualizar datos cuando cambien los vuelos
   useEffect(() => {
-    if (!map || !initializedRef.current) return;
-
+    if (!map) return;
+    
+    // 🔧 FIX: Intentar actualizar incluso si init no ha terminado
+    // Las sources pueden existir mientras init está en progreso
     try {
       const source = map.getSource(FLIGHTS_SOURCE_ID);
       const selectedSource = map.getSource(FLIGHTS_SOURCE_ID + '-selected');
       
-      if (source) source.setData(getGeoJSON(false));
-      if (selectedSource) selectedSource.setData(getGeoJSON(true));
+      if (source && selectedSource) {
+        source.setData(getGeoJSON(false));
+        selectedSource.setData(getGeoJSON(true));
+      }
     } catch (e) {
-      // Ignorar
+      // Ignorar errores si las sources aún no existen
     }
   }, [map, flights, selectedFlight, getGeoJSON]);
 
@@ -481,9 +513,11 @@ export default function FlightLayer({
   useEffect(() => {
     if (!map) return;
 
+    let handlersRegistered = false;
+
     const handleFlightClick = (e) => {
       const features = map.queryRenderedFeatures(e.point, {
-        layers: [FLIGHTS_LAYER_ID, FLIGHTS_SELECTED_LAYER_ID]
+        layers: [FLIGHTS_LAYER_ID, FLIGHTS_SELECTED_LAYER_ID].filter(id => map.getLayer(id))
       });
 
       if (features.length > 0) {
@@ -499,21 +533,43 @@ export default function FlightLayer({
     const resetCursor = () => { map.getCanvas().style.cursor = ''; };
 
     const setup = () => {
+      if (handlersRegistered) return;
+      
       if (map.getLayer(FLIGHTS_LAYER_ID)) {
         map.on('click', FLIGHTS_LAYER_ID, handleFlightClick);
         map.on('click', FLIGHTS_SELECTED_LAYER_ID, handleFlightClick);
         map.on('mouseenter', FLIGHTS_LAYER_ID, setCursor);
         map.on('mouseleave', FLIGHTS_LAYER_ID, resetCursor);
+        handlersRegistered = true;
+        console.log('✅ FlightLayer: Click handlers registrados');
       }
     };
 
-    if (initializedRef.current) {
-      setup();
-    } else {
-      map.once('idle', setup);
-    }
+    // 🔧 FIX: Estrategia múltiple para registrar handlers
+    // 1. Intento inmediato si la capa ya existe
+    setup();
+    
+    // 2. Escuchar idle como respaldo
+    const handleIdle = () => {
+      if (!handlersRegistered) setup();
+    };
+    map.on('idle', handleIdle);
+    
+    // 3. Retry con delay como último recurso
+    const retryInterval = setInterval(() => {
+      if (!handlersRegistered && map.getLayer(FLIGHTS_LAYER_ID)) {
+        setup();
+        clearInterval(retryInterval);
+      }
+    }, 200);
+    
+    // Limpiar después de 5 segundos si no se necesita
+    const clearRetry = setTimeout(() => clearInterval(retryInterval), 5000);
 
     return () => {
+      clearInterval(retryInterval);
+      clearTimeout(clearRetry);
+      map.off('idle', handleIdle);
       try {
         map.off('click', FLIGHTS_LAYER_ID, handleFlightClick);
         map.off('click', FLIGHTS_SELECTED_LAYER_ID, handleFlightClick);
