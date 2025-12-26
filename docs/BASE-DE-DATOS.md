@@ -251,6 +251,45 @@ Configuración de permisos JSONB por rol.
 
 ## Tablas de Auditoría
 
+### `user_audit_logs` - Logs de Actividad de Usuarios
+Registro completo de actividad de usuarios en el sistema.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Identificador único |
+| user_id | UUID | FK a auth.users |
+| user_email | TEXT | Email del usuario (respaldo) |
+| event_type | TEXT | login, logout, login_failed, password_change, session_refresh |
+| ip_address | TEXT | Dirección IP del cliente |
+| user_agent | TEXT | User-Agent completo |
+| device_type | TEXT | desktop, mobile, tablet |
+| browser | TEXT | Navegador (Chrome, Safari, Firefox) |
+| os | TEXT | Sistema operativo |
+| success | BOOLEAN | Resultado de la operación |
+| error_message | TEXT | Mensaje de error (si aplica) |
+| metadata | JSONB | Datos adicionales |
+| created_at | TIMESTAMPTZ | Timestamp del evento |
+
+**Índices**:
+- `idx_audit_user_id`: Por user_id para historial
+- `idx_audit_created_at`: Por fecha para filtros
+- `idx_audit_event_type`: Por tipo de evento
+
+### `user_sessions` - Sesiones de Usuario
+Tracking de sesiones activas.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Identificador único |
+| user_id | UUID | FK a auth.users |
+| session_token | TEXT | Token de sesión |
+| ip_address | TEXT | IP de la sesión |
+| device_info | JSONB | Info del dispositivo |
+| started_at | TIMESTAMPTZ | Inicio de sesión |
+| last_activity | TIMESTAMPTZ | Última actividad |
+| ended_at | TIMESTAMPTZ | Fin de sesión |
+| is_active | BOOLEAN | Sesión activa |
+
 ### `movement_history` - Historial de Movimientos
 Registra cada cambio de posición de entidades.
 
@@ -289,6 +328,8 @@ Las siguientes tablas tienen RLS habilitado:
 - `incursion_monitor_config` ✅
 - `user_profiles` ✅
 - `intelligence_events` ✅
+- `user_audit_logs` ✅ (solo admins pueden leer)
+- `user_sessions` ✅ (solo admins pueden leer)
 
 ## Funciones PostGIS Útiles
 

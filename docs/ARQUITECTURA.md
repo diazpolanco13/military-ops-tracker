@@ -109,6 +109,36 @@ src/
 - **Terrestres**: Natural Earth / GADM
 - **Almacenamiento**: `maritime_boundaries_cache`, `terrestrial_boundaries_cache`
 
+### 6. Sistema de Auditoría
+Sistema completo de registro y monitoreo de actividad de usuarios.
+
+**Ubicación**: Configuración → Auditoría (solo admins)
+
+**Vistas disponibles**:
+- **📋 Registro de Actividad**: Logs de eventos del sistema con filtros
+- **👥 Conexiones de Usuarios**: Estado y estadísticas de cada usuario
+- **📜 Historial por Usuario**: Timeline detallado por usuario
+
+**Eventos registrados**:
+- `login`: Inicio de sesión exitoso
+- `logout`: Cierre de sesión
+- `login_failed`: Intento fallido de login
+- `password_change`: Cambio de contraseña
+- `session_refresh`: Renovación de sesión
+
+**Datos capturados**:
+- IP del cliente
+- Dispositivo (desktop/mobile/tablet)
+- Navegador y versión
+- Sistema operativo
+- Timestamp
+- Resultado (éxito/error)
+
+**Componentes**:
+- `src/components/Settings/AuditSection.jsx`: Vista integrada en SettingsPanel
+- `src/hooks/useAuditLog.js`: Hook para registrar eventos
+- Tablas: `user_audit_logs`, `user_sessions`
+
 ## Edge Functions Principales
 
 | Función | Versión | Propósito | Frecuencia |
