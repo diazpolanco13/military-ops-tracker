@@ -12,7 +12,12 @@ import {
   Shield,
   Globe,
   Activity,
-  User
+  User,
+  History,
+  LogIn,
+  LogOut,
+  ChevronLeft,
+  MapPin
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -76,6 +81,9 @@ export default function UserConnectionsPanel({ onClose }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('last_login'); // last_login, name, logins
+  const [selectedUserHistory, setSelectedUserHistory] = useState(null); // Usuario para ver historial
+  const [userHistoryLogs, setUserHistoryLogs] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Cargar datos de conexiones
   useEffect(() => {
@@ -145,6 +153,29 @@ export default function UserConnectionsPanel({ onClose }) {
 
     loadData();
   }, []);
+
+  // Cargar historial de un usuario específico
+  const loadUserHistory = async (user) => {
+    setSelectedUserHistory(user);
+    setLoadingHistory(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_audit_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      setUserHistoryLogs(data || []);
+    } catch (error) {
+      console.error('Error cargando historial:', error);
+      setUserHistoryLogs([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Ordenar usuarios
   const sortedUsers = [...users].sort((a, b) => {
@@ -361,6 +392,16 @@ export default function UserConnectionsPanel({ onClose }) {
                           {user.lastLoginDetails.ip_address}
                         </div>
                       )}
+
+                      {/* Botón Ver Historial */}
+                      <button
+                        onClick={() => loadUserHistory(user)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded-lg transition-colors"
+                        title="Ver historial de conexiones"
+                      >
+                        <History className="w-4 h-4" />
+                        Historial
+                      </button>
                     </div>
                   </div>
                 );
@@ -377,6 +418,209 @@ export default function UserConnectionsPanel({ onClose }) {
           <span>
             Actualizado: {new Date().toLocaleTimeString('es-ES')}
           </span>
+        </div>
+      </div>
+
+      {/* Modal de Historial de Usuario */}
+      {selectedUserHistory && (
+        <UserHistoryModal
+          user={selectedUserHistory}
+          logs={userHistoryLogs}
+          loading={loadingHistory}
+          onClose={() => setSelectedUserHistory(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 📜 Modal de Historial de Conexiones de Usuario
+ */
+function UserHistoryModal({ user, logs, loading, onClose }) {
+  // Agrupar logs por fecha
+  const groupedLogs = logs.reduce((acc, log) => {
+    const date = new Date(log.created_at).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(log);
+    return acc;
+  }, {});
+
+  // Iconos y colores por tipo de evento
+  const EVENT_STYLES = {
+    login: { icon: LogIn, color: 'text-green-400', bg: 'bg-green-400/10' },
+    logout: { icon: LogOut, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    login_failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-400/10' },
+    password_change: { icon: Shield, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    session_refresh: { icon: RefreshCw, color: 'text-cyan-400', bg: 'bg-cyan-400/10' },
+  };
+
+  const DEVICE_ICONS = {
+    desktop: Monitor,
+    mobile: Smartphone,
+    tablet: Tablet,
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-700 flex items-center gap-4">
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-slate-400" />
+          </button>
+          
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">
+              {(user.full_name || user.email)?.charAt(0).toUpperCase() || '?'}
+            </span>
+          </div>
+          
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-white">
+              {user.full_name || user.username || 'Usuario'}
+            </h2>
+            <p className="text-sm text-slate-400">{user.email}</p>
+          </div>
+
+          <div className="text-right">
+            <div className="text-2xl font-bold text-white">{logs.length}</div>
+            <div className="text-xs text-slate-500">eventos</div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center h-48">
+              <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-slate-500">
+              <History className="w-12 h-12 mb-3 opacity-30" />
+              <p>No hay historial de actividad</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(groupedLogs).map(([date, dayLogs]) => (
+                <div key={date}>
+                  {/* Fecha */}
+                  <div className="sticky top-0 bg-slate-900/95 backdrop-blur-sm py-2 mb-3 z-10">
+                    <div className="flex items-center gap-2">
+                      <div className="h-px flex-1 bg-slate-700"></div>
+                      <span className="text-xs text-slate-500 uppercase tracking-wider px-2">
+                        {date}
+                      </span>
+                      <div className="h-px flex-1 bg-slate-700"></div>
+                    </div>
+                  </div>
+
+                  {/* Eventos del día */}
+                  <div className="space-y-2">
+                    {dayLogs.map((log) => {
+                      const style = EVENT_STYLES[log.event_type] || { 
+                        icon: Activity, 
+                        color: 'text-slate-400', 
+                        bg: 'bg-slate-400/10' 
+                      };
+                      const EventIcon = style.icon;
+                      const DeviceIcon = DEVICE_ICONS[log.device_type] || Monitor;
+
+                      return (
+                        <div 
+                          key={log.id}
+                          className={`flex items-center gap-3 p-3 rounded-lg ${style.bg} border border-slate-800`}
+                        >
+                          {/* Icono del evento */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${style.bg}`}>
+                            <EventIcon className={`w-5 h-5 ${style.color}`} />
+                          </div>
+
+                          {/* Info del evento */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-medium ${style.color}`}>
+                                {log.event_type === 'login' ? 'Inicio de sesión' :
+                                 log.event_type === 'logout' ? 'Cierre de sesión' :
+                                 log.event_type === 'login_failed' ? 'Login fallido' :
+                                 log.event_type === 'password_change' ? 'Cambio de contraseña' :
+                                 log.event_type}
+                              </span>
+                              {!log.success && (
+                                <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-xs rounded">
+                                  Error
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Detalles */}
+                            <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                              {/* Hora */}
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {new Date(log.created_at).toLocaleTimeString('es-ES')}
+                              </span>
+                              
+                              {/* Dispositivo */}
+                              {log.device_type && (
+                                <span className="flex items-center gap-1">
+                                  <DeviceIcon className="w-3 h-3" />
+                                  {log.browser || log.device_type}
+                                </span>
+                              )}
+                              
+                              {/* IP */}
+                              {log.ip_address && (
+                                <span className="flex items-center gap-1 font-mono">
+                                  <MapPin className="w-3 h-3" />
+                                  {log.ip_address}
+                                </span>
+                              )}
+
+                              {/* OS */}
+                              {log.os && (
+                                <span className="text-slate-600">
+                                  {log.os}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Mensaje de error si existe */}
+                            {log.error_message && (
+                              <div className="mt-1 text-xs text-red-400/80 italic">
+                                {log.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3 border-t border-slate-700 flex items-center justify-between">
+          <span className="text-xs text-slate-500">
+            Mostrando últimos {logs.length} eventos
+          </span>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors"
+          >
+            Cerrar
+          </button>
         </div>
       </div>
     </div>

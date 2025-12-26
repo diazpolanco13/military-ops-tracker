@@ -1,10 +1,11 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu, Radar } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu, Radar, ClipboardList } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
 import { useUserRole } from '../../hooks/useUserRole';
 import UserManagement from '../Auth/UserManagement';
 import RolePermissionsEditor from './RolePermissionsEditor';
 import IncursionMonitorPanel from './IncursionMonitorPanel';
+import AuditSection from './AuditSection';
 
 /**
  * ⚙️ Panel de Configuración
@@ -155,6 +156,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'incursiones', label: 'Monitor Incursiones', icon: Radar, adminOnly: true },
     { id: 'usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
     { id: 'permisos', label: 'Permisos', icon: Shield, adminOnly: true },
+    { id: 'auditoria', label: 'Auditoría', icon: ClipboardList, adminOnly: true },
   ];
 
   // Filtrar tabs según permisos
@@ -961,6 +963,11 @@ export default function SettingsPanel({ onClose }) {
             <div className="space-y-6">
               <RolePermissionsEditor />
             </div>
+          )}
+
+          {/* TAB: Auditoría del Sistema */}
+          {activeTab === 'auditoria' && (
+            <AuditSection />
           )}
           
           {/* Footer con resumen y botones */}

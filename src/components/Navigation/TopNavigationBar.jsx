@@ -48,7 +48,7 @@ import { useUserRole } from '../../hooks/useUserRole';
 import EntitiesManagementModal from '../Sidebar/EntitiesManagementModal';
 import SettingsPanel from '../Settings/SettingsPanel';
 import MaritimeBoundariesManager from '../Settings/MaritimeBoundariesManager';
-import AuditLogPanel from '../Settings/AuditLogPanel';
+// AuditLogPanel ahora está integrado en SettingsPanel (sección Auditoría)
 import ZonesPanel from './ZonesPanel';
 import WeatherLayersPanel from '../Weather/WeatherLayersPanel';
 import LogoutConfirmModal from '../Auth/LogoutConfirmModal';
@@ -114,7 +114,7 @@ export default function TopNavigationBar({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showAuditPanel, setShowAuditPanel] = useState(false);
+  // showAuditPanel eliminado - ahora integrado en SettingsPanel
   const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
@@ -357,24 +357,7 @@ export default function TopNavigationBar({
               </button>
             )}
 
-            {/* Auditoría - Solo para admins */}
-            {canAccessSettings() && (
-              <button
-                onClick={() => {
-                  setShowAuditPanel(true);
-                  setShowUserMenu(false);
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800 transition-colors text-left group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-purple-600/20 flex items-center justify-center group-hover:bg-purple-600/30 transition-colors">
-                  <Shield className="w-4 h-4 text-purple-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-white text-sm font-medium">Auditoría</div>
-                  <div className="text-slate-500 text-xs">Registro de actividad</div>
-                </div>
-              </button>
-            )}
+            {/* Auditoría ahora está en Configuración > Auditoría */}
 
             {/* Cambiar Contraseña */}
             <button
@@ -501,13 +484,7 @@ export default function TopNavigationBar({
         <MaritimeBoundariesManager onClose={() => setShowMaritimePanel(false)} />
       )}
 
-      {/* Panel de Auditoría - Solo para admins */}
-      {showAuditPanel && canAccessSettings() && (
-        <AuditLogPanel 
-          isOpen={showAuditPanel} 
-          onClose={() => setShowAuditPanel(false)} 
-        />
-      )}
+      {/* Panel de Auditoría ahora está integrado en SettingsPanel */}
 
       {/* Modal de Confirmación de Logout */}
       {showLogoutModal && user && (
