@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
+import { COUNTRY_COLORS } from '../../hooks/useMaritimeBoundariesLocal';
 
 /**
  * 🌊 Capa de Límites Marítimos para Mapbox GL JS

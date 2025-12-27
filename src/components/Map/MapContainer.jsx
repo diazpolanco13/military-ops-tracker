@@ -8,7 +8,7 @@ import EsequiboClaimLayer from './EsequiboClaimLayer';
 import EsequiboPolygonEditor from './EsequiboPolygonEditor';
 import { useEntities } from '../../hooks/useEntities';
 import { useUpdateEntity } from '../../hooks/useUpdateEntity';
-import { useMaritimeBoundariesCached } from '../../hooks/useMaritimeBoundariesCached';
+import { useMaritimeBoundariesLocal } from '../../hooks/useMaritimeBoundariesLocal';
 import { useMaritimeSettings } from '../../hooks/useMaritimeSettings';
 import { useLock } from '../../stores/LockContext';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
@@ -157,8 +157,17 @@ export default function MapContainer({
   });
 
   // 🌊 Obtener configuración de límites marítimos desde BD
-  // 🗺️ Incluye estado de Zona en Reclamación (Guayana Esequiba)
-  const { showBoundaries, showEsequiboClaim, isEsequiboEditing, toggleEsequiboEditing } = useMaritimeBoundariesContext();
+  // 🗺️ Estados de visibilidad de límites (marítimos, terrestres, Esequibo)
+  const { 
+    showMaritime, 
+    showTerrestrial, 
+    showEsequiboClaim, 
+    isEsequiboEditing, 
+    toggleEsequiboEditing 
+  } = useMaritimeBoundariesContext();
+  
+  // Compatibilidad: showBoundaries es true si cualquiera está activo
+  const showBoundaries = showMaritime || showTerrestrial;
   const { settings, loading: loadingMaritime, updateTrigger, refetch: refetchSettings } = useMaritimeSettings();
 
   // Escuchar cambios en maritime settings para refrescar
@@ -260,8 +269,12 @@ export default function MapContainer({
     return opacities;
   }, [settings, loadingMaritime, updateTrigger]);
 
-  // 🌊 Hook para obtener límites marítimos con caché en Supabase (RÁPIDO)
-  const { boundaries, loading: boundariesLoading, cacheHit } = useMaritimeBoundariesCached(visibleCountryCodes, showBoundaries);
+  // 🌊 Hook para obtener límites desde archivos LOCALES (INSTANTÁNEO)
+  const { boundaries, loading: boundariesLoading, cacheHit } = useMaritimeBoundariesLocal(
+    visibleCountryCodes, 
+    showBoundaries,
+    { includeMaritime: showMaritime, includeTerrestrial: showTerrestrial }
+  );
   
   // Log de rendimiento del caché
   useEffect(() => {

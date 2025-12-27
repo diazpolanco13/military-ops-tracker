@@ -1,6 +1,6 @@
 import { X, Waves, Check, Palette } from 'lucide-react';
 import { useMaritimeBoundariesContext } from '../../stores/MaritimeBoundariesContext';
-import { CARIBBEAN_COUNTRIES, COUNTRY_COLORS } from '../../hooks/useMaritimeBoundaries';
+import { CARIBBEAN_COUNTRIES, COUNTRY_COLORS } from '../../hooks/useMaritimeBoundariesLocal';
 import { useState } from 'react';
 
 /**

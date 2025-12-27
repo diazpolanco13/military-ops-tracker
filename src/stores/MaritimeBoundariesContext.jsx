@@ -1,28 +1,39 @@
 import { createContext, useContext, useState } from 'react';
-import { CARIBBEAN_COUNTRIES } from '../hooks/useMaritimeBoundaries';
+import { CARIBBEAN_COUNTRIES } from '../hooks/useMaritimeBoundariesLocal';
 
 /**
- * 🌊 Contexto para gestionar visualización de límites marítimos
- * 🗺️ Incluye zona en reclamación (Guayana Esequiba)
+ * 🌊 Contexto para gestionar visualización de límites territoriales
+ * 
+ * Controla 3 capas independientes:
+ * - Límites Marítimos (EEZ 200mn)
+ * - Límites Terrestres (fronteras)
+ * - Zona en Reclamación (Guayana Esequiba)
  */
 const MaritimeBoundariesContext = createContext();
 
 export function MaritimeBoundariesProvider({ children }) {
-  const [showBoundaries, setShowBoundaries] = useState(() => {
-    return localStorage.getItem('showMaritimeBoundaries') === 'true';
-  });
-
-  // 🗺️ Estado para Zona en Reclamación (Guayana Esequiba)
-  // Por defecto ACTIVADO para todos los usuarios
-  const [showEsequiboClaim, setShowEsequiboClaim] = useState(() => {
-    const saved = localStorage.getItem('showEsequiboClaim');
-    // Si no hay valor guardado, mostrar por defecto (true)
+  // 🌊 Estado para Límites Marítimos (EEZ)
+  const [showMaritime, setShowMaritime] = useState(() => {
+    const saved = localStorage.getItem('showMaritimeBoundaries');
     return saved === null ? true : saved === 'true';
   });
 
-  // ✏️ Estado para modo edición del polígono
+  // 🗺️ Estado para Límites Terrestres
+  const [showTerrestrial, setShowTerrestrial] = useState(() => {
+    const saved = localStorage.getItem('showTerrestrialBoundaries');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // 🔺 Estado para Zona en Reclamación (Guayana Esequiba)
+  const [showEsequiboClaim, setShowEsequiboClaim] = useState(() => {
+    const saved = localStorage.getItem('showEsequiboClaim');
+    return saved === null ? true : saved === 'true';
+  });
+
+  // ✏️ Estado para modo edición del polígono Esequibo
   const [isEsequiboEditing, setIsEsequiboEditing] = useState(false);
 
+  // 🌍 Países seleccionados
   const [selectedCountries, setSelectedCountries] = useState(() => {
     const saved = localStorage.getItem('maritimeCountries');
     return saved ? JSON.parse(saved) : [
@@ -38,29 +49,42 @@ export function MaritimeBoundariesProvider({ children }) {
     ];
   });
 
-  const toggleBoundaries = () => {
-    setShowBoundaries(prev => {
+  // 🌊 Toggle Límites Marítimos
+  const toggleMaritime = () => {
+    setShowMaritime(prev => {
       const newValue = !prev;
       localStorage.setItem('showMaritimeBoundaries', newValue);
+      console.log('🌊 Maritime boundaries:', newValue ? 'visible' : 'hidden');
       return newValue;
     });
   };
 
-  // 🗺️ Toggle para Zona en Reclamación
+  // 🗺️ Toggle Límites Terrestres
+  const toggleTerrestrial = () => {
+    setShowTerrestrial(prev => {
+      const newValue = !prev;
+      localStorage.setItem('showTerrestrialBoundaries', newValue);
+      console.log('🗺️ Terrestrial boundaries:', newValue ? 'visible' : 'hidden');
+      return newValue;
+    });
+  };
+
+  // 🔺 Toggle Zona en Reclamación
   const toggleEsequiboClaim = () => {
     setShowEsequiboClaim(prev => {
       const newValue = !prev;
       localStorage.setItem('showEsequiboClaim', newValue);
-      console.log('🗺️ Esequibo claim zone:', newValue ? 'visible' : 'hidden');
+      console.log('🔺 Esequibo claim zone:', newValue ? 'visible' : 'hidden');
       return newValue;
     });
   };
 
-  // ✏️ Toggle para modo edición del polígono
+  // ✏️ Toggle modo edición del polígono
   const toggleEsequiboEditing = () => {
     setIsEsequiboEditing(prev => !prev);
   };
 
+  // 🌍 Actualizar países seleccionados
   const updateCountries = (countries) => {
     setSelectedCountries(countries);
     localStorage.setItem('maritimeCountries', JSON.stringify(countries));
@@ -77,14 +101,33 @@ export function MaritimeBoundariesProvider({ children }) {
     });
   };
 
+  // Compatibilidad: showBoundaries ahora es true si cualquiera de los dos está activo
+  const showBoundaries = showMaritime || showTerrestrial;
+  
+  // Toggle general (activa/desactiva ambos)
+  const toggleBoundaries = () => {
+    const newValue = !showBoundaries;
+    setShowMaritime(newValue);
+    setShowTerrestrial(newValue);
+    localStorage.setItem('showMaritimeBoundaries', newValue);
+    localStorage.setItem('showTerrestrialBoundaries', newValue);
+  };
+
   return (
     <MaritimeBoundariesContext.Provider value={{ 
-      showBoundaries, 
-      toggleBoundaries,
+      // Estados individuales
+      showMaritime, 
+      toggleMaritime,
+      showTerrestrial,
+      toggleTerrestrial,
       showEsequiboClaim,
       toggleEsequiboClaim,
       isEsequiboEditing,
       toggleEsequiboEditing,
+      // Compatibilidad (toggle general)
+      showBoundaries, 
+      toggleBoundaries,
+      // Países
       selectedCountries,
       updateCountries,
       toggleCountry
@@ -95,7 +138,7 @@ export function MaritimeBoundariesProvider({ children }) {
 }
 
 /**
- * Hook para acceder al contexto de límites marítimos
+ * Hook para acceder al contexto de límites territoriales
  */
 export function useMaritimeBoundariesContext() {
   const context = useContext(MaritimeBoundariesContext);
@@ -104,4 +147,3 @@ export function useMaritimeBoundariesContext() {
   }
   return context;
 }
-

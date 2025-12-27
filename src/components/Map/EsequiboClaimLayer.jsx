@@ -61,7 +61,7 @@ export default function EsequiboClaimLayer({ map, visible = true }) {
         },
         paint: {
           'fill-color': '#ef4444', // Rojo (mismo que Venezuela)
-          'fill-opacity': 0.25,    // Semitransparente
+          'fill-opacity': 0.2,     // Igual que los límites marítimos
         },
       });
 
