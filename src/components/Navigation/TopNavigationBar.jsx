@@ -53,6 +53,7 @@ import ZonesPanel from './ZonesPanel';
 import WeatherLayersPanel from '../Weather/WeatherLayersPanel';
 import LogoutConfirmModal from '../Auth/LogoutConfirmModal';
 import ChangePasswordModal from '../Auth/ChangePasswordModal';
+import { AircraftRegistryPanel } from '../Aircraft';
 
 /**
  * 🧭 BARRA DE NAVEGACIÓN SUPERIOR HORIZONTAL
@@ -114,6 +115,7 @@ export default function TopNavigationBar({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAircraftRegistry, setShowAircraftRegistry] = useState(false);
   // showAuditPanel eliminado - ahora integrado en SettingsPanel
   const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
@@ -285,6 +287,15 @@ export default function TopNavigationBar({
           active={activePanel === 'zones'}
           onClick={() => togglePanel('zones')}
           tooltip="Límites Territoriales"
+        />
+
+        {/* 🎖️ Registro de Aeronaves Militares */}
+        <NavButton
+          icon={<Shield className="w-5 h-5" />}
+          label="Inventario"
+          active={showAircraftRegistry}
+          onClick={() => setShowAircraftRegistry(true)}
+          tooltip="Registro de Aeronaves Militares"
         />
 
         {/* Separador - Oculto en móvil */}
@@ -504,6 +515,12 @@ export default function TopNavigationBar({
           onClose={() => setShowChangePasswordModal(false)}
         />
       )}
+
+      {/* Panel de Registro de Aeronaves Militares */}
+      <AircraftRegistryPanel
+        isOpen={showAircraftRegistry}
+        onClose={() => setShowAircraftRegistry(false)}
+      />
     </>
   );
 }

@@ -1181,6 +1181,224 @@ export async function getAllFlights(bounds = null) {
   }));
 }
 
+// =====================================================
+// 🎖️ REGISTRO DE AERONAVES MILITARES
+// Sistema de tracking persistente de aeronaves únicas
+// =====================================================
+
+/**
+ * Registrar o actualizar una aeronave militar en el registry
+ * Llama a la función SQL upsert_military_aircraft()
+ * 
+ * @param {Object} flightData - Datos del vuelo
+ * @param {Object} options - Opciones adicionales
+ * @returns {Promise<Object>} - Resultado del registro
+ */
+export async function registerMilitaryAircraft(flightData, options = {}) {
+  const {
+    isIncursion = false,
+    incursionSessionId = null,
+  } = options;
+
+  try {
+    // Extraer datos del vuelo
+    const icao24 = (flightData.icao24 || '').toUpperCase().substring(0, 6);
+    
+    if (!icao24 || icao24.length < 2) {
+      console.warn('⚠️ registerMilitaryAircraft: ICAO24 inválido');
+      return { success: false, error: 'ICAO24 inválido' };
+    }
+
+    // Obtener modelo de aeronave
+    const aircraftType = flightData.aircraft?.type || flightData.aircraftType || '';
+    const modelInfo = getAircraftModel(aircraftType);
+    
+    // Determinar rama militar por callsign/airline
+    const militaryBranch = detectMilitaryBranch(flightData);
+
+    // Llamar a la función SQL
+    const { data, error } = await supabase.rpc('upsert_military_aircraft', {
+      p_icao24: icao24,
+      p_callsign: flightData.callsign?.substring(0, 10) || null,
+      p_aircraft_type: aircraftType?.substring(0, 10) || null,
+      p_aircraft_model: modelInfo?.name || flightData.aircraft?.modelName || null,
+      p_military_branch: militaryBranch,
+      p_origin_icao: flightData.origin?.substring(0, 4) || null,
+      p_destination_icao: flightData.destination?.substring(0, 4) || null,
+      p_latitude: flightData.latitude || null,
+      p_longitude: flightData.longitude || null,
+      p_altitude: flightData.altitude || null,
+      p_speed: flightData.speed || null,
+      p_heading: flightData.heading || null,
+      p_is_incursion: isIncursion,
+      p_incursion_session_id: incursionSessionId,
+      p_data_source: 'fr24_public',
+    });
+
+    if (error) {
+      console.error('❌ Error registering aircraft:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`✅ Aircraft registered: ${icao24} (history_id: ${data})`);
+    return { success: true, historyId: data, icao24 };
+
+  } catch (err) {
+    console.error('❌ Exception registering aircraft:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Detectar la rama militar basada en callsign y airline
+ * @param {Object} flight - Datos del vuelo
+ * @returns {String|null} - USAF, Navy, Marines, Army, Coast Guard, CBP, Other
+ */
+function detectMilitaryBranch(flight) {
+  const callsign = (flight.callsign || '').toUpperCase();
+  const airline = (flight.aircraft?.airline || '').toUpperCase();
+  const icao24 = (flight.icao24 || '').toUpperCase();
+
+  // Por callsign patterns
+  if (callsign.startsWith('RCH') || callsign.startsWith('CNV') || 
+      callsign.startsWith('SPAR') || callsign.startsWith('REACH')) {
+    return 'USAF';
+  }
+  if (callsign.startsWith('NAVY') || callsign.startsWith('IRON') || 
+      callsign.startsWith('BAT') || callsign.startsWith('DUKE')) {
+    return 'Navy';
+  }
+  if (callsign.startsWith('BOXER') || callsign.startsWith('VENOM') || 
+      callsign.startsWith('MARINE')) {
+    return 'Marines';
+  }
+  if (callsign.startsWith('ARMY') || callsign.startsWith('PAT')) {
+    return 'Army';
+  }
+  if (callsign.startsWith('USCG') || callsign.startsWith('COAST') || 
+      callsign.startsWith('CG')) {
+    return 'Coast Guard';
+  }
+  if (callsign.startsWith('CBP') || callsign.startsWith('OMAHA')) {
+    return 'CBP';
+  }
+
+  // Por airline code
+  if (['RCH', 'CNV', 'EVAC', 'SPAR'].includes(airline)) return 'USAF';
+  if (['NAVY', 'USN', 'IRON', 'DUKE'].includes(airline)) return 'Navy';
+  if (['USMC', 'VENOM', 'BOXER'].includes(airline)) return 'Marines';
+  if (['ARMY', 'PAT', 'ANG'].includes(airline)) return 'Army';
+  if (['USCG'].includes(airline)) return 'Coast Guard';
+
+  // Por ICAO24 - AE/AF son militares USA
+  if (icao24.startsWith('AE') || icao24.startsWith('AF')) {
+    return 'USAF'; // Default para hex militar
+  }
+
+  return null;
+}
+
+/**
+ * Registrar múltiples aeronaves militares en batch
+ * Útil para procesar todos los vuelos de una actualización
+ * 
+ * @param {Array} flights - Array de vuelos
+ * @param {Object} options - Opciones
+ * @returns {Promise<Object>} - Resumen del registro
+ */
+export async function registerMilitaryAircraftBatch(flights, options = {}) {
+  const results = {
+    total: flights.length,
+    registered: 0,
+    errors: 0,
+    skipped: 0,
+  };
+
+  // Filtrar solo vuelos militares
+  const militaryFlights = flights.filter(f => isMilitaryFlight(f));
+  results.military = militaryFlights.length;
+
+  for (const flight of militaryFlights) {
+    const result = await registerMilitaryAircraft(flight, options);
+    if (result.success) {
+      results.registered++;
+    } else {
+      results.errors++;
+    }
+  }
+
+  results.skipped = flights.length - militaryFlights.length;
+
+  console.log(`📊 Batch registration: ${results.registered}/${results.military} military aircraft registered`);
+  return results;
+}
+
+/**
+ * Obtener aeronave del registry por ICAO24
+ * @param {String} icao24 - Código hex del transponder
+ * @returns {Promise<Object|null>} - Datos de la aeronave o null
+ */
+export async function getAircraftFromRegistry(icao24) {
+  try {
+    const { data, error } = await supabase
+      .from('military_aircraft_registry')
+      .select(`
+        *,
+        model:aircraft_model_catalog(
+          aircraft_model,
+          category,
+          manufacturer,
+          primary_image_url,
+          thumbnail_url
+        ),
+        base:caribbean_military_bases(
+          name,
+          country_name,
+          city
+        )
+      `)
+      .eq('icao24', icao24.toUpperCase())
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = not found
+      console.error('Error fetching aircraft:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception fetching aircraft:', err);
+    return null;
+  }
+}
+
+/**
+ * Obtener historial de ubicaciones de una aeronave
+ * @param {String} icao24 - Código hex del transponder
+ * @param {Number} limit - Límite de registros
+ * @returns {Promise<Array>} - Historial de ubicaciones
+ */
+export async function getAircraftLocationHistory(icao24, limit = 50) {
+  try {
+    const { data, error } = await supabase
+      .from('aircraft_location_history')
+      .select('*')
+      .eq('icao24', icao24.toUpperCase())
+      .order('detected_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching location history:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (err) {
+    console.error('Exception fetching location history:', err);
+    return [];
+  }
+}
+
 export default {
   getFlightsByZone,
   getMilitaryFlights,
@@ -1194,6 +1412,11 @@ export default {
   filterFlightsByCategory,
   detectSignalType,
   getAirportCoordinates,
+  // Nuevo: Registro de aeronaves
+  registerMilitaryAircraft,
+  registerMilitaryAircraftBatch,
+  getAircraftFromRegistry,
+  getAircraftLocationHistory,
   CARIBBEAN_BOUNDS,
   AIRPORTS_DB,
   SIGNAL_TYPES,
