@@ -107,7 +107,14 @@ src/
 ### 5. Límites Geográficos
 - **Marítimos**: EEZ de Marine Regions (200mn)
 - **Terrestres**: Natural Earth / GADM
-- **Almacenamiento**: `maritime_boundaries_cache`, `terrestrial_boundaries_cache`
+- **Frontend**: Archivos locales para carga instantánea:
+  - `src/data/maritimeBoundaries.js` (11 zonas EEZ, 5.9 MB)
+  - `src/data/terrestrialBoundaries.js` (18 países, 880 KB)
+  - `src/data/esequiboClaimZone.js` (zona en reclamación, manual)
+- **Backend**: Tablas Supabase (para Edge Functions de detección):
+  - `maritime_boundaries_cache`
+  - `terrestrial_boundaries_cache`
+- **Toggles independientes**: Marítimos, Terrestres, Esequibo (panel Límites)
 
 ### 6. Sistema de Auditoría
 Sistema completo de registro y monitoreo de actividad de usuarios.

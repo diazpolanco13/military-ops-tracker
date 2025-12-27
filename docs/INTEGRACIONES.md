@@ -409,11 +409,12 @@ Obtener polígonos EEZ (Zona Económica Exclusiva) de países.
 
 ### Endpoint
 ```
-https://marineregions.org/rest/getGazetteerRecordsByType.json/EEZ/
+https://geo.vliz.be/geoserver/MarineRegions/ows?service=WFS&version=2.0.0&request=GetFeature&typeName=MarineRegions:eez&outputFormat=application/json
 ```
 
 ### Almacenamiento
-Tabla `maritime_boundaries_cache` con campo `geojson` (JSONB).
+- **Backend**: Tabla `maritime_boundaries_cache` (para Edge Functions de detección)
+- **Frontend**: Archivo local `src/data/maritimeBoundaries.js` (carga instantánea)
 
 ---
 
@@ -427,7 +428,51 @@ Polígonos terrestres de países.
 - GADM (más detallado)
 
 ### Almacenamiento
-Tabla `terrestrial_boundaries_cache` con campo `geojson` (JSONB).
+- **Backend**: Tabla `terrestrial_boundaries_cache` (para Edge Functions)
+- **Frontend**: Archivo local `src/data/terrestrialBoundaries.js`
+
+---
+
+## Límites Territoriales (Frontend)
+
+### Arquitectura
+El frontend usa archivos locales para carga instantánea, mientras el backend usa Supabase para detección.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ FRONTEND: Archivos Locales (carga instantánea)              │
+│ ├── src/data/maritimeBoundaries.js    (11 zonas, 5.9 MB)   │
+│ ├── src/data/terrestrialBoundaries.js (18 países, 880 KB)  │
+│ └── src/data/esequiboClaimZone.js     (manual, 305 vértices)│
+├─────────────────────────────────────────────────────────────┤
+│ BACKEND: Supabase (detección de incursiones)                │
+│ ├── maritime_boundaries_cache                               │
+│ └── terrestrial_boundaries_cache                            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Hook Principal
+```javascript
+import { useMaritimeBoundariesLocal } from '../hooks/useMaritimeBoundariesLocal';
+
+const { boundaries, loading } = useMaritimeBoundariesLocal(
+  ['VEN', 'COL', 'GUY'],  // países
+  true,                    // enabled
+  { includeMaritime: true, includeTerrestrial: true }
+);
+```
+
+### Toggles de Visibilidad
+El panel "Límites" permite controlar cada capa independientemente:
+- 🌊 **Marítimos**: EEZ 200 millas náuticas
+- ⛰️ **Terrestres**: Fronteras de países
+- ⚠️ **Esequibo**: Zona en reclamación (Guayana Esequiba)
+
+### Regenerar Archivos Locales
+Si se actualizan los datos en Supabase:
+```bash
+node scripts/export-boundaries-to-local.js
+```
 
 ---
 

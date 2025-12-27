@@ -127,8 +127,12 @@ Una sola fila con configuración global.
 
 ## Tablas de Límites Geográficos
 
+> **Nota**: Estas tablas son usadas por las **Edge Functions** para detección de incursiones.
+> El **frontend** usa archivos locales (`src/data/maritimeBoundaries.js`, etc.) para carga instantánea.
+> Para regenerar los archivos locales: `node scripts/export-boundaries-to-local.js`
+
 ### `maritime_boundaries_cache` - EEZ (Zona Económica Exclusiva)
-Polígonos marítimos de Marine Regions.
+Polígonos marítimos de Marine Regions. Usada por `military-airspace-monitor` para detectar incursiones.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
