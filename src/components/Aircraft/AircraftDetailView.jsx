@@ -39,6 +39,7 @@ import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
 import { useAircraftImages } from '../../hooks/useAircraftImages';
 import { supabase } from '../../lib/supabase';
 import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
+import { getCountryByICAO24 } from '../../services/flightRadarService';
 
 /**
  * 🎖️ VISTA DE DETALLE DE AERONAVE (PANTALLA COMPLETA)
@@ -288,6 +289,18 @@ export default function AircraftDetailView({ aircraft, onClose }) {
         </button>
 
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          {/* Bandera del país del avión (basado en ICAO24) */}
+          {(() => {
+            const ci = getCountryByICAO24(a.icao24);
+            return ci && ci.code !== 'XX' ? (
+              <div className="flex flex-col items-center shrink-0" title={`${ci.name}${ci.military ? ' (Militar)' : ''}`}>
+                <span className="text-2xl sm:text-3xl leading-none">{ci.flag}</span>
+                {ci.military && (
+                  <span className="text-[7px] sm:text-[8px] font-bold uppercase text-red-400 mt-0.5">MIL</span>
+                )}
+              </div>
+            ) : null;
+          })()}
           <div className="flex flex-col items-center sm:items-start leading-tight min-w-0">
             <span className="font-mono text-xl sm:text-2xl text-amber-300 font-extrabold tracking-wide max-w-[180px] sm:max-w-none truncate">
               {primaryCallsign || 'SIN CALLSIGN'}
@@ -749,6 +762,27 @@ function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditing
             <InfoRow label="Fabricante" value={modelData?.manufacturer} />
           )}
           <InfoRow label="Rama militar" value={getBranchLabel(a.military_branch) || 'No identificada'} />
+          {/* País del avión (basado en ICAO24) */}
+          {(() => {
+            const countryInfo = getCountryByICAO24(a.icao24);
+            return countryInfo && countryInfo.code !== 'XX' ? (
+              <div className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <Shield className="w-4 h-4 text-slate-500" />
+                  <span>País del avión</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">{countryInfo.flag}</span>
+                  <span className="text-sm font-medium text-white">{countryInfo.name}</span>
+                  {countryInfo.military && (
+                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                      MIL
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : null;
+          })()}
           {lastLocation?.country_code && (
             <InfoRow
               label="Último país detectado"
@@ -1422,13 +1456,27 @@ function getCategoryLabel(category) {
 }
 
 function getBranchLabel(branch) {
+  if (!branch) return null;
   const labels = {
+    // Códigos oficiales
     'USAF': 'US Air Force',
     'USN': 'US Navy',
     'USMC': 'US Marine Corps',
     'USA': 'US Army',
     'USCG': 'US Coast Guard',
     'CBP': 'Customs & Border Protection',
+    // Variantes que vienen de la API
+    'Air Force': 'US Air Force',
+    'Navy': 'US Navy',
+    'Marine Corps': 'US Marine Corps',
+    'Army': 'US Army',
+    'Coast Guard': 'US Coast Guard',
+    // Otros países
+    'RAF': 'Royal Air Force (UK)',
+    'FAC': 'Fuerza Aérea Colombiana',
+    'FAB': 'Fuerza Aérea Brasileña',
+    'FAV': 'Fuerza Aérea Venezolana',
+    'FAM': 'Fuerza Aérea Mexicana',
   };
   return labels[branch] || branch;
 }
