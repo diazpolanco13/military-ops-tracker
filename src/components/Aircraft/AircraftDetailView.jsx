@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { MAPBOX_TOKEN, MAPBOX_STYLES } from '../../lib/maplibre';
 import { 
   ArrowLeft, 
   Plane, 
@@ -1032,9 +1035,11 @@ function StatsTab({ aircraft, firstSeen, lastSeen, formatDate }) {
 }
 
 // =============================================
-// TAB: HISTORIAL
+// TAB: HISTORIAL (Estilo FlightRadar24)
 // =============================================
 function HistoryTab({ history, loading, error, formatDate }) {
+  const [selectedFlight, setSelectedFlight] = useState(null);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -1060,111 +1065,475 @@ function HistoryTab({ history, loading, error, formatDate }) {
     return (
       <div className="text-center py-16">
         <History className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-        <h3 className="text-lg text-white mb-2">Sin historial</h3>
-        <p className="text-slate-400 text-sm">Los eventos de esta aeronave aparecerán aquí</p>
+        <h3 className="text-lg text-white mb-2">Sin historial de vuelos</h3>
+        <p className="text-slate-400 text-sm">Los vuelos de esta aeronave aparecerán aquí cuando sean detectados.</p>
       </div>
     );
   }
 
-  const getEventIcon = (type) => {
-    switch (type) {
-      case 'incursion': return <AlertTriangle className="w-4 h-4 text-red-400" />;
-      case 'departure': return <Navigation className="w-4 h-4 text-green-400" style={{ transform: 'rotate(45deg)' }} />;
-      case 'arrival': return <Navigation className="w-4 h-4 text-blue-400" style={{ transform: 'rotate(135deg)' }} />;
-      case 'transit': return <Route className="w-4 h-4 text-amber-400" />;
-      case 'first_detection': return <TrendingUp className="w-4 h-4 text-purple-400" />;
-      case 'detection': return <Activity className="w-4 h-4 text-sky-400" />;
-      default: return <Activity className="w-4 h-4 text-slate-400" />;
+  // Agrupar por fecha
+  const groupedByDate = {};
+  history.forEach(h => {
+    const date = new Date(h.detected_at).toISOString().split('T')[0];
+    if (!groupedByDate[date]) {
+      groupedByDate[date] = {
+        date,
+        records: [],
+        callsigns: new Set(),
+        origins: new Set(),
+        destinations: new Set(),
+        countries: new Set(),
+        firstRecord: null,
+        lastRecord: null,
+      };
     }
-  };
+    const group = groupedByDate[date];
+    group.records.push(h);
+    if (h.callsign) group.callsigns.add(h.callsign);
+    if (h.origin_icao) group.origins.add(h.origin_icao);
+    if (h.destination_icao) group.destinations.add(h.destination_icao);
+    if (h.country_code) group.countries.add(h.country_code);
+    if (!group.firstRecord || new Date(h.detected_at) < new Date(group.firstRecord.detected_at)) {
+      group.firstRecord = h;
+    }
+    if (!group.lastRecord || new Date(h.detected_at) > new Date(group.lastRecord.detected_at)) {
+      group.lastRecord = h;
+    }
+  });
 
-  const getEventLabel = (type) => {
-    const labels = {
-      incursion: 'Incursión',
-      departure: 'Salida',
-      arrival: 'Llegada',
-      transit: 'Tránsito',
-      first_detection: 'Primera detección',
-      detection: 'Detección',
-      overflight: 'Sobrevuelo',
-      patrol: 'Patrulla',
-    };
-    return labels[type] || type;
-  };
+  // Convertir a array y ordenar por fecha descendente
+  const flightDays = Object.values(groupedByDate)
+    .map(g => ({
+      ...g,
+      callsigns: Array.from(g.callsigns),
+      origins: Array.from(g.origins),
+      destinations: Array.from(g.destinations),
+      countries: Array.from(g.countries),
+    }))
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Calcular estadísticas
+  const totalFlights = flightDays.length;
+  const totalPoints = history.length;
+  const uniqueOrigins = new Set(history.map(h => h.origin_icao).filter(Boolean)).size;
+
+  // Vista de detalle de un día específico
+  if (selectedFlight) {
+    return (
+      <FlightDayDetail 
+        flight={selectedFlight} 
+        onBack={() => setSelectedFlight(null)} 
+        formatDate={formatDate}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {history.map((h) => (
-        <div 
-          key={h.id}
-          className={`flex gap-4 p-4 rounded-xl border ${
-            h.event_type === 'incursion' 
-              ? 'bg-red-500/10 border-red-500/30' 
-              : 'bg-slate-800/50 border-slate-700/50'
-          }`}
-        >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            h.event_type === 'incursion' ? 'bg-red-500/20' : 'bg-slate-700'
-          }`}>
-            {getEventIcon(h.event_type)}
-          </div>
+    <div className="space-y-4">
+      {/* Estadísticas */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-sky-400">{totalFlights}</div>
+          <div className="text-[10px] sm:text-xs text-slate-400">Días con actividad</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-green-400">{totalPoints}</div>
+          <div className="text-[10px] sm:text-xs text-slate-400">Puntos registrados</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700 text-center">
+          <div className="text-xl sm:text-2xl font-bold text-amber-400">{uniqueOrigins}</div>
+          <div className="text-[10px] sm:text-xs text-slate-400">Aeropuertos</div>
+        </div>
+      </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-medium text-white">
-                {getEventLabel(h.event_type)}
-              </span>
-              {h.callsign && (
-                <span className="font-mono text-xs bg-slate-600 px-2 py-0.5 rounded text-slate-300">
-                  {h.callsign}
+      {/* Encabezado de tabla */}
+      <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-2 text-xs font-medium text-slate-400 uppercase tracking-wider border-b border-slate-700">
+        <div className="col-span-2">Fecha</div>
+        <div className="col-span-2">Origen</div>
+        <div className="col-span-2">Destino</div>
+        <div className="col-span-1">Callsign</div>
+        <div className="col-span-2">Duración</div>
+        <div className="col-span-2">Puntos</div>
+        <div className="col-span-1"></div>
+      </div>
+
+      {/* Lista de vuelos (tabla) */}
+      <div className="space-y-1">
+        {flightDays.map((day) => {
+          const duration = day.firstRecord && day.lastRecord
+            ? Math.round((new Date(day.lastRecord.detected_at) - new Date(day.firstRecord.detected_at)) / 60000)
+            : 0;
+          const hours = Math.floor(duration / 60);
+          const mins = duration % 60;
+          const primaryCallsign = day.callsigns[0] || '—';
+          const originDisplay = day.origins.length > 0 ? day.origins.join(', ') : '—';
+          const destDisplay = day.destinations.length > 0 ? day.destinations.join(', ') : '—';
+          
+          return (
+            <div 
+              key={day.date}
+              onClick={() => setSelectedFlight(day)}
+              className="grid grid-cols-12 gap-2 items-center p-3 sm:p-4 bg-slate-800/40 hover:bg-slate-700/50 border border-slate-700/50 hover:border-sky-500/30 rounded-lg cursor-pointer transition-all group"
+            >
+              {/* Fecha */}
+              <div className="col-span-6 sm:col-span-2">
+                <div className="text-sm font-medium text-white">
+                  {new Date(day.date).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </div>
+                <div className="text-xs text-slate-500 sm:hidden mt-0.5">
+                  {primaryCallsign} • {day.records.length} pts
+                </div>
+              </div>
+
+              {/* Origen */}
+              <div className="hidden sm:block col-span-2">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Navigation className="w-3 h-3 text-green-400" style={{ transform: 'rotate(45deg)' }} />
+                  <span className="font-mono text-slate-300">{originDisplay}</span>
+                </div>
+              </div>
+
+              {/* Destino */}
+              <div className="hidden sm:block col-span-2">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <MapPin className="w-3 h-3 text-red-400" />
+                  <span className="font-mono text-slate-300">{destDisplay}</span>
+                </div>
+              </div>
+
+              {/* Callsign */}
+              <div className="hidden sm:block col-span-1">
+                <span className="font-mono text-xs bg-slate-600 px-2 py-0.5 rounded text-amber-300">
+                  {primaryCallsign}
                 </span>
-              )}
+              </div>
+
+              {/* Duración */}
+              <div className="col-span-3 sm:col-span-2 text-right sm:text-left">
+                <div className="flex items-center gap-1.5 text-sm text-slate-300 justify-end sm:justify-start">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  {duration > 0 ? `${hours}h ${mins}m` : '—'}
+                </div>
+              </div>
+
+              {/* Puntos */}
+              <div className="hidden sm:flex col-span-2 items-center gap-1.5 text-sm text-slate-400">
+                <Route className="w-3 h-3" />
+                {day.records.length} puntos
+              </div>
+
+              {/* Acción */}
+              <div className="col-span-3 sm:col-span-1 flex justify-end">
+                <span className="text-xs text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                  Ver <ChevronRight className="w-3 h-3" />
+                </span>
+              </div>
             </div>
-            
-            {(h.origin_icao || h.destination_icao) && (
-              <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
-                {h.origin_icao && <span>{h.origin_name || h.origin_icao}</span>}
-                {h.origin_icao && h.destination_icao && <ChevronRight className="w-3 h-3" />}
-                {h.destination_icao && <span>{h.destination_name || h.destination_icao}</span>}
-              </div>
-            )}
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-            {(h.altitude || h.speed) && (
-              <div className="flex gap-4 text-xs text-slate-500">
-                {h.altitude && <span>Alt: {h.altitude.toLocaleString()} ft</span>}
-                {h.speed && <span>Vel: {h.speed} kts</span>}
-                {h.heading && <span>Rmb: {h.heading}°</span>}
-              </div>
-            )}
+// Vista de detalle de un día de vuelo con mapa
+function FlightDayDetail({ flight, onBack, formatDate }) {
+  const mapContainerRef = useRef(null);
+  const mapRef = useRef(null);
+  const [showTrailList, setShowTrailList] = useState(false);
 
-            {/* Coordenadas y país */}
-            {(h.latitude && h.longitude) && (
-              <div className="flex items-center gap-2 mt-2">
-                <a 
-                  href={`https://www.google.com/maps?q=${h.latitude},${h.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs bg-slate-700/80 hover:bg-slate-600/80 px-2 py-1 rounded text-sky-300 transition-colors"
-                  title="Ver en Google Maps"
-                >
-                  <MapPin className="w-3 h-3" />
-                  {Number(h.latitude).toFixed(4)}°, {Number(h.longitude).toFixed(4)}°
-                </a>
-                {h.country_code && (
-                  <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded flex items-center gap-1">
-                    <Globe className="w-3 h-3" />
-                    {getCountryNameEs(h.country_code) || h.country_name || h.country_code}
-                  </span>
-                )}
-              </div>
-            )}
+  const duration = flight.firstRecord && flight.lastRecord
+    ? Math.round((new Date(flight.lastRecord.detected_at) - new Date(flight.firstRecord.detected_at)) / 60000)
+    : 0;
+  const hours = Math.floor(duration / 60);
+  const mins = duration % 60;
 
-            <div className="text-xs text-slate-500 mt-2">
-              {formatDate(new Date(h.detected_at))}
+  // Ordenar puntos cronológicamente
+  const sortedRecords = [...flight.records].sort((a, b) => 
+    new Date(a.detected_at) - new Date(b.detected_at)
+  );
+
+  // Inicializar mapa
+  useEffect(() => {
+    if (!mapContainerRef.current || sortedRecords.length === 0) return;
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    // Calcular bounds para centrar el mapa
+    const lngs = sortedRecords.map(r => parseFloat(r.longitude));
+    const lats = sortedRecords.map(r => parseFloat(r.latitude));
+    const bounds = [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)]
+    ];
+
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: MAPBOX_STYLES.OUTDOORS, // Mapa claro con topografía
+      bounds: bounds,
+      fitBoundsOptions: { padding: 50 },
+      attributionControl: false,
+    });
+
+    mapRef.current = map;
+
+    map.on('load', () => {
+      // Crear coordenadas para la línea
+      const coordinates = sortedRecords.map(r => [
+        parseFloat(r.longitude),
+        parseFloat(r.latitude)
+      ]);
+
+      // Agregar source para la línea del trail
+      map.addSource('trail-line', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: coordinates
+          }
+        }
+      });
+
+      // Agregar capa de línea con gradiente de color
+      map.addLayer({
+        id: 'trail-line-layer',
+        type: 'line',
+        source: 'trail-line',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#f59e0b',
+          'line-width': 3,
+          'line-opacity': 0.9
+        }
+      });
+
+      // Agregar puntos del trail
+      map.addSource('trail-points', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: sortedRecords.map((r, i) => ({
+            type: 'Feature',
+            properties: {
+              index: i + 1,
+              time: new Date(r.detected_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+              altitude: r.altitude,
+              speed: r.speed
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [parseFloat(r.longitude), parseFloat(r.latitude)]
+            }
+          }))
+        }
+      });
+
+      map.addLayer({
+        id: 'trail-points-layer',
+        type: 'circle',
+        source: 'trail-points',
+        paint: {
+          'circle-radius': 4,
+          'circle-color': '#0ea5e9',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      });
+
+      // Marcador de INICIO (verde)
+      const startPoint = sortedRecords[0];
+      new mapboxgl.Marker({ color: '#22c55e' })
+        .setLngLat([parseFloat(startPoint.longitude), parseFloat(startPoint.latitude)])
+        .setPopup(new mapboxgl.Popup().setHTML(`
+          <div style="color: #333; font-size: 12px;">
+            <strong>🛫 Inicio</strong><br/>
+            ${new Date(startPoint.detected_at).toLocaleTimeString('es-VE')}<br/>
+            Alt: ${startPoint.altitude?.toLocaleString() || '—'} ft
+          </div>
+        `))
+        .addTo(map);
+
+      // Marcador de FIN (rojo)
+      const endPoint = sortedRecords[sortedRecords.length - 1];
+      new mapboxgl.Marker({ color: '#ef4444' })
+        .setLngLat([parseFloat(endPoint.longitude), parseFloat(endPoint.latitude)])
+        .setPopup(new mapboxgl.Popup().setHTML(`
+          <div style="color: #333; font-size: 12px;">
+            <strong>🛬 Fin</strong><br/>
+            ${new Date(endPoint.detected_at).toLocaleTimeString('es-VE')}<br/>
+            Alt: ${endPoint.altitude?.toLocaleString() || '—'} ft
+          </div>
+        `))
+        .addTo(map);
+
+      // Agregar controles de navegación
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+    });
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [sortedRecords]);
+
+  return (
+    <div className="space-y-4">
+      {/* Header con botón volver */}
+      <div className="flex items-center gap-3 pb-3 border-b border-slate-700">
+        <button
+          onClick={onBack}
+          className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="flex-1">
+          <h3 className="text-lg font-bold text-white">
+            {new Date(flight.date).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </h3>
+          <p className="text-sm text-slate-400">
+            {flight.callsigns.join(', ')} • {flight.records.length} puntos registrados
+          </p>
+        </div>
+      </div>
+
+      {/* 🗺️ MAPA CON EL TRAIL */}
+      <div className="rounded-xl overflow-hidden border border-slate-700 bg-slate-900">
+        <div 
+          ref={mapContainerRef} 
+          className="w-full h-[250px] sm:h-[300px]"
+        />
+        {/* Leyenda del mapa */}
+        <div className="flex items-center justify-center gap-4 py-2 bg-slate-800/80 text-xs text-slate-400">
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-green-500"></span>
+            Inicio
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-red-500"></span>
+            Fin
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-6 h-0.5 bg-amber-500"></span>
+            Ruta
+          </span>
+        </div>
+      </div>
+
+      {/* Resumen del vuelo */}
+      <div className="bg-gradient-to-r from-sky-500/10 to-amber-500/10 rounded-xl p-4 border border-sky-500/20">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <div className="text-xs text-slate-400 mb-1">Origen</div>
+            <div className="flex items-center gap-1.5">
+              <Navigation className="w-4 h-4 text-green-400" style={{ transform: 'rotate(45deg)' }} />
+              <span className="font-mono text-white">{flight.origins.join(', ') || 'N/A'}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400 mb-1">Destino</div>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-red-400" />
+              <span className="font-mono text-white">{flight.destinations.join(', ') || 'N/A'}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400 mb-1">Duración</div>
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span className="text-white">{duration > 0 ? `${hours}h ${mins}m` : 'N/A'}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-slate-400 mb-1">Países</div>
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-sky-400" />
+              <span className="text-white truncate">{flight.countries.length > 0 ? flight.countries.map(c => getCountryNameEs(c) || c).join(', ') : 'N/A'}</span>
             </div>
           </div>
         </div>
-      ))}
+      </div>
+
+      {/* Horario */}
+      <div className="flex items-center justify-between bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+        <div className="text-center flex-1">
+          <div className="text-xs text-slate-400">Primera detección</div>
+          <div className="text-lg font-mono text-green-400">
+            {flight.firstRecord ? new Date(flight.firstRecord.detected_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-slate-500">
+          <div className="w-8 h-px bg-slate-600"></div>
+          <Plane className="w-5 h-5" />
+          <div className="w-8 h-px bg-slate-600"></div>
+        </div>
+        <div className="text-center flex-1">
+          <div className="text-xs text-slate-400">Última detección</div>
+          <div className="text-lg font-mono text-red-400">
+            {flight.lastRecord ? new Date(flight.lastRecord.detected_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '—'}
+          </div>
+        </div>
+      </div>
+
+      {/* Toggle para lista de puntos */}
+      <button
+        onClick={() => setShowTrailList(!showTrailList)}
+        className="w-full flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm text-slate-400">
+          <Route className="w-4 h-4" />
+          Trail de vuelo ({flight.records.length} puntos)
+        </span>
+        <ChevronRight className={`w-4 h-4 text-slate-500 transition-transform ${showTrailList ? 'rotate-90' : ''}`} />
+      </button>
+
+      {/* Lista de puntos (trail) - colapsable */}
+      {showTrailList && (
+        <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar-transparent animate-in fade-in duration-200">
+          {sortedRecords.map((record, index) => (
+            <div 
+              key={record.id}
+              className="flex items-center gap-3 p-2 bg-slate-800/30 rounded-lg border border-slate-700/30 hover:border-slate-600 transition-colors"
+            >
+              <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-400">
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-mono text-slate-300">
+                    {new Date(record.detected_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                  {record.country_code && (
+                    <span className="text-amber-400">{getCountryNameEs(record.country_code) || record.country_code}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                  <span>Alt: {record.altitude?.toLocaleString() || '—'} ft</span>
+                  <span>Vel: {record.speed || '—'} kts</span>
+                  <span>Rmb: {record.heading || '—'}°</span>
+                </div>
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${record.latitude},${record.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-sky-400 hover:text-sky-300 p-1.5 rounded hover:bg-slate-700 transition-colors"
+                title="Ver en mapa"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MapPin className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
