@@ -20,7 +20,7 @@ import {
   Globe
 } from 'lucide-react';
 import { useAircraftRegistry, useMilitaryBases, useAircraftModels, useCountryPresence } from '../../hooks/useAircraftRegistry';
-import AircraftDetailModal from './AircraftDetailModal';
+import AircraftDetailView from './AircraftDetailView';
 
 /**
  * 🎖️ PANEL DE REGISTRO DE AERONAVES MILITARES
@@ -295,9 +295,9 @@ export default function AircraftRegistryPanel({ isOpen, onClose }) {
         )}
       </div>
 
-      {/* Aircraft Detail Modal */}
+      {/* Aircraft Detail View (Pantalla Completa) */}
       {selectedAircraft && (
-        <AircraftDetailModal
+        <AircraftDetailView
           aircraft={selectedAircraft}
           onClose={() => setSelectedAircraft(null)}
         />

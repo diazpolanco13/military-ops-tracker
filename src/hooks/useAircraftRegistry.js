@@ -143,7 +143,7 @@ export function useAircraftRegistry(options = {}) {
   }, []);
 
   /**
-   * Obtener aeronave por ICAO24
+   * Obtener aeronave por ICAO24 con información enriquecida del catálogo
    */
   const getByIcao24 = useCallback(async (icao24) => {
     try {
@@ -157,17 +157,23 @@ export function useAircraftRegistry(options = {}) {
       
       // Si encontramos la aeronave, buscar modelo y base por separado
       if (data) {
-        // Obtener modelo de aeronave
+        // Obtener modelo de aeronave del catálogo (con especificaciones completas)
         if (data.aircraft_type) {
           const { data: modelData } = await supabase
             .from('aircraft_model_catalog')
             .select('*')
             .eq('aircraft_type', data.aircraft_type)
             .single();
-          if (modelData) data.model = modelData;
+          if (modelData) {
+            data.model = modelData;
+            // Si el registro no tiene el nombre completo, usar el del catálogo
+            if (!data.aircraft_model || data.aircraft_model === data.aircraft_type) {
+              data.aircraft_model = modelData.aircraft_model;
+            }
+          }
         }
         
-        // Obtener base
+        // Obtener base probable
         if (data.probable_base_icao) {
           const { data: baseData } = await supabase
             .from('caribbean_military_bases')
@@ -175,6 +181,17 @@ export function useAircraftRegistry(options = {}) {
             .eq('icao_code', data.probable_base_icao)
             .single();
           if (baseData) data.base = baseData;
+        }
+        
+        // Obtener presencia por países
+        const { data: presenceData } = await supabase
+          .from('aircraft_country_presence')
+          .select('country_code, country_name, country_flag, total_sightings, first_seen_in_country, last_seen_in_country')
+          .eq('icao24', icao24.toUpperCase())
+          .order('total_sightings', { ascending: false });
+        
+        if (presenceData && presenceData.length > 0) {
+          data.countries = presenceData;
         }
       }
       
@@ -280,30 +297,35 @@ export function useAircraftRegistry(options = {}) {
           // Obtener tipos únicos de aeronaves para buscar imágenes
           const uniqueTypes = [...new Set(aircraftData?.map(a => a.aircraft_type).filter(Boolean))];
           
-          // Cargar imágenes del catálogo de modelos
-          let modelImages = {};
+          // Cargar catálogo completo de modelos (incluyendo especificaciones)
+          let modelCatalog = {};
           if (uniqueTypes.length > 0) {
             const { data: catalogData } = await supabase
               .from('aircraft_model_catalog')
-              .select('aircraft_type, thumbnail_url, primary_image_url')
+              .select('*')
               .in('aircraft_type', uniqueTypes);
             
             if (catalogData) {
               catalogData.forEach(m => {
-                modelImages[m.aircraft_type] = {
-                  thumbnail_url: m.thumbnail_url || m.primary_image_url
-                };
+                modelCatalog[m.aircraft_type] = m;
               });
             }
           }
 
-          // Asociar imágenes a cada aeronave
-          const aircraftWithImages = (aircraftData || []).map(a => ({
-            ...a,
-            model: modelImages[a.aircraft_type] || null
-          }));
+          // Asociar datos del catálogo a cada aeronave
+          const aircraftWithCatalog = (aircraftData || []).map(a => {
+            const catalogInfo = modelCatalog[a.aircraft_type] || null;
+            return {
+              ...a,
+              // Si aircraft_model es igual al código, usar el nombre completo del catálogo
+              aircraft_model: (a.aircraft_model === a.aircraft_type && catalogInfo) 
+                ? catalogInfo.aircraft_model 
+                : a.aircraft_model,
+              model: catalogInfo
+            };
+          });
 
-          setAircraft(aircraftWithImages);
+          setAircraft(aircraftWithCatalog);
 
           // Fetch stats
           const { data: statsData, error: statsError } = await supabase

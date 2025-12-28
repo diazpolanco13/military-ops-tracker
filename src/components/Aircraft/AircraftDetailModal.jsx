@@ -214,12 +214,21 @@ function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes,
         <InfoRow label="ICAO24 (Hex)" value={a.icao24} mono />
         <InfoRow label="Tipo de aeronave" value={a.aircraft_type || 'Desconocido'} />
         <InfoRow label="Modelo" value={a.aircraft_model || 'Desconocido'} />
-        <InfoRow label="Rama militar" value={a.military_branch || 'No identificada'} />
+        {a.model?.category && (
+          <InfoRow label="Categoría" value={getCategoryLabel(a.model.category)} />
+        )}
+        {a.model?.manufacturer && (
+          <InfoRow label="Fabricante" value={a.model.manufacturer} />
+        )}
+        <InfoRow label="Rama militar" value={getBranchLabel(a.military_branch) || 'No identificada'} />
         {a.tail_number && (
           <InfoRow label="Número de cola" value={a.tail_number} mono />
         )}
         {a.squadron && (
           <InfoRow label="Escuadrón" value={a.squadron} />
+        )}
+        {a.model?.primary_role && (
+          <InfoRow label="Rol principal" value={a.model.primary_role} />
         )}
       </Section>
 
@@ -285,6 +294,13 @@ function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes,
                 value={`${a.model.max_speed_knots} kts`}
               />
             )}
+            {a.model.cruise_speed_knots && (
+              <SpecCard 
+                icon={Gauge}
+                label="Velocidad crucero"
+                value={`${a.model.cruise_speed_knots} kts`}
+              />
+            )}
             {a.model.max_altitude_ft && (
               <SpecCard 
                 icon={TrendingUp}
@@ -292,20 +308,49 @@ function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes,
                 value={`${(a.model.max_altitude_ft / 1000).toFixed(0)}k ft`}
               />
             )}
-            {a.model.category && (
+            {a.model.range_nm && (
               <SpecCard 
-                icon={Target}
-                label="Categoría"
-                value={getCategoryLabel(a.model.category)}
+                icon={Route}
+                label="Alcance"
+                value={`${a.model.range_nm.toLocaleString()} nm`}
               />
             )}
-            {a.model.manufacturer && (
+            {a.model.crew_count !== undefined && a.model.crew_count !== null && (
               <SpecCard 
                 icon={Shield}
-                label="Fabricante"
-                value={a.model.manufacturer}
+                label="Tripulación"
+                value={`${a.model.crew_count} personas`}
               />
             )}
+            {a.model.operated_by && a.model.operated_by.length > 0 && (
+              <SpecCard 
+                icon={Target}
+                label="Operadores"
+                value={a.model.operated_by.join(', ')}
+              />
+            )}
+          </div>
+        </Section>
+      )}
+
+      {/* Países detectados */}
+      {a.countries && a.countries.length > 0 && (
+        <Section title="Países Detectados">
+          <div className="space-y-2">
+            {a.countries.map((country, idx) => (
+              <div 
+                key={idx}
+                className="flex items-center justify-between p-2 bg-slate-700/30 rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{country.country_flag || '🏳️'}</span>
+                  <span className="text-sm text-white">{country.country_name}</span>
+                </div>
+                <span className="text-xs text-slate-400">
+                  {country.total_sightings} {country.total_sightings === 1 ? 'avistamiento' : 'avistamientos'}
+                </span>
+              </div>
+            ))}
           </div>
         </Section>
       )}
@@ -607,14 +652,26 @@ function getCategoryLabel(category) {
     fighter: 'Caza',
     transport: 'Transporte',
     tanker: 'Cisterna',
-    awacs: 'AWACS',
-    patrol: 'Patrulla',
+    awacs: 'AWACS/Alerta Temprana',
+    patrol: 'Patrulla Marítima',
     reconnaissance: 'Reconocimiento',
     helicopter: 'Helicóptero',
-    drone: 'Drone',
+    drone: 'Drone/UAV',
     bomber: 'Bombardero',
     trainer: 'Entrenador',
   };
   return labels[category] || category;
+}
+
+function getBranchLabel(branch) {
+  const labels = {
+    'USAF': 'US Air Force',
+    'USN': 'US Navy',
+    'USMC': 'US Marine Corps',
+    'USA': 'US Army',
+    'USCG': 'US Coast Guard',
+    'CBP': 'Customs & Border Protection',
+  };
+  return labels[branch] || branch;
 }
 
