@@ -9,6 +9,7 @@ import {
   getAircraftModel,
   SIGNAL_TYPES,
 } from '../../services/flightRadarService';
+import { useAircraftModelImage } from '../../hooks/useAircraftImages';
 
 // Determinar si es helicóptero basado en el tipo
 const isHelicopter = (type) => {
@@ -46,6 +47,17 @@ const getAircraftModelName = (icaoType) => {
   return modelInfo?.name || null;
 };
 
+// Normalizar para que coincida con aircraft_model_catalog / aircraft_model_images
+// Ej: "C17A" -> "C17"
+const normalizeTypeForCatalog = (type) => {
+  const t = String(type || '').trim().toUpperCase();
+  if (!t) return '';
+  if (t.length >= 4 && /[A-Z]/.test(t[t.length - 1]) && /\d/.test(t)) {
+    return t.slice(0, -1);
+  }
+  return t;
+};
+
 /**
  * 🛩️ PANEL DE DETALLES DE VUELO - BOTTOM SHEET UNIVERSAL
  * 
@@ -59,6 +71,16 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const panelRef = useRef(null);
+
+  // Datos combinados (necesario arriba para el hook de imagen)
+  const aircraftTypeRaw = details?.aircraft?.type || flight?.aircraft?.type || '';
+  // Priorizar el tipo exacto (ej: DH8B) y usar fallback (ej: C17A->C17) si no hay imagen.
+  const aircraftTypeExact = String(aircraftTypeRaw || '').trim().toUpperCase();
+  const aircraftTypeFallback = normalizeTypeForCatalog(aircraftTypeRaw);
+  const { imageUrl: modelImageUrlExact } = useAircraftModelImage(aircraftTypeExact);
+  const { imageUrl: modelImageUrlFallback } = useAircraftModelImage(aircraftTypeFallback);
+  const modelImageUrl = modelImageUrlExact || modelImageUrlFallback;
+  const aircraftType = aircraftTypeExact || aircraftTypeFallback || aircraftTypeRaw || '';
 
   useEffect(() => {
     if (flight?.id) {
@@ -79,8 +101,15 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   const speedKmh = knotsToKmh(flight.speed);
   
   // Datos combinados
-  const aircraftType = flight.aircraft?.type || '';
-  const aircraftModel = flight.aircraft?.modelName || details?.aircraft?.modelName || getAircraftModelName(aircraftType) || aircraftType || 'Unknown';
+  const aircraftModel =
+    flight.aircraft?.modelName ||
+    details?.aircraft?.modelName ||
+    getAircraftModelName(aircraftTypeExact) ||
+    getAircraftModelName(aircraftTypeFallback) ||
+    getAircraftModelName(aircraftTypeRaw) ||
+    aircraftTypeRaw ||
+    aircraftType ||
+    'Unknown';
   const airlineName = details?.airline?.name || flight.aircraft?.airline || '';
   const registration = details?.aircraft?.registration || flight.registration || 'N/A';
   const aircraftAge = details?.aircraft?.age;
@@ -142,22 +171,35 @@ export default function FlightDetailsPanel({ flight, onClose }) {
         {/* Header con info principal - SIEMPRE VISIBLE */}
         <div className="px-3 py-2 sm:px-4">
           <div className="flex items-center gap-3">
-            {/* Icono */}
-            <div 
-              className="p-2 rounded-xl shrink-0"
-              style={{ 
-                backgroundColor: `${color}15`, 
+            {/* Imagen del modelo (si existe en catálogo) o ícono fallback */}
+            <div
+              className="rounded-xl shrink-0 overflow-hidden"
+              style={{
+                width: '56px',
+                height: '56px',
+                backgroundColor: `${color}15`,
                 border: `2px solid ${color}`,
-                boxShadow: `0 0 15px ${color}30`
+                boxShadow: `0 0 15px ${color}30`,
               }}
             >
-              {isHeli ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v4M12 14v8M4 8h16M7 14h10M9 18h6"/>
-                  <circle cx="12" cy="11" r="3"/>
-                </svg>
+              {modelImageUrl ? (
+                <img
+                  src={modelImageUrl}
+                  alt={aircraftModel}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : isHeli ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v4M12 14v8M4 8h16M7 14h10M9 18h6"/>
+                    <circle cx="12" cy="11" r="3"/>
+                  </svg>
+                </div>
               ) : (
-                <Plane size={24} color={color} strokeWidth={2.5} />
+                <div className="w-full h-full flex items-center justify-center">
+                  <Plane size={26} color={color} strokeWidth={2.5} />
+                </div>
               )}
             </div>
             
@@ -170,9 +212,9 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                 {loading && <Loader2 size={14} className="animate-spin text-blue-400" />}
               </div>
               {/* Nombre completo del modelo de aeronave */}
-              {aircraftType && (
+              {(aircraftTypeRaw || aircraftType) && (
                 <p className="text-xs sm:text-sm text-cyan-400 font-medium truncate">
-                  {getAircraftModelName(aircraftType) || details?.aircraft?.modelName || aircraftType}
+                  {getAircraftModelName(aircraftTypeRaw) || getAircraftModelName(aircraftType) || details?.aircraft?.modelName || aircraftTypeRaw || aircraftType}
                 </p>
               )}
               {/* Operador */}
@@ -226,9 +268,9 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                 <p className="text-[10px] text-green-400 uppercase font-medium">Vel</p>
                 <p className="text-sm font-bold text-white">{speedKmh} km/h</p>
               </div>
-              {/* País */}
+              {/* País (del avión) */}
               <div className="text-center">
-                <p className="text-[10px] text-cyan-400 uppercase font-medium">País</p>
+                <p className="text-[10px] text-cyan-400 uppercase font-medium">País (avión)</p>
                 <p className="text-lg">{countryInfo.flag}</p>
               </div>
             </div>
@@ -297,7 +339,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               <p className="text-[9px] font-bold text-white truncate">{aircraftType || '?'}</p>
             </div>
             <div className="bg-cyan-500/10 rounded-md p-1.5 text-center">
-              <p className="text-[8px] text-cyan-300 uppercase">País</p>
+              <p className="text-[8px] text-cyan-300 uppercase">Avión</p>
               <p className="text-sm">{countryInfo.flag}</p>
             </div>
             {/* 📡 INDICADOR DE TRANSPONDER - Móvil */}
@@ -334,6 +376,20 @@ export default function FlightDetailsPanel({ flight, onClose }) {
         {/* Contenido expandido */}
         {expanded && (
           <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 space-y-3">
+
+            {/* Imagen grande del modelo (solo cuando está expandido) */}
+            {modelImageUrl && (
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl overflow-hidden">
+                <div className="w-full h-[160px] sm:h-[220px] bg-black/30 flex items-center justify-center">
+                  <img
+                    src={modelImageUrl}
+                    alt={aircraftModel}
+                    className="w-full h-full object-contain p-3"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            )}
             
             {/* Grid de info detallada - 2 columnas en desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -356,7 +412,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                     <span className="font-mono font-bold text-white">{registration}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400">País</span>
+                    <span className="text-slate-400">País (avión)</span>
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <span className="text-base">{countryInfo.flag}</span>
                       <span className="text-cyan-400">{countryInfo.name}</span>

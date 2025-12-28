@@ -441,6 +441,12 @@ function AircraftListItem({ aircraft, onClick }) {
   
   // Obtener el último callsign usado (el más reciente/importante)
   const lastCallsign = a.callsigns_used?.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null;
+  const lastCountryLabel = a.last_country_code === 'PR'
+    ? 'Puerto Rico (Territorio de USA)'
+    : (a.last_country_name || a.last_country_code);
+  const lastCountryFlag = a.last_country_code === 'PR' ? '🇵🇷' : a.last_country_flag;
+  const lastSeenInCountry = a.last_seen_in_country ? new Date(a.last_seen_in_country) : null;
+  const detectionDate = lastSeenInCountry || lastSeen;
 
   return (
     <div 
@@ -486,6 +492,33 @@ function AircraftListItem({ aircraft, onClick }) {
         <h4 className="text-sm font-medium text-white truncate group-hover:text-sky-300 transition-colors">
           {a.aircraft_model || a.aircraft_type || 'Modelo desconocido'}
         </h4>
+
+        {/* Última ubicación (país) + Base probable + Fecha */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[11px] text-slate-400">
+          {(a.last_country_code || a.last_country_name) && (
+            <span className="inline-flex items-center gap-1">
+              <Globe className="w-3 h-3 text-slate-500" />
+              <span className="text-base leading-none">{lastCountryFlag || '🏳️'}</span>
+              <span className="truncate max-w-[220px]">{lastCountryLabel}</span>
+            </span>
+          )}
+          {a.probable_base_icao && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="w-3 h-3 text-slate-500" />
+              <span className="font-mono text-slate-300">{a.probable_base_icao}</span>
+              <span className="truncate max-w-[260px]">{a.probable_base_name}</span>
+            </span>
+          )}
+          {detectionDate && (
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-3 h-3 text-slate-500" />
+              <span>
+                {detectionDate.toLocaleString('es-VE', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </span>
+          )}
+        </div>
+
         {a.callsigns_used?.length > 1 && (
           <div className="text-[10px] text-slate-500 mt-0.5 truncate">
             También: {a.callsigns_used.slice(0, -1).slice(-2).join(', ')}

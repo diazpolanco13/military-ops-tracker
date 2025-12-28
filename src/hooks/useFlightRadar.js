@@ -5,6 +5,7 @@ import {
   filterFlightsByCategory,
   getFlightCategory
 } from '../services/flightRadarService';
+import { supabase } from '../lib/supabase';
 
 /**
  * 🛩️ HOOK USEFLIGHTRADAR - VERSIÓN COMPLETA
@@ -72,6 +73,120 @@ export function useFlightRadar({
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [isActive, setIsActive] = useState(enabled);
+
+  // Cache local para evitar queries repetidas al catálogo en cada refresh
+  const aircraftCatalogCacheRef = useRef(new Map()); // type -> catalog row
+  const aircraftImageCacheRef = useRef(new Map());   // type -> url
+
+  const normalizeTypeForCatalog = useCallback((type) => {
+    // Solo normalización “segura”: uppercase + trim.
+    // NO recortar sufijos (ej: DH8B) porque en muchos ICAO el sufijo es parte del tipo real del catálogo.
+    return String(type || '').trim().toUpperCase();
+  }, []);
+
+  const getTypeCandidates = useCallback((typeRaw) => {
+    const t = normalizeTypeForCatalog(typeRaw);
+    if (!t) return [];
+
+    // Fallback opcional: si termina en una letra y tiene dígitos, probar sin sufijo.
+    // Útil para casos como C17A->C17, C130J->C130, etc. pero manteniendo DH8B intacto como prioridad.
+    const candidates = [t];
+    if (t.length >= 4 && /[A-Z]$/.test(t) && /\d/.test(t)) {
+      candidates.push(t.slice(0, -1));
+    }
+
+    // unique
+    return Array.from(new Set(candidates)).filter(Boolean);
+  }, [normalizeTypeForCatalog]);
+
+  const enrichFlightsWithCatalog = useCallback(async (flightsData) => {
+    try {
+      const types = Array.from(
+        new Set(
+          (flightsData || [])
+            .flatMap((f) => getTypeCandidates(f?.aircraft?.type))
+            .filter(Boolean)
+        )
+      );
+
+      // Solo consultar por tipos que aún no estén en cache
+      const missingTypes = types.filter((t) => !aircraftCatalogCacheRef.current.has(t) && !aircraftImageCacheRef.current.has(t));
+
+      if (missingTypes.length > 0) {
+        // 1) Catálogo de modelos (batch)
+        const { data: catalogRows } = await supabase
+          .from('aircraft_model_catalog')
+          .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url')
+          .in('aircraft_type', missingTypes);
+
+        (catalogRows || []).forEach((row) => {
+          if (row?.aircraft_type) aircraftCatalogCacheRef.current.set(String(row.aircraft_type).toUpperCase(), row);
+          const img = row?.thumbnail_url || row?.primary_image_url;
+          if (img && row?.aircraft_type) aircraftImageCacheRef.current.set(String(row.aircraft_type).toUpperCase(), img);
+        });
+
+        // 2) Imágenes por tipo (batch) - preferir imagen primaria si existe
+        const { data: imageRows } = await supabase
+          .from('aircraft_model_images')
+          .select('aircraft_type, thumbnail_url, image_url, is_primary, created_at')
+          .in('aircraft_type', missingTypes)
+          .order('is_primary', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        (imageRows || []).forEach((row) => {
+          const t = row?.aircraft_type ? String(row.aircraft_type).toUpperCase() : null;
+          if (!t) return;
+          if (aircraftImageCacheRef.current.has(t)) return;
+          const img = row?.thumbnail_url || row?.image_url;
+          if (img) aircraftImageCacheRef.current.set(t, img);
+        });
+      }
+
+      // Mezclar data enriquecida
+      return (flightsData || []).map((f) => {
+        const typeRaw = f?.aircraft?.type || '';
+        const candidates = getTypeCandidates(typeRaw);
+        const primaryType = candidates[0] || normalizeTypeForCatalog(typeRaw);
+        const fallbackType = candidates[1] || null;
+
+        const catalog =
+          (primaryType ? aircraftCatalogCacheRef.current.get(primaryType) : null) ||
+          (fallbackType ? aircraftCatalogCacheRef.current.get(fallbackType) : null) ||
+          null;
+
+        const thumb =
+          (primaryType ? aircraftImageCacheRef.current.get(primaryType) : null) ||
+          (fallbackType ? aircraftImageCacheRef.current.get(fallbackType) : null) ||
+          null;
+
+        const modelName =
+          f?.aircraft?.modelName ||
+          catalog?.aircraft_model ||
+          null;
+
+        const modelCategory =
+          f?.aircraft?.modelCategory ||
+          catalog?.category ||
+          null;
+
+        return {
+          ...f,
+          aircraft: {
+            ...(f.aircraft || {}),
+            type: typeRaw,
+            type_norm: primaryType || typeRaw,
+            modelName,
+            modelCategory,
+            thumbnailUrl: thumb || null,
+            modelCatalog: catalog || null,
+          },
+        };
+      });
+    } catch (e) {
+      // Si falla el enriquecimiento, devolver sin romper
+      return flightsData || [];
+    }
+  }, [normalizeTypeForCatalog]);
   
   // Guardar bounds en ref para usarlos en fetchFlights
   const boundsRef = useRef(bounds);
@@ -134,7 +249,9 @@ export function useFlightRadar({
 
       // ⚠️ Solo actualizar si hay datos válidos
       if (Array.isArray(flightsData) && flightsData.length > 0) {
-        setAllFlights(flightsData);
+        const enriched = await enrichFlightsWithCatalog(flightsData);
+        if (!isMountedRef.current) return;
+        setAllFlights(enriched);
         setLastUpdate(new Date());
         isFirstLoadRef.current = false;
         console.log(`✅ FlightRadar24: ${flightsData.length} vuelos cargados`);

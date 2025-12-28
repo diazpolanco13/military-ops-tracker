@@ -465,6 +465,14 @@ export default function FlightRadarPanel({
             {filteredFlights.map(flight => {
               const country = COUNTRIES[flight.detectedCountry] || COUNTRIES.other;
               const typeInfo = AIRCRAFT_TYPES[flight.flightType] || AIRCRAFT_TYPES.military;
+              const thumb = flight.aircraft?.thumbnailUrl || null;
+              const modelName =
+                flight.aircraft?.modelName ||
+                getAircraftModelName(flight.aircraft?.type_norm || flight.aircraft?.type) ||
+                flight.aircraft?.type ||
+                'Aeronave';
+              const modelTypeCode = flight.aircraft?.type_norm || flight.aircraft?.type || null;
+              const modelCategory = flight.aircraft?.modelCategory || null;
               
               return (
                 <button
@@ -475,10 +483,38 @@ export default function FlightRadarPanel({
                   {/* Header del vuelo */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm">{country.flag}</span>
-                      <span className="font-mono font-bold text-white text-sm group-hover:text-yellow-400 transition-colors">
-                        {flight.callsign || 'UNKNOWN'}
-                      </span>
+                      {/* Thumbnail + bandera del AVIÓN (no ubicación) */}
+                      <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-600/60 bg-slate-900/60 shrink-0">
+                        {thumb ? (
+                          <img
+                            src={thumb}
+                            alt={modelName}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Plane className="w-5 h-5 text-slate-500" />
+                          </div>
+                        )}
+                        <div
+                          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-[11px]"
+                          title="País del avión (registro/operador) — no es la ubicación"
+                        >
+                          {country.flag}
+                        </div>
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-white text-sm group-hover:text-yellow-400 transition-colors">
+                            {flight.callsign || 'UNKNOWN'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-cyan-300 font-semibold truncate max-w-[220px]">
+                          {modelName}
+                        </p>
+                      </div>
                     </div>
                     <span 
                       className="px-1.5 py-0.5 rounded text-[9px] font-bold"
@@ -508,29 +544,18 @@ export default function FlightRadarPanel({
                   </div>
 
                   {/* Modelo de aeronave - INFORMACIÓN CLAVE */}
-                  {flight.aircraft?.type && (
+                  {(modelTypeCode || modelCategory || flight.registration) && (
                     <div className="mt-2 pt-2 border-t border-slate-700/50">
-                      <div className="flex items-start gap-1.5">
-                        <Plane size={12} className="text-cyan-400 mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          {/* Nombre completo del modelo si está disponible */}
-                          {getAircraftModelName(flight.aircraft.type) ? (
-                            <>
-                              <p className="text-xs font-semibold text-cyan-300 truncate">
-                                {getAircraftModelName(flight.aircraft.type)}
-                              </p>
-                              <p className="text-[10px] text-slate-500">
-                                {flight.aircraft.type}
-                                {flight.registration && <span className="ml-1.5">• {flight.registration}</span>}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-[10px] text-slate-400">
-                              {flight.aircraft.type}
-                              {flight.registration && <span className="ml-1.5 text-slate-500">• {flight.registration}</span>}
-                            </p>
-                          )}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[10px] text-slate-500 font-mono truncate">
+                          {modelTypeCode || 'N/A'}
+                          {flight.registration && <span className="ml-1.5">• {flight.registration}</span>}
                         </div>
+                        {modelCategory && (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-700/40 border border-slate-600/40 text-[9px] text-slate-200 uppercase tracking-wide">
+                            {modelCategory}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}

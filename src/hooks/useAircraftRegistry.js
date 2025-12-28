@@ -30,6 +30,28 @@ export function useAircraftRegistry(options = {}) {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
 
+  const mergeLastPresence = useCallback((aircraftRows, lastPresenceRows) => {
+    const byIcao = {};
+    (lastPresenceRows || []).forEach((p) => {
+      if (p?.icao24) byIcao[String(p.icao24).toUpperCase()] = p;
+    });
+
+    return (aircraftRows || []).map((a) => {
+      const p = byIcao[String(a.icao24).toUpperCase()];
+      if (!p) return a;
+      return {
+        ...a,
+        last_presence: p,
+        last_country_code: p.country_code,
+        last_country_name: p.country_name,
+        last_country_flag: p.country_flag,
+        last_seen_in_country: p.last_seen_in_country,
+        last_position_lat: p.last_position_lat,
+        last_position_lon: p.last_position_lon,
+      };
+    });
+  }, []);
+
   /**
    * Cargar lista de aeronaves con filtros
    * NOTA: No usamos JOINs por falta de FKs - las tablas relacionadas
@@ -83,7 +105,18 @@ export function useAircraftRegistry(options = {}) {
 
       if (queryError) throw queryError;
 
-      setAircraft(data || []);
+      // Cargar última presencia por aeronave (batch) y mezclar
+      const icaoList = (data || []).map((r) => r.icao24).filter(Boolean);
+      let merged = data || [];
+      if (icaoList.length > 0) {
+        const { data: presenceRows } = await supabase
+          .from('aircraft_last_presence')
+          .select('*')
+          .in('icao24', icaoList);
+        merged = mergeLastPresence(merged, presenceRows);
+      }
+
+      setAircraft(merged);
     } catch (err) {
       console.error('Error fetching aircraft registry:', err);
       setError(err.message);
@@ -159,11 +192,13 @@ export function useAircraftRegistry(options = {}) {
       if (data) {
         // Obtener modelo de aeronave del catálogo (con especificaciones completas)
         if (data.aircraft_type) {
-          const { data: modelData } = await supabase
+          // Evitar `.single()` aquí: si el tipo no existe en catálogo, PostgREST responde 406.
+          const { data: modelRows } = await supabase
             .from('aircraft_model_catalog')
             .select('*')
             .eq('aircraft_type', data.aircraft_type)
-            .single();
+            .limit(1);
+          const modelData = modelRows?.[0] || null;
           if (modelData) {
             data.model = modelData;
             // Si el registro no tiene el nombre completo, usar el del catálogo
@@ -175,11 +210,13 @@ export function useAircraftRegistry(options = {}) {
         
         // Obtener base probable
         if (data.probable_base_icao) {
-          const { data: baseData } = await supabase
+          // Evitar `.single()` por el mismo motivo: si no está en el catálogo de bases, 406.
+          const { data: baseRows } = await supabase
             .from('caribbean_military_bases')
             .select('*')
             .eq('icao_code', data.probable_base_icao)
-            .single();
+            .limit(1);
+          const baseData = baseRows?.[0] || null;
           if (baseData) data.base = baseData;
         }
         
@@ -325,7 +362,18 @@ export function useAircraftRegistry(options = {}) {
             };
           });
 
-          setAircraft(aircraftWithCatalog);
+          // Mezclar última presencia por aeronave (batch)
+          const icaoList = (aircraftWithCatalog || []).map((r) => r.icao24).filter(Boolean);
+          let aircraftWithPresence = aircraftWithCatalog;
+          if (icaoList.length > 0) {
+            const { data: presenceRows } = await supabase
+              .from('aircraft_last_presence')
+              .select('*')
+              .in('icao24', icaoList);
+            aircraftWithPresence = mergeLastPresence(aircraftWithCatalog, presenceRows);
+          }
+
+          setAircraft(aircraftWithPresence);
 
           // Fetch stats
           const { data: statsData, error: statsError } = await supabase

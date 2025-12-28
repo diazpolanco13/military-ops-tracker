@@ -1,7 +1,7 @@
 # Propuesta: Registro de Aeronaves Militares del Caribe
 
-> **Estado**: Propuesta pendiente de implementación  
-> **Fecha**: 26 de diciembre de 2024  
+> **Estado**: **MVP IMPLEMENTADO (en producción) + mejoras en curso**  
+> **Fecha**: 26 de diciembre de 2024 (actualizado: 28 de diciembre de 2025)  
 > **Prioridad**: Alta  
 
 ---
@@ -32,6 +32,33 @@ Crear un **sistema de registro persistente de aeronaves militares de EEUU** que 
 - Calcular base probable por frecuencia
 - Permitir consultas: "¿Qué hay en Puerto Rico?" / "¿Cuántas veces vino AE1234?"
 - Galería de imágenes por modelo de aeronave
+
+---
+
+## ✅ Estado Actual (Dic 2025)
+
+### Implementado (MVP)
+- **Registro persistente por aeronave (ICAO24)**: `military_aircraft_registry` operativo.
+- **Historial de detecciones**: `aircraft_location_history` operativo (eventos `detection`).
+- **Presencia por país**: `aircraft_country_presence` + vista `caribbean_deployment_summary`.
+- **Detección de país/EEZ con PostGIS**:
+  - RPCs `get_country_at_point` y `get_eez_at_point` (mejoradas con `ST_Covers` + SRID).
+  - Normalización de country codes para consistencia (ISO3 en tracking: `USA`, `VEN`, `COL`, `PAN`, etc.).
+- **Catálogo de modelos**: `aircraft_model_catalog` + UI enriquecida (especificaciones, fabricante, rol).
+- **Imágenes por modelo**: `aircraft_model_images` + uploader/galería (por `aircraft_type`).
+- **Vista de detalle full-screen**: `AircraftDetailView` reemplaza modales, con layout PC (imagen izq, tabs der).
+- **CALLSIGN como dato prioritario**:
+  - En lista/grid y en header del detalle.
+- **Inventario optimizado**:
+  - Se muestra **último país detectado + fecha** y **base probable** en la lista (batch via vista `aircraft_last_presence`).
+- **Base probable**:
+  - RPC `recalculate_probable_base` corregida para funcionar con `detection` y resolver IATA/ICAO.
+  - `caribbean_military_bases` ampliada con bases/aeropuertos clave (US/PR/PA) según `origin_icao`.
+- **Fix crítico**: normalización de ramas militares en el collector (v14) para que entren Navy/Marines/Army/Coast Guard sin violar constraints.
+
+### Operativa enfocada (inteligencia)
+- **Foco principal**: aeronaves militares/gobierno de EEUU, priorizando **Caribe + EEUU**.
+- **Puerto Rico (PR)**: resaltado como **Territorio de USA** en UI para evitar ambigüedades.
 
 ---
 
@@ -630,37 +657,43 @@ export function useAircraftRegistry() {
 ## 📋 Checklist de Implementación
 
 ### Fase 1: Base de Datos
-- [ ] Crear tabla `military_aircraft_registry`
-- [ ] Crear tabla `aircraft_model_images`
-- [ ] Crear tabla `caribbean_military_bases`
-- [ ] Crear tabla `aircraft_location_history`
-- [ ] Crear tabla `aircraft_model_catalog`
-- [ ] Insertar datos iniciales (bases, catálogo)
-- [ ] Configurar RLS policies
-- [ ] Configurar Storage bucket
+- [x] Crear tabla `military_aircraft_registry`
+- [x] Crear tabla `aircraft_model_images`
+- [x] Crear tabla `caribbean_military_bases`
+- [x] Crear tabla `aircraft_location_history`
+- [x] Crear tabla `aircraft_model_catalog`
+- [x] Insertar datos iniciales (bases, catálogo) + ampliaciones por telemetría (`origin_icao`)
+- [x] Configurar Storage bucket (imágenes)
+- [x] RPCs geoespaciales: `get_country_at_point`, `get_eez_at_point`
+- [x] Normalización de country codes (ISO3 en tracking + backfills)
 
 ### Fase 2: Backend/Servicios
-- [ ] Crear función `registerMilitaryAircraft` en flightRadarService
-- [ ] Modificar Edge Function para registrar aeronaves
-- [ ] Crear función para recalcular base probable
-- [ ] Crear hook `useAircraftRegistry`
-- [ ] Crear hook `useAircraftImages`
+- [x] Edge Function `aircraft-registry-collector` (v14) registra/actualiza registry + history + country presence
+- [x] RPC `recalculate_probable_base` corregida para `detection` y mapeo IATA/ICAO
+- [x] Hooks: `useAircraftRegistry`, `useAircraftImages`
+- [x] Servicio frontend de geocoding (fallback) para backfill de país en historial cuando sea necesario
+- [ ] (Opcional) Integración con API externa (AeroDataBox/Aviation Edge) para auto-poblar specs más allá del catálogo local
 
 ### Fase 3: UI - Imágenes
-- [ ] Crear `AircraftImageUploader` component
-- [ ] Configurar Supabase Storage
-- [ ] Integrar en catálogo de modelos
+- [x] Upload/galería por `aircraft_type` + selección de imagen primaria
 
 ### Fase 4: UI - Registry
-- [ ] Crear `AircraftRegistryPanel`
-- [ ] Crear `AircraftDetailModal`
-- [ ] Crear `BaseInventoryPanel`
-- [ ] Integrar en IncursionStatsPanel
+- [x] `AircraftRegistryPanel`
+- [x] `AircraftDetailView` full-screen (reemplaza modal)
+- [x] Vista por país (`caribbean_deployment_summary`) + vista por bases
+- [ ] (Mejora) Panel dedicado “US Aircraft por país (Caribe + EEUU)” con filtros operativos
+- [ ] (Mejora) “Puerto Rico como hub”: sección fija destacada en “Por País” (PR)
 
 ### Fase 5: Integración
-- [ ] Modificar `FlightDetailsPanel` para mostrar datos de registry
-- [ ] Agregar menú en Navbar
-- [ ] Documentar en ARQUITECTURA.md
+- [x] Menú/Panel Inventario integrado en UI
+- [ ] (Mejora) Profundizar integración con panel de vuelo/track en mapa (link directo a detalle desde marker)
+
+---
+
+## 🔎 Pendientes Técnicos Prioritarios
+- **Códigos de origen no estándar**: ejemplo `QSK` aparece en `origin_icao` y requiere mapeo/limpieza.
+- **Cobertura de bases EEUU**: seguir ampliando `caribbean_military_bases` con bases clave (Caribe + SE USA) según telemetría real.
+- **Calidad de país en zonas costeras**: ya mejorado con `ST_Covers`, pero seguir validando edge cases.
 
 ---
 

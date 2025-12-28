@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ArrowLeft, 
   Plane, 
@@ -38,6 +38,7 @@ import {
 import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
 import { useAircraftImages } from '../../hooks/useAircraftImages';
 import { supabase } from '../../lib/supabase';
+import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
 
 /**
  * 🎖️ VISTA DE DETALLE DE AERONAVE (PANTALLA COMPLETA)
@@ -55,12 +56,80 @@ export default function AircraftDetailView({ aircraft, onClose }) {
   const [notes, setNotes] = useState(aircraft?.notes || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [modelData, setModelData] = useState(aircraft?.model || null);
+  const [lastLocation, setLastLocation] = useState(null);
   
-  // Ref para cancelar peticiones cuando el componente se desmonte
-  const mountedRef = useRef(true);
-  const historyLoadedRef = useRef(false);
 
   const { updateNotes, recalculateBase } = useAircraftRegistry();
+  
+  // Cargar modelo del catálogo si no viene incluido
+  useEffect(() => {
+    let cancelled = false;
+    
+    // Si ya tenemos modelo cargado o no hay tipo, no hacer nada
+    if (modelData || !aircraft?.aircraft_type) return;
+    
+    const loadModelFromCatalog = async () => {
+      try {
+        // NOTA: no usamos `.single()` aquí porque si no existe el tipo en el catálogo,
+        // PostgREST responde 406 y ensucia la consola; con `limit(1)` recibimos 200 + [].
+        const { data, error } = await supabase
+          .from('aircraft_model_catalog')
+          .select('*')
+          .eq('aircraft_type', aircraft.aircraft_type)
+          .limit(1);
+
+        const row = data?.[0] || null;
+        if (!cancelled && !error && row) {
+          setModelData(row);
+        }
+      } catch (err) {
+        // Silencioso - el modelo simplemente no está en el catálogo
+      }
+    };
+    
+    loadModelFromCatalog();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [aircraft?.aircraft_type, modelData]);
+
+  // Cargar última ubicación (para mostrar último país detectado y coords en Identificación)
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!aircraft?.icao24) {
+      setLastLocation(null);
+      return;
+    }
+
+    const loadLastLocation = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('aircraft_location_history')
+          .select('callsign, latitude, longitude, country_code, country_name, detected_at, origin_icao, destination_icao')
+          .eq('icao24', aircraft.icao24.toUpperCase())
+          .order('detected_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!cancelled && !error) {
+          setLastLocation(data || null);
+        }
+      } catch (e) {
+        // silencioso: es solo UI
+        if (!cancelled) setLastLocation(null);
+      }
+    };
+
+    loadLastLocation();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [aircraft?.icao24]);
+
   const { 
     images, 
     loading: loadingImages,
@@ -70,60 +139,94 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     setPrimaryImage 
   } = useAircraftImages(aircraft?.aircraft_type);
 
-  // Función estable para cargar historial
-  const loadHistory = useCallback(async (icao24) => {
-    if (!icao24 || historyLoadedRef.current) return;
-    
-    setLoadingHistory(true);
-    setHistoryError(null);
-    
-    try {
-      const { data, error } = await supabase
-        .from('aircraft_location_history')
-        .select('*')
-        .eq('icao24', icao24.toUpperCase())
-        .order('detected_at', { ascending: false })
-        .limit(50);
-      
-      if (!mountedRef.current) return;
-      
-      if (error) throw error;
-      
-      setHistory(data || []);
-      historyLoadedRef.current = true;
-    } catch (err) {
-      console.error('Error loading history:', err);
-      if (mountedRef.current) {
-        setHistoryError(err.message);
-        setHistory([]);
-      }
-    } finally {
-      if (mountedRef.current) {
-        setLoadingHistory(false);
-      }
+  // Si cambió el tamaño de la galería y el índice quedó fuera de rango, clamp a 0
+  useEffect(() => {
+    if (currentImageIndex >= images.length && images.length > 0) {
+      setCurrentImageIndex(0);
     }
-  }, []);
+  }, [images.length, currentImageIndex]);
 
-  // Cargar historial cuando se selecciona la tab
+  // Cargar historial cuando se selecciona la tab "history"
   useEffect(() => {
-    if (activeTab === 'history' && aircraft?.icao24) {
-      loadHistory(aircraft.icao24);
+    // Bandera local para este efecto
+    let cancelled = false;
+    
+    if (activeTab !== 'history' || !aircraft?.icao24) {
+      return;
     }
-  }, [activeTab, aircraft?.icao24, loadHistory]);
-  
-  // Cleanup al desmontar
-  useEffect(() => {
-    mountedRef.current = true;
-    historyLoadedRef.current = false;
+    
+    const fetchHistory = async () => {
+      setLoadingHistory(true);
+      setHistoryError(null);
+      
+      try {
+        const { data, error } = await supabase
+          .from('aircraft_location_history')
+          .select('*')
+          .eq('icao24', aircraft.icao24.toUpperCase())
+          .order('detected_at', { ascending: false })
+          .limit(50);
+        
+        if (cancelled) return;
+        
+        if (error) throw error;
+        
+        // Hacer geocoding de registros sin país (en background)
+        const recordsWithoutCountry = data?.filter(r => !r.country_code && r.latitude && r.longitude) || [];
+        
+        if (recordsWithoutCountry.length > 0) {
+          // Procesar en background sin bloquear la UI
+          batchGeocodeHistory(recordsWithoutCountry.slice(0, 10)) // Limitar a 10 por el rate limit
+            .then(geocoded => {
+              if (!cancelled) {
+                // Actualizar la BD con los países detectados
+                updateHistoryWithCountries(geocoded);
+                
+                // Actualizar el estado local
+                const updatedHistory = data.map(h => {
+                  const geocodedItem = geocoded.find(g => g.id === h.id);
+                  if (geocodedItem?.country) {
+                    return {
+                      ...h,
+                      country_code: geocodedItem.country.country_code,
+                      country_name: geocodedItem.country.country_name
+                    };
+                  }
+                  return h;
+                });
+                setHistory(updatedHistory);
+              }
+            })
+            .catch(console.error);
+        }
+        
+        setHistory(data || []);
+      } catch (err) {
+        console.error('[AircraftDetailView] Error loading history:', err);
+        if (!cancelled) {
+          setHistoryError(err.message);
+          setHistory([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingHistory(false);
+        }
+      }
+    };
+    
+    fetchHistory();
     
     return () => {
-      mountedRef.current = false;
+      cancelled = true;
     };
-  }, [aircraft?.icao24]); // Reset cuando cambia la aeronave
+  }, [activeTab, aircraft?.icao24]);
 
   if (!aircraft) return null;
 
   const a = aircraft;
+  const primaryCallsign =
+    (lastLocation?.callsign && String(lastLocation.callsign).trim()) ||
+    (a.callsigns_used && a.callsigns_used.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null);
   const lastSeen = a.last_seen ? new Date(a.last_seen) : null;
   const firstSeen = a.first_seen ? new Date(a.first_seen) : null;
 
@@ -185,7 +288,14 @@ export default function AircraftDetailView({ aircraft, onClose }) {
         </button>
 
         <div className="flex items-center gap-3">
-          <span className="font-mono text-lg text-sky-400 font-bold">{a.icao24}</span>
+          <div className="flex flex-col items-center sm:items-start leading-tight">
+            <span className="font-mono text-xl sm:text-2xl text-amber-300 font-extrabold tracking-wide">
+              {primaryCallsign || 'SIN CALLSIGN'}
+            </span>
+            <span className="font-mono text-xs sm:text-sm text-sky-400/90">
+              {a.icao24}
+            </span>
+          </div>
           {a.military_branch && (
             <span className="text-xs bg-sky-500/20 text-sky-300 px-2 py-1 rounded-full font-medium">
               {getBranchLabel(a.military_branch)}
@@ -298,21 +408,21 @@ export default function AircraftDetailView({ aircraft, onClose }) {
               {a.aircraft_model || a.aircraft_type || 'Modelo desconocido'}
             </h1>
             <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-              {a.model?.manufacturer && (
+              {modelData?.manufacturer && (
                 <span className="flex items-center gap-1">
                   <Target className="w-3.5 h-3.5" />
-                  {a.model.manufacturer}
+                  {modelData?.manufacturer}
                 </span>
               )}
-              {a.model?.category && (
+              {modelData?.category && (
                 <span className="px-2 py-0.5 rounded-full bg-slate-700/80 text-xs">
-                  {getCategoryLabel(a.model.category)}
+                  {getCategoryLabel(modelData?.category)}
                 </span>
               )}
-              {a.model?.country_origin && (
+              {modelData?.country_origin && (
                 <span className="flex items-center gap-1">
                   <Globe className="w-3.5 h-3.5" />
-                  {a.model.country_origin}
+                  {modelData?.country_origin}
                 </span>
               )}
             </div>
@@ -324,69 +434,69 @@ export default function AircraftDetailView({ aircraft, onClose }) {
               Especificaciones Técnicas
             </h3>
             
-            {a.model ? (
+            {modelData ? (
               <div className="grid grid-cols-2 gap-3">
-                {a.model.max_speed_knots && (
+                {modelData?.max_speed_knots && (
                   <SpecCard 
                     icon={Gauge}
                     label="Velocidad máx"
-                    value={`${a.model.max_speed_knots} kts`}
+                    value={`${modelData?.max_speed_knots} kts`}
                     color="sky"
                   />
                 )}
-                {a.model.cruise_speed_knots && (
+                {modelData?.cruise_speed_knots && (
                   <SpecCard 
                     icon={Zap}
                     label="Velocidad crucero"
-                    value={`${a.model.cruise_speed_knots} kts`}
+                    value={`${modelData?.cruise_speed_knots} kts`}
                     color="green"
                   />
                 )}
-                {a.model.max_altitude_ft && (
+                {modelData?.max_altitude_ft && (
                   <SpecCard 
                     icon={TrendingUp}
                     label="Altitud máx"
-                    value={`${(a.model.max_altitude_ft / 1000).toFixed(0)}k ft`}
+                    value={`${(modelData?.max_altitude_ft / 1000).toFixed(0)}k ft`}
                     color="purple"
                   />
                 )}
-                {a.model.range_nm && (
+                {modelData?.range_nm && (
                   <SpecCard 
                     icon={Route}
                     label="Alcance"
-                    value={`${a.model.range_nm.toLocaleString()} nm`}
+                    value={`${modelData?.range_nm.toLocaleString()} nm`}
                     color="amber"
                   />
                 )}
-                {a.model.crew_count !== undefined && a.model.crew_count !== null && (
+                {modelData?.crew_count !== undefined && modelData?.crew_count !== null && (
                   <SpecCard 
                     icon={Users}
                     label="Tripulación"
-                    value={`${a.model.crew_count} personas`}
+                    value={`${modelData?.crew_count} personas`}
                     color="pink"
                   />
                 )}
-                {a.model.wingspan_m && (
+                {modelData?.wingspan_m && (
                   <SpecCard 
                     icon={Ruler}
                     label="Envergadura"
-                    value={`${a.model.wingspan_m} m`}
+                    value={`${modelData?.wingspan_m} m`}
                     color="orange"
                   />
                 )}
-                {a.model.length_m && (
+                {modelData?.length_m && (
                   <SpecCard 
                     icon={Ruler}
                     label="Longitud"
-                    value={`${a.model.length_m} m`}
+                    value={`${modelData?.length_m} m`}
                     color="teal"
                   />
                 )}
-                {a.model.mtow_kg && (
+                {modelData?.mtow_kg && (
                   <SpecCard 
                     icon={Anchor}
                     label="Peso máx despegue"
-                    value={`${(a.model.mtow_kg / 1000).toFixed(0)}t`}
+                    value={`${(modelData?.mtow_kg / 1000).toFixed(0)}t`}
                     color="slate"
                   />
                 )}
@@ -399,13 +509,13 @@ export default function AircraftDetailView({ aircraft, onClose }) {
             )}
 
             {/* Operadores */}
-            {a.model?.operated_by && a.model.operated_by.length > 0 && (
+            {modelData?.operated_by && modelData?.operated_by.length > 0 && (
               <div className="mt-6">
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                   Operadores
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {a.model.operated_by.map((op, i) => (
+                  {modelData?.operated_by.map((op, i) => (
                     <span key={i} className="px-3 py-1.5 bg-slate-700/50 rounded-lg text-sm text-slate-300 border border-slate-600/50">
                       {op}
                     </span>
@@ -415,22 +525,22 @@ export default function AircraftDetailView({ aircraft, onClose }) {
             )}
 
             {/* Rol principal */}
-            {a.model?.primary_role && (
+            {modelData?.primary_role && (
               <div className="mt-6">
                 <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                   Rol Principal
                 </h4>
                 <p className="text-white text-sm bg-slate-700/30 rounded-lg px-4 py-3 border border-slate-600/30">
-                  {a.model.primary_role}
+                  {modelData?.primary_role}
                 </p>
               </div>
             )}
 
             {/* Wikipedia link */}
-            {a.model?.wikipedia_url && (
+            {modelData?.wikipedia_url && (
               <div className="mt-6">
                 <a
-                  href={a.model.wikipedia_url}
+                  href={modelData?.wikipedia_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm transition-colors"
@@ -471,6 +581,8 @@ export default function AircraftDetailView({ aircraft, onClose }) {
             {activeTab === 'info' && (
               <InfoTab 
                 aircraft={a} 
+                modelData={modelData}
+                lastLocation={lastLocation}
                 notes={notes}
                 setNotes={setNotes}
                 isEditingNotes={isEditingNotes}
@@ -610,8 +722,13 @@ function Lightbox({ images, currentIndex, onClose, onPrev, onNext, onIndexChange
 // =============================================
 // TAB: IDENTIFICACIÓN
 // =============================================
-function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes, onSaveNotes, onRecalculateBase }) {
+function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditingNotes, setIsEditingNotes, onSaveNotes, onRecalculateBase }) {
   const a = aircraft;
+  const baseCountryCode = a.probable_country;
+  const baseCountryLabel = baseCountryCode === 'PR'
+    ? 'Puerto Rico (Territorio de USA)'
+    : (getCountryNameEs(baseCountryCode) || baseCountryCode);
+  const baseCountryFlag = baseCountryCode === 'PR' ? '🇵🇷' : null;
 
   return (
     <div className="space-y-6">
@@ -621,13 +738,37 @@ function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes,
           <InfoRow label="ICAO24 (Hex)" value={a.icao24} mono />
           <InfoRow label="Tipo de aeronave" value={a.aircraft_type || 'Desconocido'} />
           <InfoRow label="Modelo" value={a.aircraft_model || 'Desconocido'} />
-          {a.model?.category && (
-            <InfoRow label="Categoría" value={getCategoryLabel(a.model.category)} />
+          {modelData?.category && (
+            <InfoRow label="Categoría" value={getCategoryLabel(modelData?.category)} />
           )}
-          {a.model?.manufacturer && (
-            <InfoRow label="Fabricante" value={a.model.manufacturer} />
+          {modelData?.manufacturer && (
+            <InfoRow label="Fabricante" value={modelData?.manufacturer} />
           )}
           <InfoRow label="Rama militar" value={getBranchLabel(a.military_branch) || 'No identificada'} />
+          {lastLocation?.country_code && (
+            <InfoRow
+              label="Último país detectado"
+              value={getCountryNameEs(lastLocation.country_code) || lastLocation.country_name || lastLocation.country_code}
+              icon={Globe}
+            />
+          )}
+          {(lastLocation?.latitude && lastLocation?.longitude) && (
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <MapPin className="w-4 h-4 text-slate-500" />
+                <span>Última posición</span>
+              </div>
+              <a
+                href={`https://www.google.com/maps?q=${lastLocation.latitude},${lastLocation.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-sm text-sky-300 hover:text-sky-200 transition-colors"
+                title="Ver en Google Maps"
+              >
+                {Number(lastLocation.latitude).toFixed(4)}°, {Number(lastLocation.longitude).toFixed(4)}°
+              </a>
+            </div>
+          )}
         </div>
       </Section>
 
@@ -672,7 +813,16 @@ function InfoTab({ aircraft, notes, setNotes, isEditingNotes, setIsEditingNotes,
           {a.probable_base_icao && (
             <div className="text-sm text-slate-400 mb-3 ml-12">
               ICAO: <span className="font-mono text-slate-300">{a.probable_base_icao}</span>
-              {a.probable_country && <span className="ml-2">({a.probable_country})</span>}
+              {a.probable_country && (
+                <span className="ml-2">
+                  ({baseCountryFlag ? `${baseCountryFlag} ` : ''}{baseCountryLabel || a.probable_country})
+                </span>
+              )}
+            </div>
+          )}
+          {!a.probable_base_icao && a.callsigns_used?.length > 0 && (
+            <div className="text-xs text-slate-500 mb-3 ml-12">
+              Tip: registra más detecciones para que el sistema estime el origen/base por frecuencia.
             </div>
           )}
           <button
@@ -949,9 +1099,25 @@ function HistoryTab({ history, loading, error, formatDate }) {
               </div>
             )}
 
-            {h.country_code && (
-              <div className="text-xs text-slate-400 mt-1">
-                País: {h.country_code}
+            {/* Coordenadas y país */}
+            {(h.latitude && h.longitude) && (
+              <div className="flex items-center gap-2 mt-2">
+                <a 
+                  href={`https://www.google.com/maps?q=${h.latitude},${h.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs bg-slate-700/80 hover:bg-slate-600/80 px-2 py-1 rounded text-sky-300 transition-colors"
+                  title="Ver en Google Maps"
+                >
+                  <MapPin className="w-3 h-3" />
+                  {Number(h.latitude).toFixed(4)}°, {Number(h.longitude).toFixed(4)}°
+                </a>
+                {h.country_code && (
+                  <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded flex items-center gap-1">
+                    <Globe className="w-3 h-3" />
+                    {getCountryNameEs(h.country_code) || h.country_name || h.country_code}
+                  </span>
+                )}
               </div>
             )}
 
