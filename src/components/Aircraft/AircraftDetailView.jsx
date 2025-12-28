@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   ArrowLeft, 
   Plane, 
@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
 import { useAircraftImages } from '../../hooks/useAircraftImages';
+import { supabase } from '../../lib/supabase';
 
 /**
  * 🎖️ VISTA DE DETALLE DE AERONAVE (PANTALLA COMPLETA)
@@ -49,12 +50,17 @@ export default function AircraftDetailView({ aircraft, onClose }) {
   const [activeTab, setActiveTab] = useState('info');
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notes, setNotes] = useState(aircraft?.notes || '');
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  
+  // Ref para cancelar peticiones cuando el componente se desmonte
+  const mountedRef = useRef(true);
+  const historyLoadedRef = useRef(false);
 
-  const { getLocationHistory, updateNotes, recalculateBase } = useAircraftRegistry();
+  const { updateNotes, recalculateBase } = useAircraftRegistry();
   const { 
     images, 
     loading: loadingImages,
@@ -64,15 +70,56 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     setPrimaryImage 
   } = useAircraftImages(aircraft?.aircraft_type);
 
+  // Función estable para cargar historial
+  const loadHistory = useCallback(async (icao24) => {
+    if (!icao24 || historyLoadedRef.current) return;
+    
+    setLoadingHistory(true);
+    setHistoryError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('aircraft_location_history')
+        .select('*')
+        .eq('icao24', icao24.toUpperCase())
+        .order('detected_at', { ascending: false })
+        .limit(50);
+      
+      if (!mountedRef.current) return;
+      
+      if (error) throw error;
+      
+      setHistory(data || []);
+      historyLoadedRef.current = true;
+    } catch (err) {
+      console.error('Error loading history:', err);
+      if (mountedRef.current) {
+        setHistoryError(err.message);
+        setHistory([]);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoadingHistory(false);
+      }
+    }
+  }, []);
+
   // Cargar historial cuando se selecciona la tab
   useEffect(() => {
-    if (activeTab === 'history' && aircraft?.icao24 && history.length === 0) {
-      setLoadingHistory(true);
-      getLocationHistory(aircraft.icao24, 50)
-        .then(data => setHistory(data))
-        .finally(() => setLoadingHistory(false));
+    if (activeTab === 'history' && aircraft?.icao24) {
+      loadHistory(aircraft.icao24);
     }
-  }, [activeTab, aircraft?.icao24, getLocationHistory, history.length]);
+  }, [activeTab, aircraft?.icao24, loadHistory]);
+  
+  // Cleanup al desmontar
+  useEffect(() => {
+    mountedRef.current = true;
+    historyLoadedRef.current = false;
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [aircraft?.icao24]); // Reset cuando cambia la aeronave
 
   if (!aircraft) return null;
 
@@ -444,6 +491,7 @@ export default function AircraftDetailView({ aircraft, onClose }) {
               <HistoryTab 
                 history={history}
                 loading={loadingHistory}
+                error={historyError}
                 formatDate={formatDate}
               />
             )}
@@ -798,7 +846,7 @@ function StatsTab({ aircraft, firstSeen, lastSeen, formatDate }) {
 // =============================================
 // TAB: HISTORIAL
 // =============================================
-function HistoryTab({ history, loading, formatDate }) {
+function HistoryTab({ history, loading, error, formatDate }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -806,6 +854,16 @@ function HistoryTab({ history, loading, formatDate }) {
           <div className="w-10 h-10 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-400 text-sm">Cargando historial...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <AlertTriangle className="w-16 h-16 text-red-500/50 mx-auto mb-4" />
+        <h3 className="text-lg text-white mb-2">Error al cargar historial</h3>
+        <p className="text-slate-400 text-sm">{error}</p>
       </div>
     );
   }

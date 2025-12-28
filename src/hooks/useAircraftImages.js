@@ -7,7 +7,7 @@
  * - Imágenes primarias para thumbnails
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const BUCKET_NAME = 'entity-images';
@@ -21,12 +21,26 @@ export function useAircraftImages(aircraftType = null) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Ref para evitar actualizar estado en componente desmontado
+  const mountedRef = useRef(true);
+  // Ref para cancelar peticiones antiguas
+  const requestIdRef = useRef(0);
 
   /**
    * Cargar imágenes para un tipo de aeronave
+   * NOTA: Esta función se usa para refrescar después de upload/delete
    */
-  const fetchImages = useCallback(async (type = aircraftType) => {
-    if (!type) return;
+  const fetchImages = useCallback(async (type) => {
+    const typeToFetch = type || aircraftType;
+    if (!typeToFetch) {
+      setImages([]);
+      setLoading(false);
+      return;
+    }
+    
+    // NO incrementar requestId aquí para no cancelar esta petición
+    // Solo queremos cancelar peticiones del useEffect inicial
     
     setLoading(true);
     setError(null);
@@ -35,17 +49,27 @@ export function useAircraftImages(aircraftType = null) {
       const { data, error: queryError } = await supabase
         .from('aircraft_model_images')
         .select('*')
-        .eq('aircraft_type', type.toUpperCase())
+        .eq('aircraft_type', typeToFetch.toUpperCase())
         .order('is_primary', { ascending: false })
         .order('created_at', { ascending: false });
+      
+      // Solo verificar si el componente sigue montado
+      if (!mountedRef.current) {
+        return;
+      }
       
       if (queryError) throw queryError;
       setImages(data || []);
     } catch (err) {
       console.error('Error fetching aircraft images:', err);
-      setError(err.message);
+      if (mountedRef.current) {
+        setError(err.message);
+        setImages([]);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [aircraftType]);
 
@@ -90,8 +114,6 @@ export function useAircraftImages(aircraftType = null) {
         .getPublicUrl(fileName);
 
       const imageUrl = urlData.publicUrl;
-
-      // Crear thumbnail URL (misma imagen por ahora, podría optimizarse)
       const thumbnailUrl = imageUrl;
 
       // Si es primary, quitar el flag de otras imágenes del mismo tipo
@@ -180,13 +202,13 @@ export function useAircraftImages(aircraftType = null) {
   /**
    * Establecer imagen como primaria
    */
-  const setPrimaryImage = useCallback(async (imageId, aircraftType) => {
+  const setPrimaryImage = useCallback(async (imageId, type) => {
     try {
       // Quitar primary de todas
       await supabase
         .from('aircraft_model_images')
         .update({ is_primary: false })
-        .eq('aircraft_type', aircraftType.toUpperCase());
+        .eq('aircraft_type', type.toUpperCase());
 
       // Establecer la nueva primary
       const { data, error: updateError } = await supabase
@@ -206,11 +228,11 @@ export function useAircraftImages(aircraftType = null) {
             primary_image_url: data.image_url,
             thumbnail_url: data.thumbnail_url 
           })
-          .eq('aircraft_type', aircraftType.toUpperCase());
+          .eq('aircraft_type', type.toUpperCase());
       }
 
       // Refrescar
-      await fetchImages(aircraftType);
+      await fetchImages(type);
 
       return { success: true };
     } catch (err) {
@@ -219,12 +241,54 @@ export function useAircraftImages(aircraftType = null) {
     }
   }, [fetchImages]);
 
-  // Cargar al montar si hay tipo
+  // Cargar al montar si hay tipo - SIN fetchImages en deps para evitar loop
   useEffect(() => {
+    mountedRef.current = true;
+    
     if (aircraftType) {
-      fetchImages();
+      // Llamada directa a Supabase para evitar problemas de dependencias
+      const loadImages = async () => {
+        const currentRequestId = ++requestIdRef.current;
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const { data, error: queryError } = await supabase
+            .from('aircraft_model_images')
+            .select('*')
+            .eq('aircraft_type', aircraftType.toUpperCase())
+            .order('is_primary', { ascending: false })
+            .order('created_at', { ascending: false });
+          
+          if (!mountedRef.current || currentRequestId !== requestIdRef.current) {
+            return;
+          }
+          
+          if (queryError) throw queryError;
+          setImages(data || []);
+        } catch (err) {
+          console.error('Error fetching aircraft images:', err);
+          if (mountedRef.current && currentRequestId === requestIdRef.current) {
+            setError(err.message);
+            setImages([]);
+          }
+        } finally {
+          if (mountedRef.current && currentRequestId === requestIdRef.current) {
+            setLoading(false);
+          }
+        }
+      };
+      
+      loadImages();
+    } else {
+      setImages([]);
+      setLoading(false);
     }
-  }, [aircraftType, fetchImages]);
+    
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [aircraftType]); // Solo depende de aircraftType
 
   // Imagen primaria
   const primaryImage = images.find(img => img.is_primary) || images[0] || null;
@@ -248,9 +312,15 @@ export function useAircraftImages(aircraftType = null) {
 export function useAircraftModelImage(aircraftType) {
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    if (!aircraftType) return;
+    mountedRef.current = true;
+    
+    if (!aircraftType) {
+      setImageUrl(null);
+      return;
+    }
 
     const fetchImage = async () => {
       setLoading(true);
@@ -262,6 +332,8 @@ export function useAircraftModelImage(aircraftType) {
           .eq('aircraft_type', aircraftType.toUpperCase())
           .eq('is_primary', true)
           .single();
+
+        if (!mountedRef.current) return;
 
         if (imageData) {
           setImageUrl(imageData.thumbnail_url || imageData.image_url);
@@ -275,21 +347,28 @@ export function useAircraftModelImage(aircraftType) {
           .eq('aircraft_type', aircraftType.toUpperCase())
           .single();
 
+        if (!mountedRef.current) return;
+
         if (catalogData) {
           setImageUrl(catalogData.thumbnail_url || catalogData.primary_image_url);
         }
       } catch (err) {
         // Silencioso - simplemente no hay imagen
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     fetchImage();
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, [aircraftType]);
 
   return { imageUrl, loading };
 }
 
 export default useAircraftImages;
-

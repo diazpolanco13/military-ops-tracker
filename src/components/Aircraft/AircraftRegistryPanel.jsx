@@ -386,13 +386,15 @@ function RegistryTab({ aircraft, viewMode, onSelect }) {
 
 function AircraftGridCard({ aircraft, onClick }) {
   const a = aircraft;
+  const lastCallsign = a.callsigns_used?.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null;
+  
   return (
     <div 
       onClick={onClick}
       className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 cursor-pointer hover:border-sky-500/50 hover:bg-slate-800 transition-all group"
     >
       {/* Imagen o icono */}
-      <div className="aspect-video bg-slate-700/50 rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+      <div className="aspect-video bg-slate-700/50 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
         {a.model?.thumbnail_url ? (
           <img 
             src={a.model.thumbnail_url} 
@@ -401,6 +403,12 @@ function AircraftGridCard({ aircraft, onClick }) {
           />
         ) : (
           <Plane className="w-10 h-10 text-slate-500" />
+        )}
+        {/* Callsign badge sobre la imagen */}
+        {lastCallsign && (
+          <div className="absolute top-2 left-2 bg-amber-500 text-slate-900 font-mono font-bold text-xs px-2 py-1 rounded shadow-lg">
+            {lastCallsign}
+          </div>
         )}
       </div>
       
@@ -430,6 +438,9 @@ function AircraftListItem({ aircraft, onClick }) {
   const a = aircraft;
   const lastSeen = a.last_seen ? new Date(a.last_seen) : null;
   const isRecent = lastSeen && (Date.now() - lastSeen.getTime()) < 3600000; // 1 hora
+  
+  // Obtener el último callsign usado (el más reciente/importante)
+  const lastCallsign = a.callsigns_used?.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null;
 
   return (
     <div 
@@ -449,12 +460,22 @@ function AircraftListItem({ aircraft, onClick }) {
         )}
       </div>
 
+      {/* CALLSIGN PROMINENTE */}
+      {lastCallsign && (
+        <div className="flex-shrink-0 min-w-[80px]">
+          <div className="font-mono text-lg font-bold text-amber-400 tracking-wide">
+            {lastCallsign}
+          </div>
+          <div className="text-[10px] text-slate-500 uppercase">Callsign</div>
+        </div>
+      )}
+
       {/* Info Principal */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm text-sky-400">{a.icao24}</span>
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="font-mono text-xs text-sky-400">{a.icao24}</span>
           {a.military_branch && (
-            <span className="text-xs bg-slate-600 px-1.5 py-0.5 rounded text-slate-300">
+            <span className="text-[10px] bg-slate-600 px-1.5 py-0.5 rounded text-slate-300">
               {a.military_branch}
             </span>
           )}
@@ -465,17 +486,11 @@ function AircraftListItem({ aircraft, onClick }) {
         <h4 className="text-sm font-medium text-white truncate group-hover:text-sky-300 transition-colors">
           {a.aircraft_model || a.aircraft_type || 'Modelo desconocido'}
         </h4>
-        <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
-          <span className="flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
-            {a.probable_base_name || 'Desconocida'}
-          </span>
-          {a.callsigns_used?.length > 0 && (
-            <span className="truncate">
-              CS: {a.callsigns_used.slice(-3).join(', ')}
-            </span>
-          )}
-        </div>
+        {a.callsigns_used?.length > 1 && (
+          <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+            También: {a.callsigns_used.slice(0, -1).slice(-2).join(', ')}
+          </div>
+        )}
       </div>
 
       {/* Stats */}
