@@ -451,30 +451,28 @@ function AircraftListItem({ aircraft, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className="flex items-center gap-3 p-3 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer hover:border-sky-500/50 hover:bg-slate-800 transition-all group"
+      className="flex items-center gap-3 p-3 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer hover:border-sky-500/50 hover:bg-slate-800 transition-all group overflow-hidden"
     >
       {/* Icono/Imagen */}
-      <div className="w-12 h-12 bg-slate-700/50 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-        {a.model?.thumbnail_url ? (
-          <img 
-            src={a.model.thumbnail_url} 
-            alt={a.aircraft_model}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <Plane className="w-6 h-6 text-slate-500" />
-        )}
-      </div>
-
-      {/* CALLSIGN PROMINENTE */}
-      {lastCallsign && (
-        <div className="flex-shrink-0 min-w-[80px]">
-          <div className="font-mono text-lg font-bold text-amber-400 tracking-wide">
+      <div className="flex-shrink-0">
+        <div className="w-14 h-14 bg-slate-700/50 rounded-lg flex items-center justify-center overflow-hidden">
+          {a.model?.thumbnail_url ? (
+            <img 
+              src={a.model.thumbnail_url} 
+              alt={a.aircraft_model}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Plane className="w-6 h-6 text-slate-500" />
+          )}
+        </div>
+        {/* Apodo (CALLSIGN) debajo de la imagen - pequeño para ahorrar espacio */}
+        {lastCallsign && (
+          <div className="mt-1 font-mono text-[11px] text-amber-300 truncate max-w-[56px]">
             {lastCallsign}
           </div>
-          <div className="text-[10px] text-slate-500 uppercase">Callsign</div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Info Principal */}
       <div className="flex-1 min-w-0">
@@ -499,14 +497,14 @@ function AircraftListItem({ aircraft, onClick }) {
             <span className="inline-flex items-center gap-1">
               <Globe className="w-3 h-3 text-slate-500" />
               <span className="text-base leading-none">{lastCountryFlag || '🏳️'}</span>
-              <span className="truncate max-w-[220px]">{lastCountryLabel}</span>
+              <span className="truncate max-w-[140px] sm:max-w-[220px]">{lastCountryLabel}</span>
             </span>
           )}
           {a.probable_base_icao && (
             <span className="inline-flex items-center gap-1">
               <MapPin className="w-3 h-3 text-slate-500" />
               <span className="font-mono text-slate-300">{a.probable_base_icao}</span>
-              <span className="truncate max-w-[260px]">{a.probable_base_name}</span>
+              <span className="truncate max-w-[160px] sm:max-w-[260px]">{a.probable_base_name}</span>
             </span>
           )}
           {detectionDate && (

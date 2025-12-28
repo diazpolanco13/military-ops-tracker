@@ -287,22 +287,22 @@ export default function AircraftDetailView({ aircraft, onClose }) {
           <span className="hidden sm:inline font-medium">Volver al Registro</span>
         </button>
 
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col items-center sm:items-start leading-tight">
-            <span className="font-mono text-xl sm:text-2xl text-amber-300 font-extrabold tracking-wide">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex flex-col items-center sm:items-start leading-tight min-w-0">
+            <span className="font-mono text-xl sm:text-2xl text-amber-300 font-extrabold tracking-wide max-w-[180px] sm:max-w-none truncate">
               {primaryCallsign || 'SIN CALLSIGN'}
             </span>
-            <span className="font-mono text-xs sm:text-sm text-sky-400/90">
+            <span className="font-mono text-xs sm:text-sm text-sky-400/90 max-w-[180px] sm:max-w-none truncate">
               {a.icao24}
             </span>
           </div>
           {a.military_branch && (
-            <span className="text-xs bg-sky-500/20 text-sky-300 px-2 py-1 rounded-full font-medium">
+            <span className="text-[10px] sm:text-xs bg-sky-500/20 text-sky-300 px-2 py-1 rounded-full font-medium leading-none max-w-[140px] truncate">
               {getBranchLabel(a.military_branch)}
             </span>
           )}
           {a.is_new_today && (
-            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-medium animate-pulse">
+            <span className="text-[10px] sm:text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full font-medium animate-pulse leading-none">
               NUEVA
             </span>
           )}
@@ -311,16 +311,18 @@ export default function AircraftDetailView({ aircraft, onClose }) {
         <div className="w-24" />
       </header>
 
-      {/* Main Content - Two Columns */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      {/* Main Content */}
+      {/* En móvil evitamos scrolls anidados (mala UX) y dejamos que la página scrollee completa.
+          En desktop mantenemos el split con scroll interno. */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         
         {/* ==================== */}
         {/* LEFT PANEL - Imagen + Especificaciones */}
         {/* ==================== */}
-        <div className="lg:w-1/2 xl:w-2/5 flex flex-col bg-gradient-to-b from-slate-950 to-slate-900 border-r border-slate-700/50 overflow-hidden">
+        <div className="lg:w-1/2 xl:w-2/5 flex flex-col bg-gradient-to-b from-slate-950 to-slate-900 lg:border-r border-slate-700/50 overflow-visible lg:overflow-hidden">
           
           {/* Imagen Grande */}
-          <div className="relative flex-shrink-0 h-[280px] sm:h-[350px] lg:h-[400px] flex items-center justify-center bg-slate-950 p-4">
+          <div className="relative flex-shrink-0 h-[240px] sm:h-[320px] lg:h-[400px] flex items-center justify-center bg-slate-950 p-4">
             {loadingImages ? (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="w-10 h-10 text-sky-400 animate-spin" />
@@ -429,7 +431,8 @@ export default function AircraftDetailView({ aircraft, onClose }) {
           </div>
 
           {/* Especificaciones del avión */}
-          <div className="flex-1 overflow-y-auto p-5 custom-scrollbar-transparent">
+          {/* Móvil: que crezca naturalmente (sin franja minúscula); Desktop: scroll interno */}
+          <div className="p-5 lg:flex-1 lg:overflow-y-auto custom-scrollbar-transparent">
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
               Especificaciones Técnicas
             </h3>
@@ -556,10 +559,10 @@ export default function AircraftDetailView({ aircraft, onClose }) {
         {/* ==================== */}
         {/* RIGHT PANEL - Tabs con información */}
         {/* ==================== */}
-        <div className="lg:w-1/2 xl:w-3/5 flex flex-col bg-slate-800/30 overflow-hidden">
+        <div className="lg:w-1/2 xl:w-3/5 flex flex-col bg-slate-800/30 overflow-visible lg:overflow-hidden">
           
           {/* Tabs */}
-          <div className="flex gap-1 px-4 sm:px-6 py-3 bg-slate-900/50 border-b border-slate-700/50 overflow-x-auto flex-shrink-0">
+          <div className="flex gap-1 px-4 sm:px-6 py-3 bg-slate-900/50 border-b border-slate-700/50 overflow-x-auto flex-nowrap flex-shrink-0">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -577,7 +580,8 @@ export default function AircraftDetailView({ aircraft, onClose }) {
           </div>
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar-transparent">
+          {/* Móvil: scroll del contenedor principal; Desktop: scroll interno */}
+          <div className="p-4 sm:p-6 lg:flex-1 lg:overflow-y-auto custom-scrollbar-transparent">
             {activeTab === 'info' && (
               <InfoTab 
                 aircraft={a} 
@@ -791,17 +795,17 @@ function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditing
       {/* Base probable */}
       <Section title="Base Probable">
         <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 rounded-xl p-4 border border-amber-500/20">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="p-2.5 rounded-lg bg-amber-500/20">
                 <MapPin className="w-5 h-5 text-amber-400" />
               </div>
-              <span className="font-medium text-white text-lg">
+              <span className="font-medium text-white text-base sm:text-lg leading-snug break-words min-w-0">
                 {a.probable_base_name || 'No determinada'}
               </span>
             </div>
             {a.base_confidence > 0 && (
-              <span className={`text-sm font-medium px-3 py-1.5 rounded-full ${
+              <span className={`self-start sm:self-auto text-xs sm:text-sm font-medium px-2.5 py-1 rounded-full whitespace-nowrap ${
                 a.base_confidence >= 70 ? 'bg-green-500/20 text-green-400' :
                 a.base_confidence >= 40 ? 'bg-amber-500/20 text-amber-400' :
                 'bg-red-500/20 text-red-400'
@@ -811,7 +815,7 @@ function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditing
             )}
           </div>
           {a.probable_base_icao && (
-            <div className="text-sm text-slate-400 mb-3 ml-12">
+            <div className="text-sm text-slate-400 mb-3 ml-0 sm:ml-12 break-words">
               ICAO: <span className="font-mono text-slate-300">{a.probable_base_icao}</span>
               {a.probable_country && (
                 <span className="ml-2">
@@ -821,13 +825,13 @@ function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditing
             </div>
           )}
           {!a.probable_base_icao && a.callsigns_used?.length > 0 && (
-            <div className="text-xs text-slate-500 mb-3 ml-12">
+            <div className="text-xs text-slate-500 mb-3 ml-0 sm:ml-12">
               Tip: registra más detecciones para que el sistema estime el origen/base por frecuencia.
             </div>
           )}
           <button
             onClick={onRecalculateBase}
-            className="text-xs text-sky-400 hover:text-sky-300 transition-colors ml-12"
+            className="text-xs text-sky-400 hover:text-sky-300 transition-colors ml-0 sm:ml-12"
           >
             ↻ Recalcular base
           </button>
