@@ -134,7 +134,7 @@ export default function FlightDetailsPanel({ flight, onClose }) {
         className={`
           fixed z-[70] bg-slate-900/95 backdrop-blur-xl shadow-2xl border-t border-x border-slate-600 flex flex-col overflow-hidden transition-all duration-300 ease-out
           inset-x-0 bottom-0 rounded-t-2xl
-          ${expanded ? 'max-h-[85vh]' : 'max-h-[180px] sm:max-h-[160px]'}
+          ${expanded ? 'max-h-[85vh]' : 'max-h-[240px] sm:max-h-[180px]'}
           sm:left-4 sm:right-4 sm:max-w-3xl sm:mx-auto
         `}
         style={{
@@ -168,10 +168,14 @@ export default function FlightDetailsPanel({ flight, onClose }) {
           </button>
         </div>
 
-        {/* Header con info principal - SIEMPRE VISIBLE */}
+        {/* ══════════════════════════════════════════════════════════════════
+            HEADER PRINCIPAL - SIEMPRE VISIBLE (colapsado y expandido)
+            ══════════════════════════════════════════════════════════════════ */}
         <div className="px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-3">
-            {/* Imagen del modelo (si existe en catálogo) o ícono fallback */}
+          
+          {/* ─── DESKTOP: Layout horizontal completo ─── */}
+          <div className="hidden sm:flex items-center gap-3">
+            {/* Imagen del modelo */}
             <div
               className="rounded-xl shrink-0 overflow-hidden"
               style={{
@@ -183,17 +187,11 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               }}
             >
               {modelImageUrl ? (
-                <img
-                  src={modelImageUrl}
-                  alt={aircraftModel}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+                <img src={modelImageUrl} alt={aircraftModel} className="w-full h-full object-cover" loading="lazy" />
               ) : isHeli ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2v4M12 14v8M4 8h16M7 14h10M9 18h6"/>
-                    <circle cx="12" cy="11" r="3"/>
+                    <path d="M12 2v4M12 14v8M4 8h16M7 14h10M9 18h6"/><circle cx="12" cy="11" r="3"/>
                   </svg>
                 </div>
               ) : (
@@ -203,86 +201,64 @@ export default function FlightDetailsPanel({ flight, onClose }) {
               )}
             </div>
             
-            {/* Callsign, modelo y operador */}
+            {/* Callsign + modelo + operador */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  {flight.callsign || 'UNKNOWN'}
-                </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white tracking-tight">{flight.callsign || 'UNKNOWN'}</h1>
                 {loading && <Loader2 size={14} className="animate-spin text-blue-400" />}
               </div>
-              {/* Nombre completo del modelo de aeronave */}
               {(aircraftTypeRaw || aircraftType) && (
-                <p className="text-xs sm:text-sm text-cyan-400 font-medium truncate">
+                <p className="text-sm text-cyan-400 font-medium truncate">
                   {getAircraftModelName(aircraftTypeRaw) || getAircraftModelName(aircraftType) || details?.aircraft?.modelName || aircraftTypeRaw || aircraftType}
                 </p>
               )}
-              {/* Operador */}
               {(airlineName || flight.aircraft?.airline) && (
                 <span 
-                  className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider"
-                  style={{ 
-                    backgroundColor: `${color}20`,
-                    color: color,
-                    border: `1px solid ${color}50`
-                  }}
+                  className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                  style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}50` }}
                 >
                   🎖️ {airlineName || flight.aircraft.airline}
                 </span>
               )}
             </div>
 
-            {/* 🛫 RUTA COMPACTA - CENTRADA (Desktop) */}
+            {/* Ruta (Desktop) */}
             {(flight.origin || flight.destination || details?.origin || details?.destination) && (
-              <div className="hidden sm:flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
                 <Route size={14} className="text-amber-400 shrink-0" />
                 <div className="text-center">
-                  <p className="text-sm font-bold text-white font-mono">
-                    {details?.origin?.code || flight.origin || '???'}
-                  </p>
-                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">
-                    {details?.origin?.city || ''}
-                  </p>
+                  <p className="text-sm font-bold text-white font-mono">{details?.origin?.code || flight.origin || '???'}</p>
+                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">{details?.origin?.city || ''}</p>
                 </div>
                 <span className="text-amber-400">→</span>
                 <div className="text-center">
-                  <p className="text-sm font-bold text-white font-mono">
-                    {details?.destination?.code || flight.destination || '???'}
-                  </p>
-                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">
-                    {details?.destination?.city || ''}
-                  </p>
+                  <p className="text-sm font-bold text-white font-mono">{details?.destination?.code || flight.destination || '???'}</p>
+                  <p className="text-[8px] text-slate-400 truncate max-w-[60px]">{details?.destination?.city || ''}</p>
                 </div>
               </div>
             )}
 
-            {/* Stats rápidos en horizontal (Desktop) */}
-            <div className="hidden sm:flex items-center gap-3">
-              {/* Altitud */}
+            {/* Stats rápidos (Desktop) */}
+            <div className="flex items-center gap-3">
               <div className="text-center">
                 <p className="text-[10px] text-blue-400 uppercase font-medium">Alt</p>
                 <p className="text-sm font-bold text-white">{Math.round(flight.altitude / 1000)}k ft</p>
               </div>
-              {/* Velocidad */}
               <div className="text-center">
                 <p className="text-[10px] text-green-400 uppercase font-medium">Vel</p>
                 <p className="text-sm font-bold text-white">{speedKmh} km/h</p>
               </div>
-              {/* País (del avión) */}
               <div className="text-center">
-                <p className="text-[10px] text-cyan-400 uppercase font-medium">País (avión)</p>
+                <p className="text-[10px] text-cyan-400 uppercase font-medium">País</p>
                 <p className="text-lg">{countryInfo.flag}</p>
               </div>
             </div>
 
-            {/* 📡 INDICADOR DE TRANSPONDER - Desktop */}
+            {/* Transponder (Desktop) */}
             {flight.signal && (
               <div 
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
-                style={{
-                  backgroundColor: `${flight.signal.color}15`,
-                  borderColor: `${flight.signal.color}50`
-                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+                style={{ backgroundColor: `${flight.signal.color}15`, borderColor: `${flight.signal.color}50` }}
                 title={flight.signal.description}
               >
                 {flight.signal.isTransponderActive ? (
@@ -290,71 +266,125 @@ export default function FlightDetailsPanel({ flight, onClose }) {
                 ) : (
                   <WifiOff size={14} style={{ color: flight.signal.color }} />
                 )}
-                <span 
-                  className="text-[10px] font-bold uppercase"
-                  style={{ color: flight.signal.color }}
-                >
+                <span className="text-[10px] font-bold uppercase" style={{ color: flight.signal.color }}>
                   {flight.signal.label}
                 </span>
               </div>
             )}
           </div>
 
-          {/* 🛫 RUTA COMPACTA - CENTRADA (Móvil) */}
-          {(flight.origin || flight.destination || details?.origin || details?.destination) && (
-            <div className="sm:hidden flex items-center justify-center gap-3 mt-1 mx-3 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5">
-              <Route size={14} className="text-amber-400 shrink-0" />
-              <div className="text-center">
-                <p className="text-sm font-bold text-white font-mono">
-                  {details?.origin?.code || flight.origin || '???'}
-                </p>
-                <p className="text-[8px] text-slate-400 truncate max-w-[70px]">
-                  {details?.origin?.city || ''}
-                </p>
-              </div>
-              <span className="text-amber-400 text-lg">→</span>
-              <div className="text-center">
-                <p className="text-sm font-bold text-white font-mono">
-                  {details?.destination?.code || flight.destination || '???'}
-                </p>
-                <p className="text-[8px] text-slate-400 truncate max-w-[70px]">
-                  {details?.destination?.city || ''}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Stats en móvil - grid compacto */}
-          <div className="sm:hidden grid grid-cols-5 gap-1.5 mt-1.5">
-            <div className="bg-blue-500/10 rounded-md p-1.5 text-center">
-              <p className="text-[8px] text-blue-300 uppercase">Alt</p>
-              <p className="text-xs font-bold text-white">{Math.round(flight.altitude / 1000)}k</p>
-            </div>
-            <div className="bg-green-500/10 rounded-md p-1.5 text-center">
-              <p className="text-[8px] text-green-300 uppercase">Vel</p>
-              <p className="text-xs font-bold text-white">{speedKmh}</p>
-            </div>
-            <div className="bg-purple-500/10 rounded-md p-1.5 text-center">
-              <p className="text-[8px] text-purple-300 uppercase">Tipo</p>
-              <p className="text-[9px] font-bold text-white truncate">{aircraftType || '?'}</p>
-            </div>
-            <div className="bg-cyan-500/10 rounded-md p-1.5 text-center">
-              <p className="text-[8px] text-cyan-300 uppercase">Avión</p>
-              <p className="text-sm">{countryInfo.flag}</p>
-            </div>
-            {/* 📡 INDICADOR DE TRANSPONDER - Móvil */}
-            {flight.signal && (
-              <div 
-                className="rounded-md p-1.5 text-center"
-                style={{ backgroundColor: `${flight.signal.color}15` }}
-                title={flight.signal.description}
+          {/* ─── MÓVIL: Layout compacto y elegante ─── */}
+          <div className="sm:hidden">
+            {/* Fila 1: Imagen + Info principal + Bandera/Transponder */}
+            <div className="flex items-start gap-3">
+              {/* Imagen del modelo */}
+              <div
+                className="rounded-xl shrink-0 overflow-hidden"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  backgroundColor: `${color}15`,
+                  border: `2px solid ${color}`,
+                  boxShadow: `0 0 12px ${color}25`,
+                }}
               >
-                <p className="text-[8px] uppercase" style={{ color: flight.signal.color }}>
-                  {flight.signal.isTransponderActive ? '📡' : '📵'}
+                {modelImageUrl ? (
+                  <img src={modelImageUrl} alt={aircraftModel} className="w-full h-full object-cover" loading="lazy" />
+                ) : isHeli ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2v4M12 14v8M4 8h16M7 14h10M9 18h6"/><circle cx="12" cy="11" r="3"/>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Plane size={28} color={color} strokeWidth={2.5} />
+                  </div>
+                )}
+              </div>
+              
+              {/* Info del vuelo */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-white tracking-tight truncate">{flight.callsign || 'UNKNOWN'}</h1>
+                  {loading && <Loader2 size={12} className="animate-spin text-blue-400 shrink-0" />}
+                </div>
+                <p className="text-xs text-cyan-400 font-medium truncate mt-0.5">
+                  {getAircraftModelName(aircraftTypeRaw) || getAircraftModelName(aircraftType) || details?.aircraft?.modelName || aircraftTypeRaw || aircraftType || 'Tipo desconocido'}
                 </p>
-                <p className="text-[9px] font-bold" style={{ color: flight.signal.color }}>
-                  {flight.signal.label}
-                </p>
+                {(airlineName || flight.aircraft?.airline) && (
+                  <span 
+                    className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide"
+                    style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
+                  >
+                    🎖️ {(airlineName || flight.aircraft.airline).slice(0, 25)}
+                  </span>
+                )}
+              </div>
+
+              {/* Columna derecha: Bandera + Transponder */}
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                {/* Bandera grande */}
+                <div className="flex flex-col items-center bg-slate-800/60 rounded-lg px-2 py-1.5 border border-slate-700/50">
+                  <span className="text-2xl leading-none">{countryInfo.flag}</span>
+                  <span className="text-[8px] text-slate-400 mt-0.5 uppercase tracking-wide">{countryInfo.code || 'N/A'}</span>
+                </div>
+                {/* Transponder mini */}
+                {flight.signal && (
+                  <div 
+                    className="flex items-center gap-1 px-1.5 py-1 rounded-md border"
+                    style={{ backgroundColor: `${flight.signal.color}12`, borderColor: `${flight.signal.color}30` }}
+                  >
+                    {flight.signal.isTransponderActive ? (
+                      <Radio size={10} style={{ color: flight.signal.color }} className="animate-pulse" />
+                    ) : (
+                      <WifiOff size={10} style={{ color: flight.signal.color }} />
+                    )}
+                    <span className="text-[8px] font-bold uppercase" style={{ color: flight.signal.color }}>
+                      {flight.signal.label}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Fila 2: Stats en grid flexible (solo colapsado) */}
+            {!expanded && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className="flex-1 min-w-[70px] bg-blue-500/10 border border-blue-500/20 rounded-lg px-2.5 py-1.5 text-center">
+                  <p className="text-[8px] text-blue-300 uppercase font-medium">Alt</p>
+                  <p className="text-sm font-bold text-white">{Math.round(flight.altitude / 1000)}k ft</p>
+                </div>
+                <div className="flex-1 min-w-[70px] bg-green-500/10 border border-green-500/20 rounded-lg px-2.5 py-1.5 text-center">
+                  <p className="text-[8px] text-green-300 uppercase font-medium">Vel</p>
+                  <p className="text-sm font-bold text-white">{speedKmh}</p>
+                </div>
+                <div className="flex-1 min-w-[60px] bg-purple-500/10 border border-purple-500/20 rounded-lg px-2.5 py-1.5 text-center">
+                  <p className="text-[8px] text-purple-300 uppercase font-medium">Tipo</p>
+                  <p className="text-sm font-bold text-white">{aircraftType || '?'}</p>
+                </div>
+                <div className="flex-1 min-w-[55px] bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 text-center">
+                  <p className="text-[8px] text-amber-300 uppercase font-medium">Rumbo</p>
+                  <p className="text-sm font-bold text-white">{flight.heading}°</p>
+                </div>
+              </div>
+            )}
+
+            {/* Fila 3: Ruta (solo colapsado) */}
+            {!expanded && (flight.origin || flight.destination || details?.origin || details?.destination) && (
+              <div 
+                className="mt-2 flex items-center justify-between bg-amber-500/10 border border-amber-500/25 rounded-xl px-3 py-2 cursor-pointer"
+                onClick={() => setExpanded(true)}
+              >
+                <div className="flex items-center gap-2">
+                  <Route size={14} className="text-amber-400 shrink-0" />
+                  <span className="text-sm font-bold text-white font-mono">{details?.origin?.code || flight.origin || '???'}</span>
+                  <span className="text-amber-400">→</span>
+                  <span className="text-sm font-bold text-white font-mono">{details?.destination?.code || flight.destination || '???'}</span>
+                </div>
+                <span className="text-[10px] text-amber-300/80 flex items-center gap-0.5">
+                  Más <ChevronUp size={12} />
+                </span>
               </div>
             )}
           </div>
