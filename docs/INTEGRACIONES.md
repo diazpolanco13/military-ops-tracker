@@ -60,16 +60,21 @@ CARIBBEAN_BOUNDS = {
 | OMNI | USAF | AWACS |
 | SHARK | Navy | P-8 Poseidon |
 
-#### Por Tipo de Aeronave (18 modelos en BD)
+#### Por Tipo de Aeronave (82+ modelos en `aircraft_model_catalog`)
 | Código | Modelo | Categoría |
 |--------|--------|-----------|
 | C17 | C-17 Globemaster III | Transporte |
-| C130 | C-130 Hercules | Transporte |
+| C130/C30J | C-130 Hercules/Super Hercules | Transporte |
 | P8 | P-8A Poseidon | Patrulla |
-| KC135 | KC-135 Stratotanker | Tanquero |
+| KC135/K35R | KC-135 Stratotanker | Tanquero |
 | E3 | E-3 Sentry AWACS | Vigilancia |
 | E6 | E-6 Mercury | Comunicaciones |
 | RC135 | RC-135 Rivet Joint | Reconocimiento |
+| DH8B | DHC-8 (Patrulla Marítima) | Vigilancia |
+| HAWK | BAe Hawk (Entrenador) | Entrenamiento |
+| CN35 | CASA CN-235 | Transporte |
+
+> Ver catálogo completo en tabla `aircraft_model_catalog`
 
 ### Categorías de Vuelo
 ```javascript
@@ -494,4 +499,89 @@ VITE_XAI_API_KEY=xxx
 - `intelligence_events`
 - `intelligence_tweets_cache`
 - `intelligence_monitor_config`
+
+---
+
+## Nominatim API (OpenStreetMap)
+
+### Uso
+Reverse geocoding para detectar país de ubicación de aeronaves.
+
+### Endpoint
+```
+https://nominatim.openstreetmap.org/reverse
+?lat={latitude}&lon={longitude}&format=json
+```
+
+### Implementación
+Usado en `AircraftDetailView.jsx` > `HistoryTab` para geocodificar puntos del historial.
+
+```javascript
+// Caché local para evitar requests repetidos
+const geocodeCache = new Map();
+
+async function reverseGeocode(lat, lon) {
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  
+  // Rate limiting: 1 request/segundo (requerido por Nominatim)
+  await delay(1000);
+  
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+    { headers: { 'User-Agent': 'SAE-RADAR/1.0' } }
+  );
+  const data = await response.json();
+  
+  const result = {
+    country: data.address?.country,
+    country_code: data.address?.country_code?.toUpperCase()
+  };
+  
+  geocodeCache.set(key, result);
+  return result;
+}
+```
+
+### Limitaciones
+- **Rate limit**: 1 request/segundo (obligatorio)
+- **Cache**: Precisión reducida a 2 decimales para reutilizar resultados
+- **User-Agent**: Requerido por términos de uso
+
+### Alternativa para Backend
+Para Edge Functions, se puede usar PostGIS con polígonos de países:
+```sql
+SELECT country_code FROM terrestrial_boundaries_cache
+WHERE ST_Contains(geojson::geometry, ST_Point(lon, lat));
+```
+
+---
+
+## Sistema de Registro de Aeronaves
+
+### Uso
+Inventario persistente de aeronaves militares USA detectadas en el Caribe.
+
+### Edge Function
+- **Nombre**: `aircraft-registry-collector`
+- **Versión**: v14
+- **Frecuencia**: Cron cada 5 minutos
+
+### Flujo
+```
+FlightRadar24 API → aircraft-registry-collector → military_aircraft_registry
+                                                → aircraft_location_history
+                                                → aircraft_country_presence
+```
+
+### Tablas Asociadas
+- `military_aircraft_registry`: Inventario principal
+- `aircraft_model_catalog`: 82+ especificaciones técnicas
+- `aircraft_model_images`: Galería por modelo
+- `caribbean_military_bases`: 40+ bases/aeropuertos
+- `aircraft_location_history`: Trail de posiciones
+- `aircraft_country_presence`: Presencia acumulada por país
+
+### Documentación Completa
+Ver `docs/REGISTRO-AERONAVES-MILITARES.md`
 

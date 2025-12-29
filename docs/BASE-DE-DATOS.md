@@ -190,6 +190,131 @@ Preferencias de visualización por país.
 
 ---
 
+## Tablas del Registro de Aeronaves Militares
+
+### `military_aircraft_registry` - Inventario Principal
+Cada aeronave militar única detectada, identificada por ICAO24.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| icao24 | VARCHAR(10) | **PK** - Código hex único del transponder |
+| callsigns_used | TEXT[] | Array de callsigns observados |
+| aircraft_type | VARCHAR(10) | Código ICAO (C30J, K35R, P8) |
+| aircraft_model | VARCHAR(100) | Nombre del modelo |
+| military_branch | VARCHAR(20) | USAF, USN, USMC, USA, USCG |
+| squadron | VARCHAR(50) | Escuadrón (si se conoce) |
+| tail_number | VARCHAR(20) | Número de cola/registro |
+| probable_base_icao | VARCHAR(10) | Código ICAO base probable |
+| probable_base_name | VARCHAR(100) | Nombre de la base |
+| probable_country | VARCHAR(50) | País de la base |
+| base_confidence | INTEGER | Confianza 0-100% |
+| first_seen | TIMESTAMPTZ | Primera detección |
+| last_seen | TIMESTAMPTZ | Última detección |
+| total_detections | INTEGER | Veces detectado |
+| total_incursions | INTEGER | Incursiones a Venezuela |
+| is_active | BOOLEAN | Activa/inactiva |
+
+### `aircraft_model_catalog` - Especificaciones Técnicas
+Catálogo de 82+ modelos de aeronave con especificaciones.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| aircraft_type | VARCHAR(10) | **PK** - Código ICAO |
+| aircraft_name | VARCHAR(100) | Nombre completo |
+| manufacturer | VARCHAR(100) | Fabricante |
+| category | VARCHAR(50) | fighter, transport, tanker, surveillance, etc. |
+| role | VARCHAR(100) | Rol: Combat, Cargo, Reconnaissance |
+| max_speed_kts | INTEGER | Velocidad máxima en nudos |
+| cruise_speed_kts | INTEGER | Velocidad crucero |
+| max_altitude_ft | INTEGER | Techo máximo en pies |
+| range_nm | INTEGER | Alcance en millas náuticas |
+| crew_size | INTEGER | Tripulación |
+| is_armed | BOOLEAN | ¿Armado? |
+| thumbnail_url | TEXT | URL de imagen principal |
+
+### `aircraft_model_images` - Galería por Modelo
+Imágenes compartidas entre aeronaves del mismo tipo.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Identificador único |
+| aircraft_type | VARCHAR(10) | FK a aircraft_model_catalog |
+| image_url | TEXT | URL en Supabase Storage |
+| is_primary | BOOLEAN | ¿Es la imagen principal? |
+| caption | TEXT | Descripción |
+| source | VARCHAR(255) | Fuente de la imagen |
+
+### `caribbean_military_bases` - Bases y Aeropuertos
+40+ bases militares y aeropuertos relevantes.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| icao_code | VARCHAR(10) | **PK** - Código ICAO |
+| iata_code | VARCHAR(3) | Código IATA |
+| name | VARCHAR(200) | Nombre de la base |
+| country_code | VARCHAR(3) | Código ISO del país |
+| country_name | VARCHAR(100) | Nombre del país |
+| base_type | VARCHAR(50) | military, joint, civilian |
+| latitude | DECIMAL(10,6) | Coordenadas |
+| longitude | DECIMAL(10,6) | |
+| operators | TEXT[] | Operadores militares |
+
+### `aircraft_location_history` - Trail de Posiciones
+Historial de ubicaciones para reconstruir vuelos.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Identificador único |
+| icao24 | VARCHAR(10) | FK a military_aircraft_registry |
+| event_type | VARCHAR(20) | detection, departure, arrival, incursion |
+| latitude | DECIMAL(10,6) | Posición |
+| longitude | DECIMAL(10,6) | |
+| altitude | INTEGER | Altitud ft |
+| heading | INTEGER | Rumbo |
+| speed | INTEGER | Velocidad kts |
+| callsign | VARCHAR(20) | Callsign usado |
+| origin_icao | VARCHAR(10) | Aeropuerto origen |
+| destination_icao | VARCHAR(10) | Aeropuerto destino |
+| country_code | VARCHAR(3) | País (geocodificado) |
+| detected_at | TIMESTAMPTZ | Timestamp |
+
+**Índices**: `idx_location_history_icao24`, `idx_location_history_detected_at`
+
+### `aircraft_country_presence` - Presencia por País
+Acumulado de presencia por país para cada aeronave.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| id | UUID | Identificador único |
+| icao24 | VARCHAR(10) | FK a military_aircraft_registry |
+| country_code | VARCHAR(3) | Código ISO |
+| country_name | VARCHAR(100) | Nombre del país |
+| first_seen_in_country | TIMESTAMPTZ | Primera vez en el país |
+| last_seen_in_country | TIMESTAMPTZ | Última vez en el país |
+| total_detections_in_country | INTEGER | Total detecciones |
+
+**Constraint**: `UNIQUE(icao24, country_code)`
+
+### `aircraft_last_presence` (VIEW) - Última Ubicación
+Vista optimizada para última ubicación conocida.
+
+```sql
+CREATE VIEW aircraft_last_presence AS
+SELECT DISTINCT ON (icao24)
+  icao24, country_code, country_name, last_seen_in_country
+FROM aircraft_country_presence
+ORDER BY icao24, last_seen_in_country DESC;
+```
+
+### Función: `recalculate_probable_base()`
+Recalcula base probable basándose en historial de origen.
+
+```sql
+SELECT recalculate_probable_base('AE54C7');
+```
+
+---
+
 ## Tablas de Buques
 
 ### `ship_positions` - Posiciones AIS
@@ -334,6 +459,12 @@ Las siguientes tablas tienen RLS habilitado:
 - `intelligence_events` ✅
 - `user_audit_logs` ✅ (solo admins pueden leer)
 - `user_sessions` ✅ (solo admins pueden leer)
+- `military_aircraft_registry` ✅
+- `aircraft_model_catalog` ✅
+- `aircraft_model_images` ✅
+- `caribbean_military_bases` ✅
+- `aircraft_location_history` ✅
+- `aircraft_country_presence` ✅
 
 ## Funciones PostGIS Útiles
 

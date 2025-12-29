@@ -20,6 +20,7 @@
 ```
 src/
 ├── components/
+│   ├── Aircraft/          # ✨ Registro de aeronaves militares
 │   ├── Analytics/         # Estadísticas de incursiones
 │   ├── Auth/              # Login, gestión de usuarios
 │   ├── Calendar/          # Vista de calendario
@@ -36,7 +37,7 @@ src/
 │   ├── Templates/         # Paleta de plantillas
 │   ├── Timeline/          # Eventos en timeline
 │   └── Weather/           # Capas meteorológicas
-├── hooks/                 # Hooks personalizados (useMapLayers, useFlightRadar, etc.)
+├── hooks/                 # Hooks personalizados (useMapLayers, useFlightRadar, useAircraftRegistry, etc.)
 ├── services/              # Servicios externos (FR24, AIS)
 ├── stores/                # Contexts de estado
 ├── config/                # Configuraciones (iconos i2)
@@ -146,6 +147,36 @@ Sistema completo de registro y monitoreo de actividad de usuarios.
 - `src/hooks/useAuditLog.js`: Hook para registrar eventos
 - Tablas: `user_audit_logs`, `user_sessions`
 
+### 7. Sistema de Registro de Aeronaves Militares ✨
+
+Inventario persistente de aeronaves militares USA detectadas en el Caribe.
+
+**Ubicación**: FlightRadar → Inventario
+
+**Características**:
+- **Catálogo**: 82+ modelos con especificaciones técnicas
+- **Bases**: 40+ aeropuertos/bases militares del Caribe y EEUU
+- **Historial**: Trail de posiciones por aeronave (estilo FR24)
+- **Presencia por país**: Tracking de países visitados
+- **Base probable**: Cálculo automático basado en frecuencia
+- **Galería**: Imágenes por modelo de aeronave
+
+**Componentes**:
+- `src/components/Aircraft/AircraftRegistryPanel.jsx`: Panel principal con inventario
+- `src/components/Aircraft/AircraftDetailView.jsx`: Vista completa con tabs
+- `src/hooks/useAircraftRegistry.js`: Hook principal
+- `src/hooks/useAircraftImages.js`: Gestión de imágenes
+
+**Tablas**:
+- `military_aircraft_registry`: Inventario principal
+- `aircraft_model_catalog`: Especificaciones técnicas
+- `aircraft_model_images`: Galería por modelo
+- `caribbean_military_bases`: Bases/aeropuertos
+- `aircraft_location_history`: Trail de posiciones
+- `aircraft_country_presence`: Presencia por país
+
+**Documentación completa**: `docs/REGISTRO-AERONAVES-MILITARES.md`
+
 ## Edge Functions Principales
 
 | Función | Versión | Propósito | Frecuencia |
@@ -153,6 +184,7 @@ Sistema completo de registro y monitoreo de actividad de usuarios.
 | `flightradar-proxy` | v19 | Proxy para datos de vuelos | On-demand |
 | `military-airspace-monitor` | v33 | Detectar incursiones + Telegram con trail | Cron 3min |
 | `incursion-session-closer` | v8 | Cerrar sesiones + screenshot con trail | Cron 5min |
+| `aircraft-registry-collector` | v14 | Registrar aeronaves militares en inventario | Cron 5min |
 | `ship-positions` | v3 | Posiciones de buques | On-demand |
 | `aisstream-collector` | v6 | Recolector AIS | Cron 1min |
 | `test-incursion-alert` | v5 | Simular alertas (debug) | Manual |
