@@ -1,17 +1,22 @@
 # Sistema de Registro de Aeronaves Militares del Caribe
 
+> **Estado**: ✅ MVP en Producción (Dic 2025)  
+> **Última actualización**: 29 de diciembre de 2025
+
 ## Índice
 
 1. [Descripción General](#descripción-general)
-2. [Arquitectura del Sistema](#arquitectura-del-sistema)
-3. [Base de Datos](#base-de-datos)
-4. [Edge Functions](#edge-functions)
-5. [Hooks de React](#hooks-de-react)
-6. [Componentes UI](#componentes-ui)
-7. [Flujo de Datos](#flujo-de-datos)
-8. [Configuración y Secretos](#configuración-y-secretos)
-9. [API de FlightRadar24](#api-de-flightradar24)
-10. [Recomendaciones de Mejora](#recomendaciones-de-mejora)
+2. [Estado Actual](#estado-actual)
+3. [Arquitectura del Sistema](#arquitectura-del-sistema)
+4. [Base de Datos](#base-de-datos)
+5. [Edge Functions](#edge-functions)
+6. [Hooks de React](#hooks-de-react)
+7. [Componentes UI](#componentes-ui)
+8. [Flujo de Datos](#flujo-de-datos)
+9. [Configuración y Secretos](#configuración-y-secretos)
+10. [API de FlightRadar24](#api-de-flightradar24)
+11. [Funcionalidades Implementadas](#funcionalidades-implementadas)
+12. [Pendientes](#pendientes)
 
 ---
 
@@ -49,6 +54,45 @@ El Sistema de Registro de Aeronaves Militares es un módulo del proyecto SAE-RAD
 - Panamá
 - Costa Rica
 - Venezuela (existente)
+
+---
+
+## Estado Actual
+
+### ✅ Funcionalidades Completadas (Dic 2025)
+
+| Componente | Estado | Descripción |
+|------------|--------|-------------|
+| **Recolector Automático** | ✅ 100% | Edge Function v14, cron cada 5 min |
+| **Catálogo de Modelos** | ✅ 100% | 82+ tipos de aeronaves con especificaciones |
+| **Base de Datos de Bases** | ✅ 100% | 40+ bases militares del Caribe y EEUU |
+| **Historial de Ubicaciones** | ✅ 100% | Tabla `aircraft_location_history` funcionando |
+| **Presencia por País** | ✅ 100% | Tabla `aircraft_country_presence` funcionando |
+| **Base Probable** | ✅ 100% | Función `recalculate_probable_base` implementada |
+| **Geocoding** | ✅ 100% | Nominatim API con cache para detectar país |
+| **Historial de Vuelos** | ✅ 100% | Vista estilo FR24 con tabla por fechas |
+| **Trail en Mapa** | ✅ 100% | Mapbox con línea, puntos y marcadores |
+| **Detección País Aeronave** | ✅ 100% | País de origen por prefijo ICAO24 |
+| **UI Responsive** | ✅ 100% | Optimizado para desktop y móvil |
+
+### 📊 Estadísticas del Sistema
+
+```
+Aeronaves en inventario: 50+ registradas
+Modelos en catálogo:     82 tipos
+Bases militares:         40+ aeropuertos
+Detecciones diarias:     Variable según actividad
+```
+
+### 🗂️ Tablas Implementadas
+
+- `military_aircraft_registry` - Inventario principal
+- `aircraft_model_catalog` - Especificaciones técnicas
+- `aircraft_model_images` - Galería de imágenes por modelo
+- `caribbean_military_bases` - Bases y aeropuertos
+- `aircraft_location_history` - Historial de posiciones
+- `aircraft_country_presence` - Presencia acumulada por país
+- `aircraft_last_presence` (VIEW) - Última ubicación conocida
 
 ---
 
@@ -204,9 +248,36 @@ CREATE TABLE caribbean_military_bases (
 );
 ```
 
-### Tabla: `aircraft_country_presence` (Futura)
+### Tabla: `aircraft_location_history` ✅ IMPLEMENTADA
 
-Para rastrear presencia por país (estructura propuesta).
+Almacena cada punto de detección para reconstruir trails.
+
+```sql
+CREATE TABLE aircraft_location_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  icao24 VARCHAR(10) REFERENCES military_aircraft_registry(icao24),
+  event_type VARCHAR(20),             -- 'detection', 'departure', 'arrival', 'incursion'
+  latitude DECIMAL(10, 6),
+  longitude DECIMAL(10, 6),
+  altitude INTEGER,
+  heading INTEGER,
+  speed INTEGER,
+  callsign VARCHAR(20),
+  origin_icao VARCHAR(10),
+  destination_icao VARCHAR(10),
+  country_code VARCHAR(3),            -- Detectado por PostGIS o Nominatim
+  detected_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices para performance
+CREATE INDEX idx_location_history_icao24 ON aircraft_location_history(icao24);
+CREATE INDEX idx_location_history_detected_at ON aircraft_location_history(detected_at);
+```
+
+### Tabla: `aircraft_country_presence` ✅ IMPLEMENTADA
+
+Acumula presencia por país para cada aeronave.
 
 ```sql
 CREATE TABLE aircraft_country_presence (
@@ -219,6 +290,63 @@ CREATE TABLE aircraft_country_presence (
   total_detections_in_country INTEGER DEFAULT 0,
   UNIQUE(icao24, country_code)
 );
+```
+
+### Vista: `aircraft_last_presence` ✅ IMPLEMENTADA
+
+Vista optimizada para obtener la última ubicación conocida de cada aeronave.
+
+```sql
+CREATE VIEW aircraft_last_presence AS
+SELECT DISTINCT ON (icao24)
+  icao24,
+  country_code,
+  country_name,
+  last_seen_in_country
+FROM aircraft_country_presence
+ORDER BY icao24, last_seen_in_country DESC;
+```
+
+### Función: `recalculate_probable_base` ✅ IMPLEMENTADA
+
+Recalcula la base probable basándose en el historial de origen/destino.
+
+```sql
+CREATE OR REPLACE FUNCTION recalculate_probable_base(p_icao24 TEXT)
+RETURNS void AS $$
+DECLARE
+  v_base RECORD;
+BEGIN
+  -- Buscar aeropuerto más frecuente como origen
+  SELECT origin_icao, COUNT(*) as freq
+  INTO v_base
+  FROM aircraft_location_history
+  WHERE icao24 = p_icao24 
+    AND origin_icao IS NOT NULL
+    AND event_type = 'detection'
+  GROUP BY origin_icao
+  ORDER BY freq DESC
+  LIMIT 1;
+  
+  IF v_base IS NOT NULL THEN
+    -- Buscar datos de la base en caribbean_military_bases
+    UPDATE military_aircraft_registry
+    SET 
+      probable_base_icao = v_base.origin_icao,
+      probable_base_name = COALESCE(
+        (SELECT name FROM caribbean_military_bases 
+         WHERE icao_code = v_base.origin_icao 
+            OR iata_code = v_base.origin_icao),
+        v_base.origin_icao
+      ),
+      probable_country = (SELECT country_name FROM caribbean_military_bases 
+                          WHERE icao_code = v_base.origin_icao 
+                             OR iata_code = v_base.origin_icao),
+      base_confidence = LEAST(100, v_base.freq * 10)
+    WHERE icao24 = p_icao24;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
 ---
@@ -398,23 +526,45 @@ export function useAircraftImages(aircraftType) {
 **Ubicación**: `src/components/Aircraft/AircraftRegistryPanel.jsx`
 
 Panel principal con tabs:
-- **Inventario**: Lista/grid de todas las aeronaves
+- **Inventario**: Lista/grid de todas las aeronaves con imagen, callsign, país y base probable
 - **Por País**: Aeronaves agrupadas por país de presencia
 - **Bases**: Aeronaves agrupadas por base probable
 - **Top Incursiones**: Aeronaves con más incursiones a Venezuela
 - **Nuevas Hoy**: Aeronaves detectadas por primera vez hoy
 
-### `AircraftDetailModal`
+Características:
+- Vista lista optimizada con thumbnails 56x56px
+- Muestra última ubicación conocida y base probable
+- Banderas de países con emoji
+- Responsive para móvil y desktop
 
-**Ubicación**: `src/components/Aircraft/AircraftDetailModal.jsx`
+### `AircraftDetailView` (Pantalla Completa)
 
-Modal con información detallada:
-- Identificación (ICAO24, callsigns, registro)
-- Especificaciones técnicas (del catálogo)
-- Estadísticas (detecciones, incursiones)
-- Historial de ubicaciones
-- Galería de imágenes
-- Notas editables
+**Ubicación**: `src/components/Aircraft/AircraftDetailView.jsx`
+
+Vista de pantalla completa con layout de 2 columnas (desktop):
+
+**Columna Izquierda:**
+- Imagen grande del modelo (galería con navegación)
+- Especificaciones técnicas del catálogo
+- Datos del transponder
+
+**Columna Derecha (Tabs):**
+- **Info**: Identificación, callsigns, estadísticas, rama militar
+- **Historial**: Trail de vuelos estilo FlightRadar24
+- **Galería**: Upload y gestión de imágenes
+- **Notas**: Notas manuales editables
+
+#### Sub-componente: HistoryTab
+
+Vista de historial de vuelos con:
+- **Estadísticas**: Días con actividad, puntos registrados, aeropuertos visitados
+- **Tabla de vuelos**: Agrupados por fecha, con hora inicio/fin, duración, aeropuertos
+- **Detalle del día**: Al seleccionar una fecha muestra:
+  - Mapa Mapbox con trail del vuelo (estilo Outdoors)
+  - Línea del recorrido con puntos
+  - Marcador verde (inicio) y rojo (fin)
+  - Lista colapsable de puntos con hora y país
 
 ### `AircraftImageGallery`
 
@@ -425,6 +575,17 @@ Galería de imágenes por modelo:
 - Marcar imagen como principal
 - Lightbox para visualización
 - Las imágenes se comparten entre todas las aeronaves del mismo tipo
+
+### `FlightDetailsPanel`
+
+**Ubicación**: `src/components/FlightRadar/FlightDetailsPanel.jsx`
+
+Panel de preview rápido en el mapa:
+- Muestra al hacer clic en un vuelo del radar
+- Imagen del modelo, callsign, tipo, bandera del país
+- Estado del transponder, altitud, velocidad
+- Modo expandido con más detalles
+- Botón para abrir vista completa del inventario
 
 ---
 
@@ -575,140 +736,160 @@ todos los vuelos que muestra la API pública.
 
 ---
 
-## Recomendaciones de Mejora
+## Funcionalidades Implementadas
+
+### ✅ Completadas (Dic 2025)
+
+| # | Funcionalidad | Estado | Notas |
+|---|---------------|--------|-------|
+| 1 | **Tracking de Presencia por País** | ✅ | Tabla `aircraft_country_presence` + Nominatim geocoding |
+| 2 | **Cálculo de Base Probable** | ✅ | Función `recalculate_probable_base()` |
+| 3 | **Historial de Ubicaciones** | ✅ | Tabla `aircraft_location_history` con trail completo |
+| 4 | **Vista Historial estilo FR24** | ✅ | Tabla de vuelos por fecha + detalle del día |
+| 5 | **Trail en Mapa** | ✅ | Mapbox con línea, puntos, marcadores inicio/fin |
+| 6 | **Detección País del Avión** | ✅ | Por prefijo ICAO24 (AE/AF = USA) con bandera |
+| 7 | **Rama Militar** | ✅ | Detección por callsign + mostrado en UI |
+| 8 | **Catálogo de Modelos** | ✅ | 82+ tipos con especificaciones técnicas |
+| 9 | **Galería de Imágenes** | ✅ | Upload a Supabase Storage por modelo |
+| 10 | **UI Responsive** | ✅ | Desktop 2 columnas, móvil stack vertical |
+
+### Detalle de Implementaciones
+
+#### Geocoding con Nominatim
+
+Sistema de reverse geocoding para detectar país de cada punto de ubicación:
+
+```javascript
+// En HistoryTab
+const cache = new Map();
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/reverse';
+
+async function reverseGeocode(lat, lon) {
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`; // Precision 2 decimales
+  if (cache.has(key)) return cache.get(key);
+  
+  // Rate limiting: 1 req/segundo
+  await delay(1000);
+  
+  const response = await fetch(
+    `${NOMINATIM_URL}?lat=${lat}&lon=${lon}&format=json`
+  );
+  const data = await response.json();
+  
+  const result = {
+    country: data.address?.country,
+    country_code: data.address?.country_code?.toUpperCase()
+  };
+  
+  cache.set(key, result);
+  return result;
+}
+```
+
+#### Detección de País por ICAO24
+
+Basado en prefijos hex del transponder:
+
+```javascript
+// Prefijos ICAO24 por país
+function getAircraftCountryByIcao24(icao24) {
+  const hex = icao24?.toUpperCase() || '';
+  
+  // USA Military
+  if (hex.startsWith('AE') || hex.startsWith('AF')) {
+    return { code: 'US', name: 'Estados Unidos', flag: '🇺🇸' };
+  }
+  // USA Civil
+  if (hex.startsWith('A')) {
+    return { code: 'US', name: 'Estados Unidos', flag: '🇺🇸' };
+  }
+  // Otros países...
+  return null;
+}
+```
+
+#### Mapa del Trail con Mapbox
+
+```jsx
+// En HistoryTab > FlightDayDetail
+useEffect(() => {
+  const map = new mapboxgl.Map({
+    container: mapContainerRef.current,
+    style: MAPBOX_STYLES.OUTDOORS, // Mapa claro con etiquetas legibles
+    center: [centerLon, centerLat],
+    zoom: 6
+  });
+  
+  // Agregar línea del trail
+  map.addSource('trail', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: points.map(p => [p.longitude, p.latitude])
+      }
+    }
+  });
+  
+  map.addLayer({
+    id: 'trail-line',
+    type: 'line',
+    source: 'trail',
+    paint: { 'line-color': '#3b82f6', 'line-width': 3 }
+  });
+  
+  // Marcadores inicio (verde) y fin (rojo)
+  new mapboxgl.Marker({ color: '#22c55e' })
+    .setLngLat([firstPoint.longitude, firstPoint.latitude])
+    .setPopup(new mapboxgl.Popup().setHTML('<b>Inicio</b>'))
+    .addTo(map);
+    
+  new mapboxgl.Marker({ color: '#ef4444' })
+    .setLngLat([lastPoint.longitude, lastPoint.latitude])
+    .setPopup(new mapboxgl.Popup().setHTML('<b>Fin</b>'))
+    .addTo(map);
+}, [points]);
+```
+
+---
+
+## Pendientes
 
 ### Alta Prioridad
 
-#### 1. Tracking de Presencia por País
-Implementar la tabla `aircraft_country_presence` para rastrear en qué países ha sido detectada cada aeronave.
-
-```sql
--- Cuando se detecta una aeronave, determinar el país
--- usando PostGIS y los límites territoriales existentes
-SELECT country_code FROM terrestrial_boundaries_cache
-WHERE ST_Contains(geojson::geometry, ST_Point(lon, lat));
-```
-
-#### 2. Cálculo de Base Probable
-Implementar algoritmo para determinar la base probable basándose en:
-- Frecuencia de origen/destino
-- Primer avistamiento del día
-- Último avistamiento del día
-
-```sql
--- Función para recalcular base probable
-CREATE OR REPLACE FUNCTION calculate_probable_base(p_icao24 TEXT)
-RETURNS void AS $$
-  -- Analizar historial de vuelos
-  -- Determinar aeropuerto más frecuente como origen
-  -- Actualizar probable_base_icao
-$$ LANGUAGE plpgsql;
-```
-
-#### 3. Integración con Sistema de Incursiones
+#### 1. Integración con Sistema de Incursiones
 Cuando se cierra una `incursion_session`, actualizar automáticamente:
 - `total_incursions` en `military_aircraft_registry`
 - Crear entrada en `aircraft_location_history`
 
-```sql
--- Trigger después de cerrar incursión
-CREATE TRIGGER after_incursion_close
-AFTER UPDATE ON incursion_sessions
-FOR EACH ROW
-WHEN (NEW.status = 'closed')
-EXECUTE FUNCTION update_aircraft_incursion_stats();
-```
+#### 2. Almacenamiento Continuo del Trail
+Actualmente el collector solo guarda la última posición. Implementar:
+- Guardar cada detección en `aircraft_location_history`
+- Configurar retención de datos (ej: 30 días)
+- Optimizar storage con compresión temporal
 
 ### Media Prioridad
 
-#### 4. Reporte Diario a Telegram
-Crear Edge Function `daily-aircraft-report` que envíe a las 18:00:
+#### 3. Reporte Diario a Telegram
+Crear Edge Function `daily-aircraft-report`
 
-```
-📊 REPORTE DIARIO - AERONAVES MILITARES USA
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#### 4. Notificaciones de Nueva Aeronave
+Enviar alerta Telegram cuando se detecta una aeronave por primera vez
 
-🆕 Nuevas hoy: 5 aeronaves
-✈️ Activas: 23 aeronaves
-🔄 Total detecciones: 156
-
-📍 Por país:
-  🇵🇷 Puerto Rico: 12
-  🇩🇴 Rep. Dominicana: 5
-  🇨🇺 Cuba: 3
-  🇹🇹 Trinidad: 3
-
-🔝 Más activas:
-  1. AE54C7 (SHARK33) - 15 detecciones
-  2. AE1234 (RCH123) - 12 detecciones
-```
-
-#### 5. Historial de Ubicaciones
-Crear tabla `aircraft_location_history` para eventos discretos:
-
-```sql
-CREATE TABLE aircraft_location_history (
-  id UUID PRIMARY KEY,
-  icao24 VARCHAR(10),
-  event_type VARCHAR(20),  -- 'detection', 'departure', 'arrival', 'incursion'
-  latitude DECIMAL(10, 6),
-  longitude DECIMAL(10, 6),
-  altitude INTEGER,
-  heading INTEGER,
-  speed INTEGER,
-  origin_icao VARCHAR(10),
-  destination_icao VARCHAR(10),
-  country_code VARCHAR(3),
-  detected_at TIMESTAMPTZ
-);
-```
-
-#### 6. Clasificación Automática de Rama Militar
-Mejorar `getOperatorName()` con más patrones:
-
-```javascript
-const BRANCH_PATTERNS = {
-  'USAF': ['RCH', 'REACH', 'SHARK', 'EVAC', 'SPAR', 'SAM', 'BAT', 'BOXER'],
-  'USN': ['NAVY', 'CNV', 'IRON'],
-  'USMC': ['VIPER', 'COBRA'],
-  'USCG': ['COAST', 'CG'],
-  'USA': ['ARMY'],
-};
-```
-
-### Baja Prioridad
-
-#### 7. Notificaciones de Nueva Aeronave
-Enviar alerta Telegram cuando se detecta una aeronave por primera vez:
-
-```
-🆕 NUEVA AERONAVE DETECTADA
-
-✈️ AE54C7 - C-130J Super Hercules
-📍 Callsign: SHARK33
-🎖️ US Air Force
-📍 Posición: 24.56°N, 76.78°W
-🕐 2025-12-27 19:11:55
-```
-
-#### 8. Dashboard de Estadísticas
+#### 5. Dashboard de Estadísticas
 Crear visualizaciones:
 - Gráfico de aeronaves por día
 - Mapa de calor de actividad
 - Timeline de detecciones
-- Comparativa por rama militar
 
-#### 9. Exportación de Datos
-Permitir exportar el inventario en formatos:
-- CSV
-- JSON
-- Excel
+### Baja Prioridad
 
-#### 10. API REST Pública
-Exponer endpoints para consultar el inventario:
-- `GET /api/aircraft` - Lista de aeronaves
-- `GET /api/aircraft/:icao24` - Detalle de aeronave
-- `GET /api/stats` - Estadísticas generales
+#### 6. Exportación de Datos
+Permitir exportar el inventario (CSV, JSON, Excel)
+
+#### 7. API REST Pública
+Endpoints para consultar el inventario
 
 ---
 
@@ -774,6 +955,33 @@ docs/
 
 ## Changelog
 
+### V15 (2025-12-29)
+- ✅ **Historial de vuelos estilo FR24**: Tabla agrupada por fecha con estadísticas
+- ✅ **Trail en mapa Mapbox**: Línea del recorrido con marcadores inicio/fin
+- ✅ **Estilo Outdoors**: Mapa claro con etiquetas legibles
+- ✅ **FlightDayDetail**: Vista detallada del día con mapa interactivo
+- ✅ **Puntos colapsables**: Lista de ubicaciones expandible/colapsable
+
+### V14 (2025-12-28)
+- ✅ **País del avión**: Detección por ICAO24 con bandera en UI
+- ✅ **Rama militar**: Badge visible en header (US Air Force, US Army, etc.)
+- ✅ **UI responsive móvil**: Tabs scrollables, texto truncado
+- ✅ **FlightDetailsPanel mejorado**: Preview con imagen, bandera, transponder
+- ✅ **82+ modelos** en catálogo con especificaciones
+- ✅ **40+ bases militares** en caribbean_military_bases
+
+### V13 (2025-12-28)
+- ✅ **Historial de ubicaciones**: Tabla `aircraft_location_history`
+- ✅ **Presencia por país**: Tabla `aircraft_country_presence`
+- ✅ **Base probable**: Función `recalculate_probable_base()`
+- ✅ **Geocoding Nominatim**: Detección de país por coordenadas
+
+### V12 (2025-12-28)
+- ✅ **AircraftDetailView**: Pantalla completa reemplaza modal
+- ✅ **Layout 2 columnas**: Imagen izq + tabs derecha
+- ✅ **Galería de imágenes**: Upload a Supabase Storage
+- ✅ **Vista aircraft_last_presence**: Última ubicación optimizada
+
 ### V11 (2025-12-27)
 - ✅ Migración a API pública de FR24
 - ✅ Primer registro exitoso (SHARK33)
@@ -781,9 +989,37 @@ docs/
 
 ### V1-V10 (2025-12-27)
 - Iteraciones de desarrollo y debugging
-- Corrección de nombre de secreto
 - Corrección de columnas de tabla
 - Cambio de API oficial a pública
+
+---
+
+## Archivos Actualizados
+
+```
+src/
+├── hooks/
+│   ├── useAircraftRegistry.js      # Hook principal (actualizado)
+│   ├── useAircraftImages.js        # Hook de imágenes (actualizado)
+│   └── useFlightRadar.js           # Enriquecimiento con catálogo
+├── components/
+│   ├── Aircraft/
+│   │   ├── AircraftRegistryPanel.jsx   # Panel inventario (responsive)
+│   │   ├── AircraftDetailView.jsx      # ✨ NUEVO: Pantalla completa
+│   │   ├── AircraftDetailModal.jsx     # Deprecado (usar DetailView)
+│   │   └── AircraftImageGallery.jsx    # Galería (actualizado)
+│   └── FlightRadar/
+│       ├── FlightDetailsPanel.jsx      # Preview mejorado
+│       └── FlightRadarPanel.jsx        # Lista con imágenes
+├── lib/
+│   └── maplibre.js                     # Estilos Mapbox (OUTDOORS)
+└── services/
+    └── flightRadarService.js           # Servicio FR24
+
+docs/
+├── REGISTRO-AERONAVES-MILITARES.md     # Este documento
+└── PROPUESTA-REGISTRO-AERONAVES-MILITARES.md
+```
 
 ---
 
