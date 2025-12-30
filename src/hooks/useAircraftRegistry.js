@@ -25,12 +25,19 @@ export function useAircraftRegistry(options = {}) {
     autoRefresh = false,
     refreshInterval = 60000, // 1 minuto
     filters = {},
+    pageSize = 20, // Paginación: elementos por página
+    initialPage = 1,
   } = options;
 
   const [aircraft, setAircraft] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const mergeLastPresence = useCallback((aircraftRows, lastPresenceRows) => {
     const byIcao = {};
@@ -317,7 +324,7 @@ export function useAircraftRegistry(options = {}) {
     }
   }, [fetchAircraft]);
 
-  // Cargar datos iniciales - solo cuando enabled cambia (con timeout)
+  // Cargar datos con PAGINACIÓN (con timeout)
   useEffect(() => {
     if (!enabled) return;
     
@@ -326,13 +333,30 @@ export function useAircraftRegistry(options = {}) {
     const loadData = async () => {
       setLoading(true);
       setError(null);
+      
       try {
-        // Fetch aircraft con timeout
+        // 1. Primero obtener el COUNT total (rápido, solo cuenta)
+        const countResult = await withTimeout(
+          supabase
+            .from('military_aircraft_registry')
+            .select('*', { count: 'exact', head: true }),
+          QUERY_TIMEOUT
+        );
+        
+        if (cancelled) return;
+        
+        const total = countResult.count || 0;
+        setTotalCount(total);
+        setTotalPages(Math.ceil(total / pageSize));
+        
+        // 2. Fetch aircraft PAGINADOS con timeout
+        const offset = (currentPage - 1) * pageSize;
         const aircraftResult = await withTimeout(
           supabase
             .from('military_aircraft_registry')
             .select('*')
-            .order('last_seen', { ascending: false }),
+            .order('last_seen', { ascending: false })
+            .range(offset, offset + pageSize - 1), // Paginación
           QUERY_TIMEOUT
         );
         
@@ -341,10 +365,10 @@ export function useAircraftRegistry(options = {}) {
         
         const aircraftData = aircraftResult.data || [];
 
-        // Obtener tipos únicos de aeronaves para buscar imágenes
+        // 3. Obtener tipos únicos SOLO de esta página
         const uniqueTypes = [...new Set(aircraftData.map(a => a.aircraft_type).filter(Boolean))];
         
-        // Cargar catálogo completo de modelos (con timeout)
+        // 4. Cargar catálogo SOLO para tipos de esta página
         let modelCatalog = {};
         if (uniqueTypes.length > 0) {
           try {
@@ -363,13 +387,12 @@ export function useAircraftRegistry(options = {}) {
             }
           } catch (catalogErr) {
             console.warn('[useAircraftRegistry] Catalog timeout:', catalogErr.message);
-            // Continuar sin catálogo
           }
         }
 
         if (cancelled) return;
 
-        // Asociar datos del catálogo a cada aeronave
+        // 5. Asociar datos del catálogo a cada aeronave
         const aircraftWithCatalog = aircraftData.map(a => {
           const catalogInfo = modelCatalog[a.aircraft_type] || null;
           return {
@@ -381,7 +404,7 @@ export function useAircraftRegistry(options = {}) {
           };
         });
 
-        // Mezclar última presencia por aeronave (con timeout)
+        // 6. Mezclar última presencia SOLO para esta página
         const icaoList = aircraftWithCatalog.map((r) => r.icao24).filter(Boolean);
         let aircraftWithPresence = aircraftWithCatalog;
         if (icaoList.length > 0) {
@@ -399,36 +422,37 @@ export function useAircraftRegistry(options = {}) {
             }
           } catch (presenceErr) {
             console.warn('[useAircraftRegistry] Presence timeout:', presenceErr.message);
-            // Continuar sin presencia
           }
         }
 
         if (cancelled) return;
         setAircraft(aircraftWithPresence);
 
-        // Fetch stats (sin bloquear si falla)
-        try {
-          const statsResult = await withTimeout(
-            supabase
-              .from('military_aircraft_registry')
-              .select('icao24, aircraft_type, probable_country, military_branch, total_incursions, is_new_today, first_seen_date'),
-            QUERY_TIMEOUT
-          );
-          
-          if (!cancelled && statsResult.data) {
-            const statsData = statsResult.data;
-            const totalAircraft = statsData.length;
-            const newToday = statsData.filter(a => a.is_new_today).length;
-            const withIncursions = statsData.filter(a => a.total_incursions > 0).length;
-            const byCountry = statsData.reduce((acc, a) => {
-              const country = a.probable_country || 'Unknown';
-              acc[country] = (acc[country] || 0) + 1;
-              return acc;
-            }, {});
-            setStats({ totalAircraft, newToday, withIncursions, byCountry });
+        // 7. Fetch stats UNA VEZ (solo en la primera carga o si no existen)
+        if (!stats) {
+          try {
+            const statsResult = await withTimeout(
+              supabase
+                .from('military_aircraft_registry')
+                .select('icao24, aircraft_type, probable_country, military_branch, total_incursions, is_new_today, first_seen_date'),
+              QUERY_TIMEOUT
+            );
+            
+            if (!cancelled && statsResult.data) {
+              const statsData = statsResult.data;
+              const totalAircraft = statsData.length;
+              const newToday = statsData.filter(a => a.is_new_today).length;
+              const withIncursions = statsData.filter(a => a.total_incursions > 0).length;
+              const byCountry = statsData.reduce((acc, a) => {
+                const country = a.probable_country || 'Unknown';
+                acc[country] = (acc[country] || 0) + 1;
+                return acc;
+              }, {});
+              setStats({ totalAircraft, newToday, withIncursions, byCountry });
+            }
+          } catch (statsErr) {
+            console.warn('[useAircraftRegistry] Stats timeout:', statsErr.message);
           }
-        } catch (statsErr) {
-          console.warn('[useAircraftRegistry] Stats timeout:', statsErr.message);
         }
       } catch (err) {
         console.error('[useAircraftRegistry] Error loading data:', err);
@@ -449,7 +473,7 @@ export function useAircraftRegistry(options = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, mergeLastPresence]);
+  }, [enabled, currentPage, pageSize, mergeLastPresence]); // Recargar al cambiar página
 
   // Auto-refresh (deshabilitado por defecto)
   useEffect(() => {
@@ -475,6 +499,25 @@ export function useAircraftRegistry(options = {}) {
     return aircraft.filter(a => new Date(a.last_seen) > oneHourAgo);
   }, [aircraft]);
 
+  // Funciones de paginación
+  const goToPage = useCallback((page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  }, [totalPages]);
+
+  const nextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, totalPages]);
+
+  const prevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
+
   return {
     // Estado
     aircraft,
@@ -482,10 +525,19 @@ export function useAircraftRegistry(options = {}) {
     error,
     stats,
 
+    // Paginación
+    pagination: {
+      currentPage,
+      totalPages,
+      totalCount,
+      pageSize,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1,
+    },
+
     // Datos computados
     topIncursionAircraft,
     recentlySeenAircraft,
-    totalCount: aircraft.length,
 
     // Funciones
     refetch: fetchAircraft,
@@ -495,6 +547,11 @@ export function useAircraftRegistry(options = {}) {
     getNewAircraftToday,
     updateNotes,
     recalculateBase,
+    
+    // Funciones de paginación
+    goToPage,
+    nextPage,
+    prevPage,
   };
 }
 

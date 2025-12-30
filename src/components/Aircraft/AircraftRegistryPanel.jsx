@@ -15,6 +15,9 @@ import {
   Flag,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
   Eye,
   MoreVertical,
   Globe
@@ -47,8 +50,13 @@ export default function AircraftRegistryPanel({ isOpen, onClose }) {
     stats,
     topIncursionAircraft,
     refetch,
+    pagination,
+    goToPage,
+    nextPage,
+    prevPage,
   } = useAircraftRegistry({
     enabled: isOpen,
+    pageSize: 20, // 20 aeronaves por página
     filters: {
       ...filters,
       search: searchTerm || undefined,
@@ -260,11 +268,24 @@ export default function AircraftRegistryPanel({ isOpen, onClose }) {
         ) : (
           <>
             {activeTab === 'registry' && (
-              <RegistryTab 
-                aircraft={filteredAircraft} 
-                viewMode={viewMode}
-                onSelect={setSelectedAircraft}
-              />
+              <>
+                <RegistryTab 
+                  aircraft={filteredAircraft} 
+                  viewMode={viewMode}
+                  onSelect={setSelectedAircraft}
+                />
+                
+                {/* Paginador */}
+                {pagination && pagination.totalPages > 1 && (
+                  <Pagination 
+                    pagination={pagination}
+                    onGoToPage={goToPage}
+                    onNextPage={nextPage}
+                    onPrevPage={prevPage}
+                    loading={loading}
+                  />
+                )}
+              </>
             )}
             {activeTab === 'countries' && (
               <CountryDeploymentTab 
@@ -344,6 +365,128 @@ function LoadingState() {
       <div className="text-center">
         <RefreshCw className="w-10 h-10 sm:w-12 sm:h-12 text-sky-400 animate-spin mx-auto mb-4" />
         <p className="text-slate-400 text-sm sm:text-base">Cargando registro...</p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 📄 Componente de Paginación
+ */
+function Pagination({ pagination, onGoToPage, onNextPage, onPrevPage, loading }) {
+  const { currentPage, totalPages, totalCount, pageSize, hasNextPage, hasPrevPage } = pagination;
+  
+  // Calcular rango de elementos mostrados
+  const startItem = ((currentPage - 1) * pageSize) + 1;
+  const endItem = Math.min(currentPage * pageSize, totalCount);
+
+  // Generar números de página a mostrar
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    
+    // Ajustar si estamos cerca del final
+    if (end - start < maxVisible - 1) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+    
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-700">
+      {/* Info de registros */}
+      <div className="text-sm text-slate-400">
+        Mostrando <span className="font-medium text-white">{startItem}-{endItem}</span> de{' '}
+        <span className="font-medium text-white">{totalCount}</span> aeronaves
+      </div>
+
+      {/* Controles de navegación */}
+      <div className="flex items-center gap-1">
+        {/* Primera página */}
+        <button
+          onClick={() => onGoToPage(1)}
+          disabled={!hasPrevPage || loading}
+          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Primera página"
+        >
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+        
+        {/* Página anterior */}
+        <button
+          onClick={onPrevPage}
+          disabled={!hasPrevPage || loading}
+          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Anterior"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {/* Números de página */}
+        <div className="flex items-center gap-1 mx-2">
+          {getPageNumbers().map(page => (
+            <button
+              key={page}
+              onClick={() => onGoToPage(page)}
+              disabled={loading}
+              className={`min-w-[36px] h-9 rounded-lg text-sm font-medium transition-colors ${
+                page === currentPage
+                  ? 'bg-sky-500 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        {/* Página siguiente */}
+        <button
+          onClick={onNextPage}
+          disabled={!hasNextPage || loading}
+          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Siguiente"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+
+        {/* Última página */}
+        <button
+          onClick={() => onGoToPage(totalPages)}
+          disabled={!hasNextPage || loading}
+          className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Última página"
+        >
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Selector de página (opcional para pantallas grandes) */}
+      <div className="hidden lg:flex items-center gap-2 text-sm">
+        <span className="text-slate-400">Ir a:</span>
+        <input
+          type="number"
+          min={1}
+          max={totalPages}
+          value={currentPage}
+          onChange={(e) => {
+            const page = parseInt(e.target.value);
+            if (page >= 1 && page <= totalPages) {
+              onGoToPage(page);
+            }
+          }}
+          className="w-16 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded-lg text-center text-white text-sm focus:outline-none focus:border-sky-500"
+          disabled={loading}
+        />
+        <span className="text-slate-400">de {totalPages}</span>
       </div>
     </div>
   );
