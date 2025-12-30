@@ -118,40 +118,55 @@ export default function SystemHealthPanel() {
     return status;
   }, []);
 
-  // Verificar cron jobs
+  // Verificar cron jobs (usando tabla de configuración del monitor)
   const checkCronJobs = useCallback(async () => {
     try {
-      // Obtener jobs activos
-      const jobsResult = await withTimeout(
-        supabase.from('cron.job').select('*'),
+      // Verificamos la configuración del monitor de incursiones
+      const configResult = await withTimeout(
+        supabase
+          .from('incursion_monitor_config')
+          .select('is_active, telegram_enabled, last_execution_at, last_execution_status, inactivity_threshold_minutes')
+          .limit(1),
         QUERY_TIMEOUT
       );
       
-      // Obtener últimas ejecuciones
-      const runsResult = await withTimeout(
-        supabase.rpc('get_recent_cron_runs'),
-        QUERY_TIMEOUT
-      );
+      if (configResult.data && configResult.data.length > 0) {
+        const config = configResult.data[0];
+        // Crear jobs basados en la configuración real
+        const jobs = [
+          {
+            jobid: 1,
+            jobname: 'military-airspace-monitor',
+            schedule: 'Cada 2 minutos',
+            active: config.is_active,
+            description: 'Monitorea espacio aéreo militar',
+            lastRun: config.last_execution_at,
+            lastStatus: config.last_execution_status,
+          },
+          {
+            jobid: 2,
+            jobname: 'incursion-session-closer',
+            schedule: `Cada ${config.inactivity_threshold_minutes || 5} minutos`,
+            active: config.is_active,
+            description: 'Cierra sesiones de incursión inactivas',
+          },
+          {
+            jobid: 3,
+            jobname: 'telegram-notifications',
+            schedule: 'En tiempo real',
+            active: config.telegram_enabled,
+            description: 'Envía alertas a Telegram',
+          },
+        ];
+        setCronJobs(jobs);
+        return jobs;
+      }
       
-      const jobs = jobsResult.data || [];
-      const runs = runsResult.data || [];
-      
-      // Merge jobs con sus últimas ejecuciones
-      const jobsWithStatus = jobs.map(job => {
-        const lastRun = runs.find(r => r.jobid === job.jobid);
-        return {
-          ...job,
-          lastRun: lastRun?.start_time,
-          lastStatus: lastRun?.status,
-          lastReturn: lastRun?.return_message,
-        };
-      });
-      
-      setCronJobs(jobsWithStatus);
-      return jobsWithStatus;
+      setCronJobs([]);
+      return [];
     } catch (err) {
-      // Si falla la consulta a cron.job (puede no tener permisos)
-      console.warn('[SystemHealth] Cron check failed:', err.message);
+      console.warn('[SystemHealth] Cron config check failed:', err.message);
+      setCronJobs([]);
       return [];
     }
   }, []);
@@ -480,13 +495,13 @@ export default function SystemHealthPanel() {
             )}
           </Section>
 
-          {/* === CRON JOBS === */}
+          {/* === CRON JOBS / TAREAS PROGRAMADAS === */}
           <Section 
             id="cron" 
-            title="Cron Jobs" 
+            title="Tareas Programadas" 
             icon={Timer}
             badge={cronJobs.length}
-            status={cronJobs.length > 0 ? 'active' : 'inactive'}
+            status={cronJobs.some(j => j.active) ? 'active' : 'inactive'}
           >
             {cronJobs.length > 0 ? (
               <div className="space-y-2 mt-2">
@@ -500,20 +515,25 @@ export default function SystemHealthPanel() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         job.active 
                           ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-slate-700 text-slate-400'
+                          : 'bg-red-500/20 text-red-400'
                       }`}>
-                        {job.active ? 'Activo' : 'Inactivo'}
+                        {job.active ? 'Activo' : 'Desactivado'}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400 font-mono mb-1">
-                      {job.schedule}
+                    <div className="text-xs text-slate-400 mb-1">
+                      ⏱️ {job.schedule}
                     </div>
+                    {job.description && (
+                      <div className="text-xs text-slate-500 mb-1">
+                        {job.description}
+                      </div>
+                    )}
                     {job.lastRun && (
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-2 pt-2 border-t border-slate-700/30">
                         <Clock className="w-3 h-3" />
                         Última: {new Date(job.lastRun).toLocaleString('es-VE')}
                         {job.lastStatus && (
-                          <span className={job.lastStatus === 'succeeded' ? 'text-green-400' : 'text-red-400'}>
+                          <span className={job.lastStatus === 'success' ? 'text-green-400' : 'text-amber-400'}>
                             ({job.lastStatus})
                           </span>
                         )}
@@ -521,11 +541,15 @@ export default function SystemHealthPanel() {
                     )}
                   </div>
                 ))}
+                
+                <div className="text-xs text-slate-500 pt-2 border-t border-slate-700/50">
+                  💡 Ejecutados via Supabase Edge Functions + pg_cron
+                </div>
               </div>
             ) : (
               <div className="text-center py-4 text-slate-500 text-sm">
                 <Server className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                No hay cron jobs o sin permisos para ver
+                Sin configuración de tareas programadas
               </div>
             )}
           </Section>

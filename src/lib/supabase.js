@@ -140,37 +140,23 @@ export async function withTimeout(promise, timeoutMs = 10000) {
 }
 
 /**
- * 🔄 Wrapper para consultas Supabase con timeout y retry
+ * 🔄 Wrapper para consultas Supabase con timeout
  * 
- * @param {Function} queryFn - Función que retorna la promesa de Supabase
- * @param {Object} options - Opciones
- * @returns {Promise} - Resultado de la consulta
+ * @param {Promise|PostgrestBuilder} queryOrPromise - Query de Supabase o Promise
+ * @param {number} timeout - Timeout en ms (default 10000)
+ * @returns {Promise<{data, error}>} - Resultado de la consulta
  */
-export async function safeQuery(queryFn, options = {}) {
-  const { 
-    timeout = 10000, 
-    retries = 1,
-    onTimeout = null,
-    silent = false 
-  } = options;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const result = await withTimeout(queryFn(), timeout);
-      return result;
-    } catch (error) {
-      const isTimeout = error.message?.includes('Timeout');
-      
-      if (isTimeout && attempt < retries) {
-        if (!silent) console.warn(`⏳ Retry ${attempt + 1}/${retries} después de timeout...`);
-        continue;
-      }
-      
-      if (isTimeout && onTimeout) {
-        onTimeout(error);
-      }
-      
-      throw error;
-    }
+export async function safeQuery(queryOrPromise, timeout = 10000) {
+  try {
+    // Si es un PostgrestBuilder (tiene .then), ejecutarlo directamente
+    const promise = typeof queryOrPromise.then === 'function' 
+      ? queryOrPromise 
+      : Promise.resolve(queryOrPromise);
+    
+    const result = await withTimeout(promise, timeout);
+    return result;
+  } catch (error) {
+    // Devolver formato consistente con Supabase
+    return { data: null, error: error.message || 'Query failed' };
   }
 }

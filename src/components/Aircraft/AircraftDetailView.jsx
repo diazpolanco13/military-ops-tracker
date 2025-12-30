@@ -180,7 +180,7 @@ export default function AircraftDetailView({ aircraft, onClose }) {
             .select('*')
             .eq('icao24', aircraft.icao24.toUpperCase())
             .order('detected_at', { ascending: false })
-            .limit(50),
+            .limit(200),  // Aumentado para capturar vuelos largos como Global Hawk
           QUERY_TIMEOUT
         );
         
@@ -1192,7 +1192,7 @@ function HistoryTab({ history, loading, error, formatDate }) {
               {/* Fecha */}
               <div className="col-span-6 sm:col-span-2">
                 <div className="text-sm font-medium text-white">
-                  {new Date(day.date).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {new Date(day.date + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </div>
                 <div className="text-xs text-slate-500 sm:hidden mt-0.5">
                   {primaryCallsign} • {day.records.length} pts
@@ -1410,7 +1410,7 @@ function FlightDayDetail({ flight, onBack, formatDate }) {
         </button>
         <div className="flex-1">
           <h3 className="text-lg font-bold text-white">
-            {new Date(flight.date).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {new Date(flight.date + 'T12:00:00').toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </h3>
           <p className="text-sm text-slate-400">
             {flight.callsigns.join(', ')} • {flight.records.length} puntos registrados

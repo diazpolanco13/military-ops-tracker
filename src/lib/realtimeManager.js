@@ -1,8 +1,9 @@
 /**
- * 🔄 Realtime Manager V2 - Gestión centralizada de suscripciones Supabase
+ * 🔄 Realtime Manager V3 - Gestión centralizada de suscripciones Supabase
  * 
- * PROBLEMA ANTERIOR: Loop infinito de reconexión por cierre/reconexión cíclico
- * SOLUCIÓN: Flag de cierre intencional + contador de reconexión por tabla
+ * V3: No bloquear la app si Realtime falla - degradar graciosamente
+ * - Polling fallback cuando Realtime no está disponible
+ * - No bloquear UI esperando reconexión
  */
 
 import { supabase } from './supabase';
@@ -15,9 +16,11 @@ class RealtimeManager {
     this.reconnectAttempts = new Map(); // tabla -> intentos (POR TABLA, no global)
     this.closingIntentionally = new Set(); // tablas que se están cerrando intencionalmente
     this.throttleMs = 500;              // Mínimo 500ms entre notificaciones
-    this.maxReconnectAttempts = 3;      // Reducido de 5 a 3
-    this.reconnectDelay = 3000;         // Aumentado a 3 segundos
+    this.maxReconnectAttempts = 5;      // Aumentado a 5 para mejor resiliencia
+    this.reconnectDelay = 2000;         // 2 segundos base
     this.isCleaningUp = false;          // Flag para evitar reconexiones durante cleanup
+    this.connectionHealthy = true;      // Estado general de conexión
+    this.lastHealthCheck = 0;           // Timestamp del último health check
   }
 
   /**
@@ -61,47 +64,56 @@ class RealtimeManager {
   }
 
   /**
-   * Crear canal para una tabla
+   * Crear canal para una tabla (no bloqueante)
    */
   _createChannel(table) {
     // Evitar crear canal si ya existe
     if (this.channels.has(table)) {
-      console.log(`🔄 RealtimeManager: Canal "${table}" ya existe, reutilizando`);
       return;
     }
 
-    console.log(`🔄 RealtimeManager: Creando canal para "${table}"`);
+    // Siempre intentar crear el canal - Supabase manejará el estado
+    // No bloquear basado en connectionStatus que puede estar desactualizado
 
-    const channel = supabase
-      .channel(`realtime_${table}_${Date.now()}`) // ID único para evitar conflictos
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: table,
-        },
-        (payload) => {
-          this._handlePayload(table, payload);
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`✅ RealtimeManager: Canal "${table}" conectado`);
-          this.reconnectAttempts.set(table, 0); // Reset por tabla
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          // Solo intentar reconectar si NO fue cierre intencional
-          if (this.closingIntentionally.has(table)) {
-            console.log(`🔌 RealtimeManager: Canal "${table}" cerrado (intencional)`);
-            this.closingIntentionally.delete(table);
-          } else if (!this.isCleaningUp) {
-            console.warn(`⚠️ RealtimeManager: Canal "${table}" cerrado/error inesperado`);
-            this._attemptReconnect(table);
+    try {
+      const channel = supabase
+        .channel(`realtime_${table}_${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: table,
+          },
+          (payload) => {
+            this._handlePayload(table, payload);
           }
-        }
-      });
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log(`✅ RealtimeManager: Canal "${table}" conectado`);
+            this.reconnectAttempts.set(table, 0);
+            this.connectionHealthy = true;
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            if (this.closingIntentionally.has(table)) {
+              this.closingIntentionally.delete(table);
+            } else if (!this.isCleaningUp) {
+              this._attemptReconnect(table);
+            }
+          }
+        });
 
-    this.channels.set(table, channel);
+      this.channels.set(table, channel);
+    } catch (e) {
+      console.error(`❌ RealtimeManager: Error creando canal "${table}":`, e);
+      // Programar reintento después de 10 segundos
+      setTimeout(() => {
+        this.channels.delete(table);
+        if (this.listeners.get(table)?.size > 0) {
+          this._createChannel(table);
+        }
+      }, 10000);
+    }
   }
 
   /**
@@ -153,43 +165,41 @@ class RealtimeManager {
   }
 
   /**
-   * Intentar reconexión con backoff (POR TABLA)
+   * Intentar reconexión con backoff (POR TABLA) - SILENCIOSO
    */
   _attemptReconnect(table) {
     // No reconectar durante cleanup global
-    if (this.isCleaningUp) {
-      console.log(`🔄 RealtimeManager: Ignorando reconexión de "${table}" (cleanup en progreso)`);
-      return;
-    }
+    if (this.isCleaningUp) return;
 
     const attempts = this.reconnectAttempts.get(table) || 0;
     
     if (attempts >= this.maxReconnectAttempts) {
-      console.error(`❌ RealtimeManager: Máximo de intentos alcanzado para "${table}", pausando reconexión`);
-      // Resetear después de 30 segundos para permitir reintentos posteriores
+      // Silencioso: solo resetear después de 60 segundos
+      this.connectionHealthy = false;
       setTimeout(() => {
         this.reconnectAttempts.set(table, 0);
-      }, 30000);
+        // Reintentar silenciosamente
+        if (this.listeners.get(table)?.size > 0) {
+          this._createChannel(table);
+        }
+      }, 60000);
       return;
     }
 
     // Solo reconectar si aún hay listeners
-    if (!this.listeners.get(table)?.size) {
-      console.log(`🔄 RealtimeManager: No hay listeners para "${table}", no reconectar`);
-      return;
-    }
+    if (!this.listeners.get(table)?.size) return;
 
     this.reconnectAttempts.set(table, attempts + 1);
-    const delay = this.reconnectDelay * (attempts + 1); // Backoff exponencial
+    const delay = this.reconnectDelay * Math.pow(1.5, attempts); // Backoff más suave
 
-    console.log(`🔄 RealtimeManager: Reconectando "${table}" en ${delay}ms (intento ${attempts + 1}/${this.maxReconnectAttempts})`);
+    // Solo loguear en primer intento
+    if (attempts === 0) {
+      console.log(`🔄 RealtimeManager: Reconectando "${table}"...`);
+    }
 
     setTimeout(() => {
-      // Verificar de nuevo si hay listeners antes de reconectar
       if (this.listeners.get(table)?.size > 0 && !this.isCleaningUp) {
-        // Eliminar canal viejo del mapa (sin llamar unsubscribe que dispara CLOSED)
         this.channels.delete(table);
-        // Crear nuevo canal
         this._createChannel(table);
       }
     }, delay);

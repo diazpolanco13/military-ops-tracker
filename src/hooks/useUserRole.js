@@ -1,21 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase, safeQuery } from '../lib/supabase';
 import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 👤 Hook para obtener el rol y permisos del usuario actual
- * Optimizado: usa RealtimeManager centralizado
+ * V2: Con timeout para no bloquear la UI
  */
 export function useUserRole() {
   const [userRole, setUserRole] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
+  const loadingRef = useRef(false); // Evitar cargas duplicadas
 
   const loadUserRole = useCallback(async () => {
+    // Evitar cargas simultáneas
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Timeout rápido para getSession
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Session timeout')), 5000)
+      );
+      
+      let session;
+      try {
+        const result = await Promise.race([sessionPromise, timeoutPromise]);
+        session = result?.data?.session;
+      } catch (e) {
+        console.warn('⚠️ Session timeout, usando defaults');
+        setUserRole('viewer');
+        setPermissions(getDefaultPermissions('viewer'));
+        return;
+      }
       
       if (!session?.user) {
         setUserRole(null);
@@ -24,17 +45,21 @@ export function useUserRole() {
         return;
       }
 
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('id, role, nombre, apellido, cargo, organizacion')
-        .eq('id', session.user.id)
-        .single();
+      // Query con timeout de 8 segundos
+      const { data: profile, error } = await safeQuery(
+        supabase
+          .from('user_profiles')
+          .select('id, role, nombre, apellido, cargo, organizacion')
+          .eq('id', session.user.id)
+          .single(),
+        8000
+      );
 
-      if (error) {
-        console.warn('⚠️ Error cargando perfil de usuario:', error);
+      if (error || !profile) {
+        // Fallback a viewer si hay error
         setUserRole('viewer');
         setUserProfile(null);
-        setPermissions({});
+        setPermissions(getDefaultPermissions('viewer'));
       } else {
         const role = profile?.role || 'viewer';
         setUserRole(role);
@@ -45,30 +70,33 @@ export function useUserRole() {
       console.error('❌ Error en useUserRole:', err);
       setUserRole('viewer');
       setUserProfile(null);
-      setPermissions({});
+      setPermissions(getDefaultPermissions('viewer'));
     } finally {
       setLoading(false);
+      loadingRef.current = false;
     }
   }, []);
 
   const loadRolePermissions = async (role) => {
     try {
-      const { data, error } = await supabase
-        .from('role_permissions')
-        .select('permissions')
-        .eq('role', role)
-        .single();
+      // Query con timeout de 5 segundos
+      const { data, error } = await safeQuery(
+        supabase
+          .from('role_permissions')
+          .select('permissions')
+          .eq('role', role)
+          .single(),
+        5000
+      );
 
-      if (error && error.code !== 'PGRST116') {
-        console.warn('⚠️ Error cargando permisos:', error);
+      if (error || !data) {
+        // Usar defaults inmediatamente, no esperar
         setPermissions(getDefaultPermissions(role));
-      } else if (data) {
-        setPermissions(data.permissions || {});
       } else {
-        setPermissions(getDefaultPermissions(role));
+        setPermissions(data.permissions || getDefaultPermissions(role));
       }
     } catch (err) {
-      console.error('❌ Error cargando permisos:', err);
+      // Silencioso: usar defaults
       setPermissions(getDefaultPermissions(role));
     }
   };

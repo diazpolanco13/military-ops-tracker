@@ -251,7 +251,7 @@ export function useAircraftRegistry(options = {}) {
   /**
    * Obtener historial de ubicaciones
    */
-  const getLocationHistory = useCallback(async (icao24, limit = 50) => {
+  const getLocationHistory = useCallback(async (icao24, limit = 200) => {
     try {
       const { data, error: queryError } = await supabase
         .from('aircraft_location_history')

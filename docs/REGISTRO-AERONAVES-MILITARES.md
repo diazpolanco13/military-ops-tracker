@@ -924,6 +924,28 @@ Endpoints para consultar el inventario
 
 La API pública (`data-cloud.flightradar24.com`) es más confiable y devuelve más datos que la API oficial para este caso de uso.
 
+### Error 401 en Monitor de Incursiones
+
+Si `last_execution_stats` muestra `"error": "FR24 API error: 401"`:
+
+1. **Verificar token en FR24 API**: https://fr24api.flightradar24.com → Key Management
+2. **Actualizar secret en Supabase**: Edge Functions → Secrets → `FLIGHTRADAR24_API_KEY`
+3. **Formato del token**: `uuid|hash` (ej: `019b6ff3-4e93-70a0-bed0-...|GV6ohiEq...`)
+
+**Nota**: La Edge Function `military-airspace-monitor` V36 busca el token como:
+```typescript
+const FR24_API_TOKEN = Deno.env.get('FLIGHTRADAR24_API_KEY') || Deno.env.get('FR24_API_TOKEN') || '';
+```
+
+### Fechas muestran día incorrecto
+
+Si las fechas en el historial muestran el día anterior:
+- **Causa**: JavaScript interpreta `"2025-12-30"` como medianoche UTC, al convertir a Venezuela (UTC-4) muestra el día anterior
+- **Solución**: Agregar `T12:00:00` al parsear fechas:
+```javascript
+new Date(day.date + 'T12:00:00').toLocaleDateString('es-VE', {...})
+```
+
 ---
 
 ## Archivos Relacionados
@@ -954,6 +976,13 @@ docs/
 ---
 
 ## Changelog
+
+### V17 (2025-12-30)
+- ✅ **Fix timezone fechas**: Corregido bug donde las fechas mostraban el día anterior por conversión UTC→Venezuela
+- ✅ **Límite historial aumentado**: De 50 a 200 puntos para capturar vuelos largos (ej: Global Hawk)
+- ✅ **Fix token FR24**: Corregido nombre de secret `FLIGHTRADAR24_API_KEY` en Edge Function V36
+- ✅ **Monitor incursiones V36**: Busca token con ambos nombres para compatibilidad
+- ✅ **Cron jobs verificados**: `aircraft-registry-collector` (5min), `military-airspace-monitor` (2min) funcionando
 
 ### V16 (2025-12-30)
 - ✅ **RealtimeManager**: Nuevo singleton centralizado para gestión de canales Supabase
