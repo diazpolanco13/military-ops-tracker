@@ -335,26 +335,15 @@ export function useAircraftRegistry(options = {}) {
       setError(null);
       
       try {
-        // 1. Primero obtener el COUNT total (rápido, solo cuenta)
-        const countResult = await withTimeout(
-          supabase
-            .from('military_aircraft_registry')
-            .select('*', { count: 'exact', head: true }),
-          QUERY_TIMEOUT
-        );
-        
-        if (cancelled) return;
-        
-        const total = countResult.count || 0;
-        setTotalCount(total);
-        setTotalPages(Math.ceil(total / pageSize));
-        
-        // 2. Fetch aircraft PAGINADOS con timeout
+        // 1) Fetch paginado con count en la MISMA request (reduce 1 llamada y baja timeouts)
         const offset = (currentPage - 1) * pageSize;
         const aircraftResult = await withTimeout(
           supabase
             .from('military_aircraft_registry')
-            .select('*')
+            .select(
+              'icao24, aircraft_type, aircraft_model, military_branch, probable_country, probable_base_icao, probable_base_name, base_confidence, total_detections, total_flights, total_incursions, is_new_today, first_seen, last_seen, notes',
+              { count: 'exact' }
+            )
             .order('last_seen', { ascending: false })
             .range(offset, offset + pageSize - 1), // Paginación
           QUERY_TIMEOUT
@@ -364,18 +353,21 @@ export function useAircraftRegistry(options = {}) {
         if (aircraftResult.error) throw aircraftResult.error;
         
         const aircraftData = aircraftResult.data || [];
+        const total = aircraftResult.count || 0;
+        setTotalCount(total);
+        setTotalPages(Math.ceil(total / pageSize));
 
-        // 3. Obtener tipos únicos SOLO de esta página
+        // 2) Obtener tipos únicos SOLO de esta página
         const uniqueTypes = [...new Set(aircraftData.map(a => a.aircraft_type).filter(Boolean))];
         
-        // 4. Cargar catálogo SOLO para tipos de esta página
+        // 3) Cargar catálogo SOLO para tipos de esta página (campos mínimos)
         let modelCatalog = {};
         if (uniqueTypes.length > 0) {
           try {
             const catalogResult = await withTimeout(
               supabase
                 .from('aircraft_model_catalog')
-                .select('*')
+                .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url, country_origin')
                 .in('aircraft_type', uniqueTypes),
               QUERY_TIMEOUT
             );
@@ -392,7 +384,7 @@ export function useAircraftRegistry(options = {}) {
 
         if (cancelled) return;
 
-        // 5. Asociar datos del catálogo a cada aeronave
+        // 4) Asociar datos del catálogo a cada aeronave
         const aircraftWithCatalog = aircraftData.map(a => {
           const catalogInfo = modelCatalog[a.aircraft_type] || null;
           return {
@@ -404,7 +396,7 @@ export function useAircraftRegistry(options = {}) {
           };
         });
 
-        // 6. Mezclar última presencia SOLO para esta página
+        // 5) Mezclar última presencia SOLO para esta página (campos mínimos)
         const icaoList = aircraftWithCatalog.map((r) => r.icao24).filter(Boolean);
         let aircraftWithPresence = aircraftWithCatalog;
         if (icaoList.length > 0) {
@@ -412,7 +404,7 @@ export function useAircraftRegistry(options = {}) {
             const presenceResult = await withTimeout(
               supabase
                 .from('aircraft_last_presence')
-                .select('*')
+                .select('icao24, country_code, country_name, country_flag, last_seen_in_country, last_position_lat, last_position_lon')
                 .in('icao24', icaoList),
               QUERY_TIMEOUT
             );
@@ -428,31 +420,17 @@ export function useAircraftRegistry(options = {}) {
         if (cancelled) return;
         setAircraft(aircraftWithPresence);
 
-        // 7. Fetch stats UNA VEZ (solo en la primera carga o si no existen)
+        // 6) Stats: evitar query full-table aquí (reduce carga).
+        // Dejamos stats básicos con el count; los demás se pueden calcular en pantallas específicas o via RPC/cache.
         if (!stats) {
-          try {
-            const statsResult = await withTimeout(
-              supabase
-                .from('military_aircraft_registry')
-                .select('icao24, aircraft_type, probable_country, military_branch, total_incursions, is_new_today, first_seen_date'),
-              QUERY_TIMEOUT
-            );
-            
-            if (!cancelled && statsResult.data) {
-              const statsData = statsResult.data;
-              const totalAircraft = statsData.length;
-              const newToday = statsData.filter(a => a.is_new_today).length;
-              const withIncursions = statsData.filter(a => a.total_incursions > 0).length;
-              const byCountry = statsData.reduce((acc, a) => {
-                const country = a.probable_country || 'Unknown';
-                acc[country] = (acc[country] || 0) + 1;
-                return acc;
-              }, {});
-              setStats({ totalAircraft, newToday, withIncursions, byCountry });
-            }
-          } catch (statsErr) {
-            console.warn('[useAircraftRegistry] Stats timeout:', statsErr.message);
-          }
+          setStats({
+            totalAircraft: total,
+            newToday: null,
+            withIncursions: null,
+            byCountry: null,
+          });
+        } else if (stats?.totalAircraft !== total) {
+          setStats((prev) => ({ ...(prev || {}), totalAircraft: total }));
         }
       } catch (err) {
         console.error('[useAircraftRegistry] Error loading data:', err);

@@ -1,159 +1,20 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase, safeQuery } from '../lib/supabase';
 import { realtimeManager } from '../lib/realtimeManager';
+import { singleflight } from '../lib/singleflight';
 
 /**
  * 👤 Hook para obtener el rol y permisos del usuario actual
  * V3: Mejor manejo de sesión expirada
  */
 export function useUserRole() {
-  const [userRole, setUserRole] = useState(null);
-  const [permissions, setPermissions] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState(null);
-  const [sessionExpired, setSessionExpired] = useState(false); // NUEVO: flag de sesión expirada
-  const loadingRef = useRef(false); // Evitar cargas duplicadas
-  const retryCountRef = useRef(0); // Contador de reintentos
+  // ---- Store compartido (singleton) ----
+  // Problema: este hook se usa en muchos componentes (Navbar, Settings, etc.)
+  // y cada instancia disparaba getSession() + queries + suscripciones.
+  // Solución: un store compartido + dedupe (singleflight) y 1 sola suscripción global.
+  const [state, setState] = useState(() => sharedState);
 
-  const loadUserRole = useCallback(async () => {
-    // Evitar cargas simultáneas
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-
-    try {
-      setLoading(true);
-      
-      // Timeout más largo (8s) para dar tiempo al refresh
-      const sessionPromise = supabase.auth.getSession();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session timeout')), 8000)
-      );
-      
-      let session;
-      let sessionError = null;
-      try {
-        const result = await Promise.race([sessionPromise, timeoutPromise]);
-        session = result?.data?.session;
-        sessionError = result?.error;
-      } catch (e) {
-        // ⚠️ TIMEOUT NO significa sesión expirada, puede ser saturación de conexión
-        console.warn('⚠️ Session timeout (puede ser saturación de red)');
-        
-        // Usar permisos en cache si existen, NO mostrar como expirada
-        if (retryCountRef.current < 1) {
-          retryCountRef.current++;
-          loadingRef.current = false;
-          // Esperar más tiempo antes de reintentar (3s)
-          setTimeout(() => loadUserRole(), 3000);
-          return;
-        }
-        
-        // Después de reintentos, usar defaults pero NO marcar como expirada
-        // Un timeout es diferente a una sesión realmente expirada
-        console.warn('⚠️ Usando permisos por defecto (timeout de red)');
-        setUserRole('viewer');
-        setPermissions(getDefaultPermissions('viewer'));
-        // NO setSessionExpired(true) - un timeout no es expiración
-        return;
-      }
-      
-      // Resetear contador de reintentos si tuvo éxito
-      retryCountRef.current = 0;
-      
-      // Si hay error de sesión REAL (token expirado, refresh token inválido)
-      if (sessionError) {
-        const errorMsg = sessionError.message?.toLowerCase() || '';
-        const isRealExpiration = 
-          errorMsg.includes('expired') || 
-          errorMsg.includes('invalid') ||
-          errorMsg.includes('refresh token') ||
-          errorMsg.includes('not found') ||
-          sessionError.status === 401;
-        
-        if (isRealExpiration) {
-          console.error('❌ Sesión REALMENTE expirada:', sessionError.message);
-          setSessionExpired(true);
-          setUserRole(null);
-          setUserProfile(null);
-          setPermissions({});
-          return;
-        } else {
-          // Otro tipo de error (red, etc.) - usar defaults
-          console.warn('⚠️ Error de sesión (no expiración):', sessionError.message);
-          setUserRole('viewer');
-          setPermissions(getDefaultPermissions('viewer'));
-          return;
-        }
-      }
-      
-      if (!session?.user) {
-        setUserRole(null);
-        setUserProfile(null);
-        setPermissions({});
-        setSessionExpired(false); // No está expirada, simplemente no hay sesión
-        return;
-      }
-      
-      // Sesión válida
-      setSessionExpired(false);
-
-      // Query con timeout de 8 segundos
-      const { data: profile, error } = await safeQuery(
-        supabase
-          .from('user_profiles')
-          .select('id, role, nombre, apellido, cargo, organizacion')
-          .eq('id', session.user.id)
-          .single(),
-        8000
-      );
-
-      if (error || !profile) {
-        // Fallback a viewer si hay error
-        setUserRole('viewer');
-        setUserProfile(null);
-        setPermissions(getDefaultPermissions('viewer'));
-      } else {
-        const role = profile?.role || 'viewer';
-        setUserRole(role);
-        setUserProfile(profile);
-        await loadRolePermissions(role);
-      }
-    } catch (err) {
-      console.error('❌ Error en useUserRole:', err);
-      setUserRole('viewer');
-      setUserProfile(null);
-      setPermissions(getDefaultPermissions('viewer'));
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, []);
-
-  const loadRolePermissions = async (role) => {
-    try {
-      // Query con timeout de 5 segundos
-      const { data, error } = await safeQuery(
-        supabase
-          .from('role_permissions')
-          .select('permissions')
-          .eq('role', role)
-          .single(),
-        5000
-      );
-
-      if (error || !data) {
-        // Usar defaults inmediatamente, no esperar
-        setPermissions(getDefaultPermissions(role));
-      } else {
-        setPermissions(data.permissions || getDefaultPermissions(role));
-      }
-    } catch (err) {
-      // Silencioso: usar defaults
-      setPermissions(getDefaultPermissions(role));
-    }
-  };
-
-  const getDefaultPermissions = (role) => {
+  const getDefaultPermissions = useCallback((role) => {
     const defaults = {
       admin: {
         view_entities: true,
@@ -217,35 +78,154 @@ export function useUserRole() {
       }
     };
     return defaults[role] || defaults.viewer;
-  };
+  }, []);
+
+  const loadRolePermissions = useCallback(async (role) => {
+    try {
+      const { data, error } = await safeQuery(
+        supabase
+          .from('role_permissions')
+          .select('permissions')
+          .eq('role', role)
+          .single(),
+        5000
+      );
+
+      if (error || !data) {
+        return getDefaultPermissions(role);
+      }
+      return data.permissions || getDefaultPermissions(role);
+    } catch {
+      return getDefaultPermissions(role);
+    }
+  }, [getDefaultPermissions]);
+
+  const loadUserRole = useCallback(async ({ force = false } = {}) => {
+    return singleflight(
+      'useUserRole:load',
+      async () => {
+        const now = Date.now();
+        // Cache suave: si ya tenemos rol y se cargó hace <30s, no refetch salvo force.
+        if (!force && sharedState.lastLoadedAt && now - sharedState.lastLoadedAt < 30000) {
+          return sharedState;
+        }
+
+        setSharedState({ ...sharedState, loading: true });
+
+        // Timeout (8s) para evitar cuelgues. OJO: timeout != sesión expirada.
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session timeout')), 8000)
+        );
+
+        let session;
+        let sessionError = null;
+        try {
+          const result = await Promise.race([sessionPromise, timeoutPromise]);
+          session = result?.data?.session;
+          sessionError = result?.error;
+        } catch {
+          // Red saturada: degradar a defaults sin marcar expiración
+          const degraded = {
+            ...sharedState,
+            loading: false,
+            sessionExpired: false,
+            userRole: sharedState.userRole || 'viewer',
+            permissions: Object.keys(sharedState.permissions || {}).length
+              ? sharedState.permissions
+              : getDefaultPermissions(sharedState.userRole || 'viewer'),
+            lastLoadedAt: now,
+          };
+          setSharedState(degraded);
+          return degraded;
+        }
+
+        // Errores reales de auth: token expirado/invalid, etc.
+        if (sessionError) {
+          const errorMsg = sessionError.message?.toLowerCase() || '';
+          const isRealExpiration =
+            errorMsg.includes('expired') ||
+            errorMsg.includes('invalid') ||
+            errorMsg.includes('refresh token') ||
+            errorMsg.includes('not found') ||
+            sessionError.status === 401;
+
+          if (isRealExpiration) {
+            const expired = {
+              userRole: null,
+              permissions: {},
+              userProfile: null,
+              loading: false,
+              sessionExpired: true,
+              lastLoadedAt: now,
+            };
+            setSharedState(expired);
+            return expired;
+          }
+        }
+
+        if (!session?.user) {
+          const anon = {
+            userRole: null,
+            permissions: {},
+            userProfile: null,
+            loading: false,
+            sessionExpired: false,
+            lastLoadedAt: now,
+          };
+          setSharedState(anon);
+          return anon;
+        }
+
+        const { data: profile, error } = await safeQuery(
+          supabase
+            .from('user_profiles')
+            .select('id, role, nombre, apellido, cargo, organizacion')
+            .eq('id', session.user.id)
+            .single(),
+          8000
+        );
+
+        const role = profile?.role || 'viewer';
+        const permissions = await loadRolePermissions(role);
+
+        const next = {
+          userRole: role,
+          permissions,
+          userProfile: error ? null : profile,
+          loading: false,
+          sessionExpired: false,
+          lastLoadedAt: now,
+        };
+        setSharedState(next);
+        return next;
+      },
+      { ttlMs: 2500 } // dedupe ráfagas cercanas (muchos componentes montando a la vez)
+    );
+  }, [getDefaultPermissions, loadRolePermissions]);
 
   useEffect(() => {
+    // Suscribirse al store compartido
+    const unsubscribeLocal = subscribeShared(setState);
+
+    // Inicializar (una sola vez globalmente)
+    ensureSharedSubscriptions(() => loadUserRole({ force: true }));
+
+    // Carga inicial (dedupe)
     loadUserRole();
 
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadUserRole();
-    });
-
-    // 🔄 Suscripción centralizada para role_permissions
-    const unsubscribe = realtimeManager.subscribe('role_permissions', () => {
-      console.log('🔄 Permisos actualizados en BD');
-      loadUserRole();
-    });
-
     return () => {
-      subscription.unsubscribe();
-      unsubscribe();
+      unsubscribeLocal();
     };
   }, [loadUserRole]);
 
   const hasPermission = (permissionKey) => {
-    return permissions[permissionKey] === true;
+    return state.permissions?.[permissionKey] === true;
   };
 
-  const isAdmin = () => userRole === 'admin';
-  const isCollaborator = () => userRole === 'operator' || userRole === 'analyst' || userRole === 'admin';
-  const isViewer = () => userRole === 'viewer';
+  const isAdmin = () => state.userRole === 'admin';
+  const isCollaborator = () => state.userRole === 'operator' || state.userRole === 'analyst' || state.userRole === 'admin';
+  const isViewer = () => state.userRole === 'viewer';
 
   const canEdit = () => hasPermission('edit_entities');
   const canCreate = () => hasPermission('create_entities');
@@ -259,11 +239,11 @@ export function useUserRole() {
   const canDeleteEvents = () => hasPermission('delete_events');
 
   return {
-    userRole,
-    permissions,
-    userProfile,
-    loading,
-    sessionExpired, // NUEVO: indica si la sesión expiró
+    userRole: state.userRole,
+    permissions: state.permissions,
+    userProfile: state.userProfile,
+    loading: state.loading,
+    sessionExpired: state.sessionExpired,
     isAdmin,
     isCollaborator,
     isViewer,
@@ -278,6 +258,59 @@ export function useUserRole() {
     canCreateEvents,
     canEditEvents,
     canDeleteEvents,
-    refresh: loadUserRole
+    refresh: () => loadUserRole({ force: true })
   };
+}
+
+// ---------- Store compartido (module scope) ----------
+let sharedState = {
+  userRole: null,
+  permissions: {},
+  userProfile: null,
+  loading: true,
+  sessionExpired: false,
+  lastLoadedAt: 0,
+};
+
+const sharedListeners = new Set(); // Set<(state)=>void>
+let sharedSubscriptionsReady = false;
+
+function setSharedState(next) {
+  sharedState = { ...next };
+  sharedListeners.forEach((cb) => {
+    try { cb(sharedState); } catch { /* ignore */ }
+  });
+}
+
+function subscribeShared(cb) {
+  sharedListeners.add(cb);
+  // Emitir inmediatamente estado actual
+  cb(sharedState);
+  return () => {
+    sharedListeners.delete(cb);
+  };
+}
+
+function ensureSharedSubscriptions(onInvalidate) {
+  if (sharedSubscriptionsReady) return;
+  sharedSubscriptionsReady = true;
+
+  // Auth changes (una sola vez)
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+    onInvalidate?.();
+  });
+
+  // Permisos cambiaron (una sola vez)
+  const unsubscribeRealtime = realtimeManager.subscribe('role_permissions', () => {
+    onInvalidate?.();
+  });
+
+  // Limpieza best-effort si se recarga el módulo (HMR)
+  if (typeof import.meta !== 'undefined' && import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      try { subscription.unsubscribe(); } catch { /* ignore */ }
+      try { unsubscribeRealtime(); } catch { /* ignore */ }
+      sharedSubscriptionsReady = false;
+    });
+  }
 }

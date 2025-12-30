@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { singleflight } from '../lib/singleflight';
 
 // Helper para obtener env vars
 const getEnv = (key) => {
@@ -105,8 +106,12 @@ export async function getShips(options = {}) {
       params.append('bounds', `${bounds.north},${bounds.south},${bounds.west},${bounds.east}`);
     }
     
-    // Obtener token de autenticación
-    const { data: { session } } = await supabase.auth.getSession();
+    // Obtener token de autenticación (dedupe para evitar ráfagas)
+    const { data: { session } } = await singleflight(
+      'shipRadar:getSession',
+      () => supabase.auth.getSession(),
+      { ttlMs: 2500 }
+    );
     const accessToken = session?.access_token;
     
     const headers = {
@@ -158,7 +163,11 @@ export async function getShips(options = {}) {
  */
 export async function getShipDetails(mmsi) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await singleflight(
+      'shipRadar:getSession',
+      () => supabase.auth.getSession(),
+      { ttlMs: 2500 }
+    );
     const accessToken = session?.access_token;
     
     const headers = { 'Accept': 'application/json' };

@@ -466,34 +466,37 @@ export function useAircraftModelImage(aircraftType, options = {}) {
  */
 export async function prefetchAircraftImages(aircraftTypes) {
   const typesToFetch = [...new Set(
-    aircraftTypes
-      .filter(t => t && t.trim())
-      .map(t => t.toUpperCase().trim())
+    (aircraftTypes || [])
+      .map(t => String(t || '').toUpperCase().trim())
+      .filter(t => t && /^[A-Z0-9]+$/.test(t)) // evitar valores raros que rompen `.in()`
       .filter(t => !imageCache.has(t))
-  )];
+  )].slice(0, 200); // límite defensivo para no saturar PostgREST
 
   if (typesToFetch.length === 0) return;
 
   try {
-    // Batch query para todos los tipos
-    const { data } = await withTimeout(
-      supabase
-        .from('aircraft_model_images')
-        .select('aircraft_type, thumbnail_url, image_url, is_primary')
-        .in('aircraft_type', typesToFetch)
-        .order('is_primary', { ascending: false }),
-      QUERY_TIMEOUT * 2  // Dar más tiempo para batch
-    );
-
-    // Indexar por tipo (primero el primary)
+    // Batch query en chunks para evitar URL enorme / 400
     const byType = {};
-    (data || []).forEach(img => {
-      if (!byType[img.aircraft_type]) {
-        byType[img.aircraft_type] = img.thumbnail_url || img.image_url;
-      }
-    });
+    const chunkSize = 40;
+    for (let i = 0; i < typesToFetch.length; i += chunkSize) {
+      const chunk = typesToFetch.slice(i, i + chunkSize);
+      const { data } = await withTimeout(
+        supabase
+          .from('aircraft_model_images')
+          .select('aircraft_type, thumbnail_url, image_url, is_primary')
+          .in('aircraft_type', chunk)
+          .order('is_primary', { ascending: false }),
+        QUERY_TIMEOUT * 2
+      );
 
-    // Guardar en caché
+      (data || []).forEach(img => {
+        const t = img?.aircraft_type ? String(img.aircraft_type).toUpperCase().trim() : null;
+        if (!t) return;
+        if (!byType[t]) byType[t] = img.thumbnail_url || img.image_url;
+      });
+    }
+
+    // Guardar en caché (incluye null para evitar reintentos)
     typesToFetch.forEach(type => {
       imageCache.set(type, byType[type] || null);
       cacheTimestamps.set(type, Date.now());

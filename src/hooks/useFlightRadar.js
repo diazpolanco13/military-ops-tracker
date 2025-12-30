@@ -6,6 +6,7 @@ import {
   getFlightCategory
 } from '../services/flightRadarService';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 🛩️ HOOK USEFLIGHTRADAR - VERSIÓN COMPLETA
@@ -68,6 +69,7 @@ export function useFlightRadar({
   militaryOnly = false,
   bounds = null,
   useCache = true, // Nuevo: usar cache centralizado
+  enableAirspaceMonitor = false, // ⚠️ IMPORTANTE: NO correr por defecto (escala por usuario)
 } = {}) {
   const [allFlights, setAllFlights] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,8 @@ export function useFlightRadar({
   // Cache local para evitar queries repetidas al catálogo en cada refresh
   const aircraftCatalogCacheRef = useRef(new Map()); // type -> catalog row
   const aircraftImageCacheRef = useRef(new Map());   // type -> url
+  const catalogPrefetchedRef = useRef(false);
+  const catalogPrefetchingRef = useRef(false);
 
   const normalizeTypeForCatalog = useCallback((type) => {
     // Solo normalización “segura”: uppercase + trim.
@@ -97,12 +101,55 @@ export function useFlightRadar({
       candidates.push(t.slice(0, -1));
     }
 
+    // Variante "safe" para catálogo: eliminar separadores y caracteres raros.
+    // Evita errores 400 de PostgREST cuando `.in()` recibe valores difíciles de parsear.
+    const compact = t.replace(/[^A-Z0-9]/g, '');
+    if (compact && compact !== t) candidates.push(compact);
+
     // unique
     return Array.from(new Set(candidates)).filter(Boolean);
   }, [normalizeTypeForCatalog]);
 
+  const chunkArray = useCallback((arr, size = 50) => {
+    const out = [];
+    for (let i = 0; i < (arr || []).length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }, []);
+
+  const prefetchCatalogOnce = useCallback(async () => {
+    // El catálogo es pequeño (~decenas/centenas). Precargarlo una vez evita:
+    // - errores 400 de PostgREST con `.in()` (listas grandes / valores raros)
+    // - múltiples peticiones por cada refresh (multiusuario)
+    if (catalogPrefetchedRef.current || catalogPrefetchingRef.current) return;
+    catalogPrefetchingRef.current = true;
+
+    try {
+      const { data: rows } = await supabase
+        .from('aircraft_model_catalog')
+        .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url')
+        .limit(1000);
+
+      (rows || []).forEach((row) => {
+        const t = row?.aircraft_type ? String(row.aircraft_type).toUpperCase() : null;
+        if (!t) return;
+        aircraftCatalogCacheRef.current.set(t, row);
+        const img = row?.thumbnail_url || row?.primary_image_url;
+        if (img) aircraftImageCacheRef.current.set(t, img);
+      });
+
+      catalogPrefetchedRef.current = true;
+    } catch {
+      // Silencioso: si falla, seguimos con el método por batches.
+    } finally {
+      catalogPrefetchingRef.current = false;
+    }
+  }, []);
+
   const enrichFlightsWithCatalog = useCallback(async (flightsData) => {
     try {
+      // 0) Precargar catálogo completo (1 sola vez) para evitar 400 y reducir peticiones
+      await prefetchCatalogOnce();
+
       const types = Array.from(
         new Set(
           (flightsData || [])
@@ -112,37 +159,16 @@ export function useFlightRadar({
       );
 
       // Solo consultar por tipos que aún no estén en cache
-      const missingTypes = types.filter((t) => !aircraftCatalogCacheRef.current.has(t) && !aircraftImageCacheRef.current.has(t));
+      // Además, limitar cantidad por ciclo para no saturar el endpoint (multiusuario).
+      const missingTypes = types
+        .filter((t) => !aircraftCatalogCacheRef.current.has(t) && !aircraftImageCacheRef.current.has(t))
+        .slice(0, 200);
 
-      if (missingTypes.length > 0) {
-        // 1) Catálogo de modelos (batch)
-        const { data: catalogRows } = await supabase
-          .from('aircraft_model_catalog')
-          .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url')
-          .in('aircraft_type', missingTypes);
-
-        (catalogRows || []).forEach((row) => {
-          if (row?.aircraft_type) aircraftCatalogCacheRef.current.set(String(row.aircraft_type).toUpperCase(), row);
-          const img = row?.thumbnail_url || row?.primary_image_url;
-          if (img && row?.aircraft_type) aircraftImageCacheRef.current.set(String(row.aircraft_type).toUpperCase(), img);
-        });
-
-        // 2) Imágenes por tipo (batch) - preferir imagen primaria si existe
-        const { data: imageRows } = await supabase
-          .from('aircraft_model_images')
-          .select('aircraft_type, thumbnail_url, image_url, is_primary, created_at')
-          .in('aircraft_type', missingTypes)
-          .order('is_primary', { ascending: false })
-          .order('created_at', { ascending: false });
-
-        (imageRows || []).forEach((row) => {
-          const t = row?.aircraft_type ? String(row.aircraft_type).toUpperCase() : null;
-          if (!t) return;
-          if (aircraftImageCacheRef.current.has(t)) return;
-          const img = row?.thumbnail_url || row?.image_url;
-          if (img) aircraftImageCacheRef.current.set(t, img);
-        });
-      }
+      // ✅ Importante (multiusuario): NO hacer queries `.in()` contra el catálogo por cada refresh.
+      // El catálogo ya se precarga completo (y es pequeño). Los tipos que no existan en el catálogo
+      // simplemente se quedan sin enrich. Esto elimina los 400 de PostgREST y baja carga.
+      // `missingTypes` se mantiene solo como métrica/diagnóstico.
+      void missingTypes;
 
       // Mezclar data enriquecida
       return (flightsData || []).map((f) => {
@@ -466,15 +492,19 @@ export function useFlightRadar({
       return;
     }
 
-    // 🛡️ Iniciar monitor de alertas de espacio aéreo (cada 3 min)
-    startAirspaceMonitor();
+    // 🛡️ Monitor de alertas de espacio aéreo
+    // ⚠️ En modo multiusuario esto NO debe correr por defecto en cada cliente:
+    // debe ejecutarse idealmente por cron/servidor. Se habilita solo si el usuario lo activa explícitamente.
+    if (enableAirspaceMonitor) {
+      startAirspaceMonitor();
+    }
 
     fetchFlights();
 
     if (autoUpdate) {
-      intervalRef.current = setInterval(() => {
-        fetchFlights();
-      }, updateInterval);
+      // Si estamos leyendo desde cache, preferir realtime + un "poll" de seguridad más lento
+      const effectiveInterval = useCache ? Math.max(updateInterval, 120000) : updateInterval;
+      intervalRef.current = setInterval(fetchFlights, effectiveInterval);
     }
 
     return () => {
@@ -484,6 +514,26 @@ export function useFlightRadar({
       }
     };
   }, [enabled, isActive, autoUpdate, updateInterval, fetchFlights]);
+
+  /**
+   * ✅ Realtime para cache (reduce polling por usuario)
+   * Cuando `flights_cache` se actualiza (cron), refrescamos desde cache.
+   */
+  useEffect(() => {
+    if (!enabled || !isActive) return;
+    if (!useCache) return;
+
+    // Trigger: cualquier UPDATE/INSERT a flights_cache -> refetch desde cache.
+    const unsubscribe = realtimeManager.subscribe('flights_cache', (payload) => {
+      const id = payload?.new?.id || payload?.old?.id;
+      if (id !== 'military_flights') return;
+      fetchFlights();
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [enabled, isActive, useCache, fetchFlights]);
 
   /**
    * Conteo por categoría (de todos los vuelos cargados)

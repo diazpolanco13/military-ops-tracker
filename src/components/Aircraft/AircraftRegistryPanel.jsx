@@ -22,7 +22,8 @@ import {
   MoreVertical,
   Globe
 } from 'lucide-react';
-import { useAircraftRegistry, useMilitaryBases, useAircraftModels, useCountryPresence } from '../../hooks/useAircraftRegistry';
+import { useAircraftRegistry, useMilitaryBases, useCountryPresence } from '../../hooks/useAircraftRegistry';
+import { prefetchAircraftImages, useAircraftModelImage } from '../../hooks/useAircraftImages';
 import AircraftDetailView from './AircraftDetailView';
 
 /**
@@ -71,9 +72,10 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
     },
   });
 
-  const { bases, basesByCountry } = useMilitaryBases({ enabled: isOpen });
-  const { models, modelsByCategory } = useAircraftModels({ enabled: isOpen });
-  const { deploymentSummary, countries, getAircraftInCountry } = useCountryPresence({ enabled: isOpen });
+  // ⚠️ Importante para evitar saturación: no cargar TODO al abrir el panel.
+  // Cargar por pestaña reduce la concurrencia (y los timeouts) en Supabase.
+  const { bases, basesByCountry } = useMilitaryBases({ enabled: isOpen && activeTab === 'bases' });
+  const { deploymentSummary, getAircraftInCountry } = useCountryPresence({ enabled: isOpen && activeTab === 'countries' });
 
   // Filtrado local adicional
   const filteredAircraft = useMemo(() => {
@@ -87,12 +89,21 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
     );
   }, [aircraft, searchTerm]);
 
+  // ⚡ Precargar thumbnails por tipo (usa aircraft_model_images con batching y cache global).
+  useEffect(() => {
+    if (!isOpen) return;
+    if (activeTab !== 'registry') return;
+    const types = (aircraft || []).map((a) => a?.aircraft_type).filter(Boolean);
+    if (types.length === 0) return;
+    prefetchAircraftImages(types);
+  }, [isOpen, activeTab, aircraft]);
+
   if (!isOpen) return null;
 
   const tabs = [
     { id: 'registry', label: 'Inventario', icon: Plane, count: stats?.totalAircraft },
-    { id: 'countries', label: 'Por País', icon: Globe, count: deploymentSummary.length },
-    { id: 'bases', label: 'Bases', icon: Building2, count: bases.length },
+    { id: 'countries', label: 'Por País', icon: Globe, count: activeTab === 'countries' ? deploymentSummary.length : undefined },
+    { id: 'bases', label: 'Bases', icon: Building2, count: activeTab === 'bases' ? bases.length : undefined },
     { id: 'incursions', label: 'Top Incursiones', icon: AlertTriangle, count: topIncursionAircraft.length },
     { id: 'new', label: 'Nuevas Hoy', icon: TrendingUp, count: stats?.newToday },
   ];
@@ -538,6 +549,7 @@ function RegistryTab({ aircraft, viewMode, onSelect }) {
 function AircraftGridCard({ aircraft, onClick }) {
   const a = aircraft;
   const lastCallsign = a.callsigns_used?.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null;
+  const { imageUrl, loading } = useAircraftModelImage(a.aircraft_type);
   
   return (
     <div 
@@ -546,14 +558,14 @@ function AircraftGridCard({ aircraft, onClick }) {
     >
       {/* Imagen o icono */}
       <div className="aspect-video bg-slate-700/50 rounded-lg mb-2 flex items-center justify-center overflow-hidden relative">
-        {a.model?.thumbnail_url ? (
+        {imageUrl ? (
           <img 
-            src={a.model.thumbnail_url} 
+            src={imageUrl} 
             alt={a.aircraft_model}
             className="w-full h-full object-cover"
           />
         ) : (
-          <Plane className="w-10 h-10 text-slate-500" />
+          <Plane className={`w-10 h-10 ${loading ? 'text-slate-400 animate-pulse' : 'text-slate-500'}`} />
         )}
         {/* Callsign badge sobre la imagen */}
         {lastCallsign && (
@@ -589,6 +601,7 @@ function AircraftListItem({ aircraft, onClick }) {
   const a = aircraft;
   const lastSeen = a.last_seen ? new Date(a.last_seen) : null;
   const isRecent = lastSeen && (Date.now() - lastSeen.getTime()) < 3600000; // 1 hora
+  const { imageUrl, loading: loadingThumb } = useAircraftModelImage(a.aircraft_type);
   
   // Obtener el último callsign usado (el más reciente/importante)
   const lastCallsign = a.callsigns_used?.length > 0 ? a.callsigns_used[a.callsigns_used.length - 1] : null;
@@ -607,14 +620,14 @@ function AircraftListItem({ aircraft, onClick }) {
       {/* Icono/Imagen */}
       <div className="flex-shrink-0">
         <div className="w-14 h-14 bg-slate-700/50 rounded-lg flex items-center justify-center overflow-hidden">
-          {a.model?.thumbnail_url ? (
+          {imageUrl ? (
             <img 
-              src={a.model.thumbnail_url} 
+              src={imageUrl} 
               alt={a.aircraft_model}
               className="w-full h-full object-cover"
             />
           ) : (
-            <Plane className="w-6 h-6 text-slate-500" />
+            <Plane className={`w-6 h-6 ${loadingThumb ? 'text-slate-400 animate-pulse' : 'text-slate-500'}`} />
           )}
         </div>
         {/* Apodo (CALLSIGN) debajo de la imagen - pequeño para ahorrar espacio */}

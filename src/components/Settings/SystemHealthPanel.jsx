@@ -42,13 +42,15 @@ import {
 import { supabase, getConnectionStatus, withTimeout } from '../../lib/supabase';
 import { realtimeManager } from '../../lib/realtimeManager';
 
-// Intervalo de actualización (10 segundos)
-const REFRESH_INTERVAL = 10000;
+// Intervalo de actualización
+// ⚠️ En entornos multiusuario, refrescar cada 10s puede saturar Supabase (varias queries por tick).
+// Subimos el intervalo y además dejamos auto-refresh apagado por defecto.
+const REFRESH_INTERVAL = 60000; // 60s
 const QUERY_TIMEOUT = 8000;
 
 export default function SystemHealthPanel() {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -284,6 +286,11 @@ export default function SystemHealthPanel() {
     refreshAll();
     
     if (!autoRefresh) return;
+
+    // No spamear cuando el tab está en background
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return;
+    }
     
     const interval = setInterval(refreshAll, REFRESH_INTERVAL);
     return () => clearInterval(interval);
