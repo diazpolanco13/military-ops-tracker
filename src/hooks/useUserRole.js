@@ -4,14 +4,16 @@ import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 👤 Hook para obtener el rol y permisos del usuario actual
- * V2: Con timeout para no bloquear la UI
+ * V3: Mejor manejo de sesión expirada
  */
 export function useUserRole() {
   const [userRole, setUserRole] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
+  const [sessionExpired, setSessionExpired] = useState(false); // NUEVO: flag de sesión expirada
   const loadingRef = useRef(false); // Evitar cargas duplicadas
+  const retryCountRef = useRef(0); // Contador de reintentos
 
   const loadUserRole = useCallback(async () => {
     // Evitar cargas simultáneas
@@ -21,29 +23,79 @@ export function useUserRole() {
     try {
       setLoading(true);
       
-      // Timeout rápido para getSession
+      // Timeout más largo (8s) para dar tiempo al refresh
       const sessionPromise = supabase.auth.getSession();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session timeout')), 5000)
+        setTimeout(() => reject(new Error('Session timeout')), 8000)
       );
       
       let session;
+      let sessionError = null;
       try {
         const result = await Promise.race([sessionPromise, timeoutPromise]);
         session = result?.data?.session;
+        sessionError = result?.error;
       } catch (e) {
-        console.warn('⚠️ Session timeout, usando defaults');
+        // ⚠️ TIMEOUT NO significa sesión expirada, puede ser saturación de conexión
+        console.warn('⚠️ Session timeout (puede ser saturación de red)');
+        
+        // Usar permisos en cache si existen, NO mostrar como expirada
+        if (retryCountRef.current < 1) {
+          retryCountRef.current++;
+          loadingRef.current = false;
+          // Esperar más tiempo antes de reintentar (3s)
+          setTimeout(() => loadUserRole(), 3000);
+          return;
+        }
+        
+        // Después de reintentos, usar defaults pero NO marcar como expirada
+        // Un timeout es diferente a una sesión realmente expirada
+        console.warn('⚠️ Usando permisos por defecto (timeout de red)');
         setUserRole('viewer');
         setPermissions(getDefaultPermissions('viewer'));
+        // NO setSessionExpired(true) - un timeout no es expiración
         return;
+      }
+      
+      // Resetear contador de reintentos si tuvo éxito
+      retryCountRef.current = 0;
+      
+      // Si hay error de sesión REAL (token expirado, refresh token inválido)
+      if (sessionError) {
+        const errorMsg = sessionError.message?.toLowerCase() || '';
+        const isRealExpiration = 
+          errorMsg.includes('expired') || 
+          errorMsg.includes('invalid') ||
+          errorMsg.includes('refresh token') ||
+          errorMsg.includes('not found') ||
+          sessionError.status === 401;
+        
+        if (isRealExpiration) {
+          console.error('❌ Sesión REALMENTE expirada:', sessionError.message);
+          setSessionExpired(true);
+          setUserRole(null);
+          setUserProfile(null);
+          setPermissions({});
+          return;
+        } else {
+          // Otro tipo de error (red, etc.) - usar defaults
+          console.warn('⚠️ Error de sesión (no expiración):', sessionError.message);
+          setUserRole('viewer');
+          setPermissions(getDefaultPermissions('viewer'));
+          return;
+        }
       }
       
       if (!session?.user) {
         setUserRole(null);
         setUserProfile(null);
         setPermissions({});
+        setSessionExpired(false); // No está expirada, simplemente no hay sesión
         return;
       }
+      
+      // Sesión válida
+      setSessionExpired(false);
 
       // Query con timeout de 8 segundos
       const { data: profile, error } = await safeQuery(
@@ -211,6 +263,7 @@ export function useUserRole() {
     permissions,
     userProfile,
     loading,
+    sessionExpired, // NUEVO: indica si la sesión expiró
     isAdmin,
     isCollaborator,
     isViewer,

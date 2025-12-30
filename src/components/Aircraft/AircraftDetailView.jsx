@@ -46,8 +46,11 @@ import { supabase, withTimeout } from '../../lib/supabase';
 import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
 import { getCountryByICAO24 } from '../../services/flightRadarService';
 
-// Timeout para consultas (10 segundos)
-const QUERY_TIMEOUT = 10000;
+// Timeouts para consultas
+const QUERY_TIMEOUT = 8000;       // Consultas simples (8 segundos)
+const HISTORY_TIMEOUT = 20000;    // Historial - más tiempo porque puede ser grande (20 segundos)
+const HISTORY_LIMIT_INITIAL = 50; // Carga inicial rápida
+const HISTORY_LIMIT_FULL = 200;   // Carga completa bajo demanda
 
 /**
  * 🎖️ VISTA DE DETALLE DE AERONAVE (PANTALLA COMPLETA)
@@ -161,7 +164,11 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     }
   }, [images.length, currentImageIndex]);
 
-  // Cargar historial cuando se selecciona la tab "history" (con timeout)
+  // Estado para historial paginado
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_LIMIT_INITIAL);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+
+  // Cargar historial cuando se selecciona la tab "history" (con timeout largo)
   useEffect(() => {
     let cancelled = false;
     
@@ -174,14 +181,15 @@ export default function AircraftDetailView({ aircraft, onClose }) {
       setHistoryError(null);
       
       try {
+        // Usar timeout más largo y límite configurable
         const result = await withTimeout(
           supabase
             .from('aircraft_location_history')
             .select('*')
             .eq('icao24', aircraft.icao24.toUpperCase())
             .order('detected_at', { ascending: false })
-            .limit(200),  // Aumentado para capturar vuelos largos como Global Hawk
-          QUERY_TIMEOUT
+            .limit(historyLimit + 1),  // +1 para saber si hay más
+          HISTORY_TIMEOUT
         );
         
         if (cancelled) return;
@@ -189,6 +197,14 @@ export default function AircraftDetailView({ aircraft, onClose }) {
         if (result.error) throw result.error;
         
         const data = result.data || [];
+        
+        // Verificar si hay más registros
+        if (data.length > historyLimit) {
+          setHasMoreHistory(true);
+          data.pop(); // Quitar el extra
+        } else {
+          setHasMoreHistory(false);
+        }
         
         // Hacer geocoding de registros sin país (en background, sin bloquear)
         const recordsWithoutCountry = data.filter(r => !r.country_code && r.latitude && r.longitude);
@@ -237,7 +253,12 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, aircraft?.icao24]);
+  }, [activeTab, aircraft?.icao24, historyLimit]);
+
+  // Handler para cargar más historial
+  const loadMoreHistory = () => {
+    setHistoryLimit(HISTORY_LIMIT_FULL);
+  };
 
   if (!aircraft) return null;
 
@@ -639,6 +660,12 @@ export default function AircraftDetailView({ aircraft, onClose }) {
                 loading={loadingHistory}
                 error={historyError}
                 formatDate={formatDate}
+                hasMore={hasMoreHistory}
+                onLoadMore={loadMoreHistory}
+                onRetry={() => {
+                  setHistoryLimit(HISTORY_LIMIT_INITIAL);
+                  setHistoryError(null);
+                }}
               />
             )}
             {activeTab === 'gallery' && (
@@ -1051,7 +1078,7 @@ function StatsTab({ aircraft, firstSeen, lastSeen, formatDate }) {
 // =============================================
 // TAB: HISTORIAL (Estilo FlightRadar24)
 // =============================================
-function HistoryTab({ history, loading, error, formatDate }) {
+function HistoryTab({ history, loading, error, formatDate, hasMore, onLoadMore, onRetry }) {
   const [selectedFlight, setSelectedFlight] = useState(null);
 
   if (loading) {
@@ -1070,7 +1097,16 @@ function HistoryTab({ history, loading, error, formatDate }) {
       <div className="text-center py-16">
         <AlertTriangle className="w-16 h-16 text-red-500/50 mx-auto mb-4" />
         <h3 className="text-lg text-white mb-2">Error al cargar historial</h3>
-        <p className="text-slate-400 text-sm">{error}</p>
+        <p className="text-slate-400 text-sm mb-4">{error}</p>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors flex items-center gap-2 mx-auto"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reintentar
+          </button>
+        )}
       </div>
     );
   }
@@ -1246,6 +1282,22 @@ function HistoryTab({ history, loading, error, formatDate }) {
           );
         })}
       </div>
+
+      {/* Botón cargar más */}
+      {hasMore && onLoadMore && (
+        <div className="text-center pt-4">
+          <button
+            onClick={onLoadMore}
+            className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors flex items-center gap-2 mx-auto"
+          >
+            <History className="w-4 h-4" />
+            Cargar historial completo
+          </button>
+          <p className="text-xs text-slate-500 mt-2">
+            Mostrando {history.length} registros. Hay más disponibles.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

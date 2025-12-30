@@ -120,7 +120,23 @@ export default function TopNavigationBar({
   const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
   const { archivedCount } = useArchivedCount();
-  const { canAccessSettings, canCreate } = useUserRole();
+  const { canAccessSettings, canCreate, sessionExpired } = useUserRole();
+
+  // ⚠️ Detectar sesión expirada y notificar al usuario
+  useEffect(() => {
+    if (sessionExpired) {
+      console.error('❌ Sesión expirada detectada');
+      // Mostrar alerta y recargar para forzar re-login
+      const shouldReload = window.confirm(
+        '⚠️ Tu sesión ha expirado.\n\nHaz clic en "Aceptar" para volver a iniciar sesión.'
+      );
+      if (shouldReload) {
+        // Limpiar localStorage de sesión para forzar re-login
+        localStorage.removeItem('supabase.auth.token');
+        window.location.reload();
+      }
+    }
+  }, [sessionExpired]);
 
   // 🌊 Escuchar evento para abrir panel de límites marítimos
   useEffect(() => {
