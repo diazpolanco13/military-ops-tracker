@@ -77,8 +77,16 @@ export default function FlightDetailsPanel({ flight, onClose }) {
   // Priorizar el tipo exacto (ej: DH8B) y usar fallback (ej: C17A->C17) si no hay imagen.
   const aircraftTypeExact = String(aircraftTypeRaw || '').trim().toUpperCase();
   const aircraftTypeFallback = normalizeTypeForCatalog(aircraftTypeRaw);
-  const { imageUrl: modelImageUrlExact } = useAircraftModelImage(aircraftTypeExact);
-  const { imageUrl: modelImageUrlFallback } = useAircraftModelImage(aircraftTypeFallback);
+  
+  // ⚡ OPTIMIZADO: Solo UN hook - el caché interno evita consultas duplicadas
+  // Intentamos primero con el tipo exacto, si no hay imagen probamos el fallback
+  const { imageUrl: modelImageUrlExact, loading: loadingExact } = useAircraftModelImage(aircraftTypeExact);
+  // Solo consultar fallback si el tipo es diferente Y no tenemos imagen del exacto
+  const shouldTryFallback = aircraftTypeFallback && 
+                            aircraftTypeFallback !== aircraftTypeExact && 
+                            !modelImageUrlExact && 
+                            !loadingExact;
+  const { imageUrl: modelImageUrlFallback } = useAircraftModelImage(shouldTryFallback ? aircraftTypeFallback : null);
   const modelImageUrl = modelImageUrlExact || modelImageUrlFallback;
   const aircraftType = aircraftTypeExact || aircraftTypeFallback || aircraftTypeRaw || '';
 

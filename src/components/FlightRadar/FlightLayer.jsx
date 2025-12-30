@@ -11,10 +11,28 @@ const FLIGHTS_SOURCE_ID = 'flights-source';
 const FLIGHTS_LAYER_ID = 'flights-layer';
 const FLIGHTS_SELECTED_LAYER_ID = 'flights-selected-layer';
 
-// Determinar si es helicóptero
+// Determinar si es helicóptero (lista ampliada)
 const isHelicopter = (type) => {
-  const heliTypes = ['H60', 'H47', 'H64', 'H53', 'UH60', 'CH47', 'AH64', 'MH60', 'HH60', 'S76', 'S92', 'EC', 'AS', 'R44', 'R22', 'B06', 'B07', 'V22'];
-  return heliTypes.some(h => (type || '').toUpperCase().includes(h));
+  const heliPatterns = [
+    'CH47', 'UH60', 'AH64', 'MH60', 'HH60', 'H60', 'H47', 'H64', 'H53',
+    'V22', 'S70', 'S76', 'S92', 'EC', 'AS',
+    'A109', 'A139', 'A169', 'AW',
+    'B06', 'B07', 'B12', 'B47',
+    'MD5', 'MD6', 'MD9',
+    'R22', 'R44', 'R66',
+    'H125', 'H130', 'H135', 'H145', 'H155', 'H160', 'H175', 'H215', 'H225',
+    'BK17', 'NH90',
+    'MI8', 'MI17', 'MI24', 'MI28', 'MI35',
+    'KA52', 'KA27', 'KA32',
+    'UH1', 'AH1',
+  ];
+  return heliPatterns.some(h => (type || '').toUpperCase().includes(h));
+};
+
+// Determinar si es drone
+const isDrone = (type) => {
+  const dronePatterns = ['RQ4', 'MQ4', 'MQ9', 'MQ1', 'RQ7', 'RQ11', 'Q4', 'HALE', 'UAV', 'RPAS'];
+  return dronePatterns.some(d => (type || '').toUpperCase().includes(d));
 };
 
 // Determinar categoría desde el tipo de aeronave
@@ -23,6 +41,10 @@ const getCategoryFromType = (type, callsign) => {
   const t = type.toUpperCase();
   const cs = (callsign || '').toUpperCase();
   
+  // Drones/UAV (PRIMERO, antes de surveillance)
+  if (isDrone(t) || cs.startsWith('BLKCAT') || cs.startsWith('FORTE') || cs.startsWith('BAMS')) {
+    return 'drone';
+  }
   // Cazas
   if (t.includes('F15') || t.includes('F16') || t.includes('F22') || t.includes('F35') || 
       t.includes('F18') || t.includes('F14') || t.includes('EUFI') || t.includes('TYPN') ||
@@ -37,10 +59,10 @@ const getCategoryFromType = (type, callsign) => {
   if (t.includes('KC135') || t.includes('KC10') || t.includes('KC46') || t.includes('K35R')) {
     return 'tanker';
   }
-  // Vigilancia/AWACS/Reconocimiento
+  // Vigilancia/AWACS/Reconocimiento (sin los drones, ya detectados arriba)
   if (t.includes('P8') || t.includes('P3') || t.includes('E3') || t.includes('E6') || 
-      t.includes('E2') || t.includes('E8') || t.includes('RC135') || t.includes('RQ4') || 
-      t.includes('U2') || t.includes('MQ9') || t.includes('DH8') || t.includes('DASH') ||
+      t.includes('E2') || t.includes('E8') || t.includes('RC135') ||
+      t.includes('U2') || t.includes('DH8') || t.includes('DASH') ||
       t.includes('DHC8') || t.includes('BE20') || t.includes('C12') ||
       cs.startsWith('BAT') || cs.startsWith('IRON')) {
     return 'surveillance';
@@ -64,6 +86,7 @@ const CATEGORY_COLORS = {
   bomber: '#dc2626',       // Rojo oscuro
   tanker: '#10b981',       // Verde
   surveillance: '#f59e0b', // Naranja
+  drone: '#06b6d4',        // Cyan (distintivo para drones)
   helicopter: '#8b5cf6',   // Morado
   vip: '#ec4899',          // Rosa
   transport: '#FFC107',    // Amarillo (default)
@@ -119,19 +142,45 @@ const SURVEILLANCE_SVG = (color) => `
   <ellipse cx="50" cy="45" rx="14" ry="2" fill="#3b82f6" stroke="none"/>
 </svg>`;
 
-// 🚁 HELICÓPTERO
+// 🚁 HELICÓPTERO - Diseño mejorado
 const HELICOPTER_SVG = (color) => `
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 100 100">
-  <line x1="10" y1="25" x2="90" y2="25" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="50" cy="25" r="5" fill="${color}" stroke="#000" stroke-width="1"/>
-  <ellipse cx="50" cy="45" rx="18" ry="15" fill="${color}" stroke="#000" stroke-width="2"/>
-  <ellipse cx="50" cy="42" rx="10" ry="7" fill="#1e3a5f" stroke="#000" stroke-width="1"/>
-  <rect x="47" y="58" width="6" height="30" fill="${color}" stroke="#000" stroke-width="1"/>
-  <ellipse cx="50" cy="90" rx="10" ry="3" fill="${color}" stroke="#000" stroke-width="1"/>
-  <line x1="30" y1="58" x2="30" y2="68" stroke="${color}" stroke-width="3"/>
-  <line x1="70" y1="58" x2="70" y2="68" stroke="${color}" stroke-width="3"/>
-  <line x1="22" y1="68" x2="40" y2="68" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
-  <line x1="60" y1="68" x2="78" y2="68" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  <!-- Fuselaje principal -->
+  <rect x="40" y="35" width="20" height="40" fill="${color}" rx="8" ry="5" stroke="#000" stroke-width="1.5"/>
+  <!-- Boom de cola -->
+  <rect x="45" y="72" width="10" height="18" fill="${color}" rx="3" ry="2" stroke="#000" stroke-width="1"/>
+  <!-- Ventana de cabina -->
+  <ellipse cx="50" cy="42" rx="7" ry="6" fill="#0ea5e9" opacity="0.85" stroke="#000" stroke-width="0.8"/>
+  <!-- Hélices principales (en X) -->
+  <line x1="10" y1="30" x2="90" y2="30" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+  <line x1="50" y1="-10" x2="50" y2="70" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="50" cy="30" r="4" fill="#334155" stroke="#000" stroke-width="1"/>
+  <!-- Rotor de cola -->
+  <line x1="40" y1="85" x2="60" y2="85" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="78" x2="50" y2="92" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="50" cy="85" r="2" fill="#334155"/>
+  <!-- Patines de aterrizaje -->
+  <line x1="35" y1="70" x2="35" y2="78" stroke="${color}" stroke-width="2.5"/>
+  <line x1="65" y1="70" x2="65" y2="78" stroke="${color}" stroke-width="2.5"/>
+  <line x1="28" y1="78" x2="42" y2="78" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+  <line x1="58" y1="78" x2="72" y2="78" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+</svg>`;
+
+// 🛸 DRONE / UAV - Silueta tipo RQ-4 Global Hawk / MQ-4C Triton
+const DRONE_SVG = (color) => `
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 100 100">
+  <!-- Alas muy largas (característica distintiva de drones HALE) -->
+  <path d="M50 45 L98 50 L95 54 L52 50 L48 50 L5 54 L2 50 Z" fill="${color}" stroke="#000" stroke-width="1.5"/>
+  <!-- Fuselaje delgado y aerodinámico -->
+  <ellipse cx="50" cy="50" rx="5" ry="35" fill="${color}" stroke="#000" stroke-width="1.5"/>
+  <!-- Sensor dome frontal (bulbo característico - cámara/radar) -->
+  <ellipse cx="50" cy="18" rx="8" ry="7" fill="#0ea5e9" stroke="#000" stroke-width="1.2"/>
+  <ellipse cx="50" cy="18" rx="4" ry="3" fill="#1e3a5f" opacity="0.8"/>
+  <!-- Cola en V invertida -->
+  <path d="M50 82 L60 96 L50 90 L40 96 Z" fill="${color}" stroke="#000" stroke-width="1.2"/>
+  <!-- Hélice trasera (pusher prop) -->
+  <circle cx="50" cy="88" r="4" fill="#334155" stroke="#000" stroke-width="1"/>
+  <line x1="42" y1="88" x2="58" y2="88" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
 </svg>`;
 
 // 👔 VIP - Jet ejecutivo
@@ -157,13 +206,14 @@ const CATEGORY_SVG = {
   bomber: BOMBER_SVG,
   tanker: TANKER_SVG,
   surveillance: SURVEILLANCE_SVG,
+  drone: DRONE_SVG,
   helicopter: HELICOPTER_SVG,
   vip: VIP_SVG,
   transport: TRANSPORT_SVG,
 };
 
 // Todas las categorías
-const ALL_CATEGORIES = ['combat', 'bomber', 'tanker', 'surveillance', 'helicopter', 'vip', 'transport'];
+const ALL_CATEGORIES = ['combat', 'bomber', 'tanker', 'surveillance', 'drone', 'helicopter', 'vip', 'transport'];
 
 // Convertir SVG a imagen para Mapbox
 const svgToImage = (svgString, size = 32) => {

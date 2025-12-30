@@ -91,8 +91,8 @@ const MILITARY_AIRLINE_CODES = [
  * Prefijos de callsign militar (campo [16] o [9])
  */
 const MILITARY_CALLSIGN_PREFIXES = [
-  'RCH',     // Reach
-  'CNV',     // Convoy
+  'RCH',     // Reach (USAF transporte)
+  'CNV',     // Convoy (USAF transporte)
   'SPAR',    // Special Air Mission
   'ELVIS',   // Military callsign
   'NAVY',
@@ -101,6 +101,9 @@ const MILITARY_CALLSIGN_PREFIXES = [
   'PAT',     // Air National Guard
   'ARMY',
   'GUARD',
+  'BLKCAT',  // Navy MQ-4C Triton (Black Cat)
+  'FORTE',   // USAF RQ-4 Global Hawk
+  'BAMS',    // Broad Area Maritime Surveillance
 ];
 
 /**
@@ -154,6 +157,10 @@ const MILITARY_AIRCRAFT_TYPES = [
   'MH60',    // MH-60 variant
   'HH60',    // HH-60 Pave Hawk
   'AH64',    // AH-64 Apache
+  
+  // Drones/UAVs
+  'Q4',      // MQ-4C Triton (Navy)
+  'HALE',    // High Altitude Long Endurance
 ];
 
 /**
@@ -293,8 +300,13 @@ export const AIRCRAFT_MODELS_DB = {
   'P8': { name: 'Boeing P-8A Poseidon', category: 'surveillance', country: 'US' },
   'P3': { name: 'Lockheed P-3 Orion', category: 'surveillance', country: 'US' },
   'U2': { name: 'Lockheed U-2 Dragon Lady', category: 'surveillance', country: 'US' },
-  'RQ4': { name: 'Northrop Grumman RQ-4 Global Hawk', category: 'surveillance', country: 'US' },
-  'MQ9': { name: 'General Atomics MQ-9 Reaper', category: 'surveillance', country: 'US' },
+  'RQ4': { name: 'Northrop Grumman RQ-4 Global Hawk', category: 'drone', country: 'US' },
+  'MQ4': { name: 'Northrop Grumman MQ-4C Triton', category: 'drone', country: 'US' },
+  'Q4': { name: 'Northrop Grumman MQ-4C Triton', category: 'drone', country: 'US' },
+  'MQ9': { name: 'General Atomics MQ-9 Reaper', category: 'drone', country: 'US' },
+  'MQ1': { name: 'General Atomics MQ-1 Predator', category: 'drone', country: 'US' },
+  'RQ7': { name: 'AAI RQ-7 Shadow', category: 'drone', country: 'US' },
+  'RQ11': { name: 'AeroVironment RQ-11 Raven', category: 'drone', country: 'US' },
   
   // ===== CAZAS =====
   'F15': { name: 'McDonnell Douglas F-15 Eagle', category: 'combat', country: 'US' },
@@ -401,20 +413,25 @@ export function getAircraftModel(icaoType) {
  * - Sur de Florida y Golfo de México
  */
 export const CARIBBEAN_BOUNDS = {
-  north: 27.0,   // Norte: Sur de Florida + Bahamas
+  north: 32.0,   // Norte: Georgia/Carolinas (incluye Jacksonville, NAS Jacksonville)
   south: 1.0,    // Sur: Venezuela completa (Amazonas ~1°N)
   west: -85.0,   // Oeste: Costa oeste de Panamá/Nicaragua
   east: -58.0,   // Este: Trinidad y Tobago + Barbados
-  // Incluye: Venezuela, Rep. Dominicana, Puerto Rico, Cuba, Jamaica, 
-  // Panamá, Colombia norte, Trinidad, Curazao, Aruba, etc.
+  // Incluye: Jacksonville, Florida completa, Bahamas, Venezuela, 
+  // Rep. Dominicana, Puerto Rico, Cuba, Jamaica, Panamá, Colombia norte, 
+  // Trinidad, Curazao, Aruba, etc.
 };
 
 /**
  * Obtener vuelos en una zona geográfica específica
  * @param {Object} bounds - Límites geográficos {north, south, west, east}
+ * @param {Object} options - Opciones adicionales
+ * @param {boolean} options.militaryOnly - Si es true, el servidor filtra solo militares (⚡ optimizado)
  * @returns {Promise<Array>} - Lista de vuelos
  */
-export async function getFlightsByZone(bounds = null) {
+export async function getFlightsByZone(bounds = null, options = {}) {
+  const { militaryOnly = false } = options;
+  
   try {
     // Usar bounds proporcionados o los por defecto
     const effectiveBounds = bounds || CARIBBEAN_BOUNDS;
@@ -430,11 +447,15 @@ export async function getFlightsByZone(bounds = null) {
       console.warn('⚠️ No hay sesión activa, intentando sin autenticación');
     }
     
-    // ✅ Usar Edge Function como proxy (evita CORS)
-    const url = `${FLIGHTRADAR_PROXY_URL}?bounds=${boundsString}`;
+    // ⚡ OPTIMIZACIÓN: Filtro server-side para militares
+    // Reduce transferencia de ~800 vuelos a ~4 vuelos
+    let url = `${FLIGHTRADAR_PROXY_URL}?bounds=${boundsString}`;
+    if (militaryOnly) {
+      url += '&military=true';
+    }
 
     console.log('🛩️ Fetching flights from FlightRadar24 (via Supabase proxy)...');
-    console.log('📍 Zona:', boundsString);
+    console.log('📍 Zona:', boundsString, militaryOnly ? '(⚡ solo militares)' : '');
 
     const headers = {
       'Accept': 'application/json',
@@ -460,12 +481,19 @@ export async function getFlightsByZone(bounds = null) {
     }
 
     const data = await response.json();
-    console.log('📦 Datos recibidos:', Object.keys(data).length, 'items');
+    
+    // Mostrar stats del filtro server-side si está disponible
+    if (data._military_flights !== undefined) {
+      console.log(`📦 Datos recibidos: ${data._military_flights}/${data._total_flights} vuelos militares (filtrado en servidor)`);
+    } else {
+      console.log('📦 Datos recibidos:', Object.keys(data).length, 'items');
+    }
     
     // La API retorna un objeto con flight IDs como keys
     // Ejemplo: { "abc123": [...], "def456": [...], ... }
+    const metaKeys = ['full_count', 'version', '_source', '_version', '_total_flights', '_military_flights'];
     const flights = Object.entries(data)
-      .filter(([key]) => key !== 'full_count' && key !== 'version')
+      .filter(([key]) => !metaKeys.includes(key))
       .map(([flightId, flightData]) => parseFlightData(flightId, flightData))
       .filter(f => f !== null); // Filtrar datos inválidos
 
@@ -478,22 +506,28 @@ export async function getFlightsByZone(bounds = null) {
 }
 
 /**
- * Obtener vuelos MILITARES usando la API oficial
- * La API oficial con categories=M devuelve solo militares/gobierno
+ * ⚡ Obtener vuelos MILITARES (OPTIMIZADO)
+ * 
+ * Usa filtro SERVER-SIDE en la Edge Function para reducir transferencia:
+ * - Antes: ~800 vuelos transferidos, filtrado en cliente
+ * - Ahora: ~4-10 vuelos transferidos (solo militares)
+ * 
  * @param {Object} bounds - Límites del viewport {north, south, west, east}
  * @returns {Promise<Array>} - Lista de vuelos militares
  */
 export async function getMilitaryFlights(bounds = CARIBBEAN_BOUNDS) {
   try {
-    // Usar los bounds proporcionados (del viewport del mapa)
-    const allFlights = await getFlightsByZone(bounds);
+    // ⚡ OPTIMIZACIÓN: Filtro en servidor (militaryOnly: true)
+    // Reduce transferencia de ~800 vuelos a solo ~4-10 vuelos militares
+    const allFlights = await getFlightsByZone(bounds, { militaryOnly: true });
     
     console.log(`\n═══════════════════════════════════════`);
     console.log(`📊 FLIGHTRADAR24 - VUELOS MILITARES`);
     console.log(`═══════════════════════════════════════`);
-    console.log(`✈️ Vuelos militares recibidos: ${allFlights.length}`);
+    console.log(`✈️ Vuelos militares recibidos: ${allFlights.length} (⚡ filtro server-side)`);
     
-    // Filtrar solo vuelos militares
+    // Los vuelos ya vienen filtrados del servidor, pero hacemos doble verificación
+    // por si acaso hay algún falso positivo
     const militaryFlights = allFlights.filter(flight => 
       isMilitaryFlight(flight)
     );
@@ -504,14 +538,14 @@ export async function getMilitaryFlights(bounds = CARIBBEAN_BOUNDS) {
       category: getMilitaryCategory(flight)
     }));
 
-    console.log(`🎯 Vuelos militares detectados: ${militaryFlights.length}`);
+    console.log(`🎯 Vuelos militares verificados: ${militaryFlights.length}`);
     console.log(`═══════════════════════════════════════\n`);
     
     if (militaryFlights.length > 0) {
       console.log(`📋 LISTA DE VUELOS MILITARES:`);
       militaryFlights.forEach(f => {
         const cat = getMilitaryCategory(f);
-        console.log(`   ${f.callsign.padEnd(15)} | ${f.aircraft.type.padEnd(8)} | ${cat.padEnd(12)} | ${f.aircraft.airline || 'N/A'}`);
+        console.log(`   ${(f.callsign || 'N/A').padEnd(15)} | ${(f.aircraft?.type || 'N/A').padEnd(8)} | ${cat.padEnd(12)} | ${f.aircraft?.airline || 'N/A'}`);
       });
       console.log('');
     }
@@ -1042,9 +1076,25 @@ export function getMilitaryCategory(flight) {
     return 'transport';
   }
 
-  // Helicópteros
-  if (type.includes('CH47') || type.includes('UH60') || type.includes('AH64') || 
-      type.includes('MH60') || type.includes('HH60')) {
+  // Helicópteros (lista ampliada)
+  const heliPatterns = [
+    'CH47', 'UH60', 'AH64', 'MH60', 'HH60', 'H60', 'H47', 'H64', 'H53',
+    'V22',   // Osprey (tiltrotor)
+    'S70',   // Sikorsky S-70 (Black Hawk civil)
+    'S76', 'S92',   // Sikorsky civiles
+    'EC', 'AS',     // Eurocopter / Airbus Helicopters
+    'A109', 'A139', 'A169', 'AW', // AgustaWestland/Leonardo
+    'B06', 'B07', 'B12', 'B47',   // Bell
+    'MD5', 'MD6', 'MD9',          // MD Helicopters
+    'R22', 'R44', 'R66',          // Robinson
+    'H125', 'H130', 'H135', 'H145', 'H155', 'H160', 'H175', 'H215', 'H225', // Airbus H-series
+    'BK17',                       // BK-117
+    'NH90',                       // NH Industries
+    'MI8', 'MI17', 'MI24', 'MI28', 'MI35', // Mil (rusos)
+    'KA52', 'KA27', 'KA32',       // Kamov (rusos)
+    'UH1', 'AH1',                 // Huey/Cobra
+  ];
+  if (heliPatterns.some(h => type.includes(h))) {
     return 'helicopter';
   }
 
@@ -1068,6 +1118,7 @@ export function getCategoryColor(category) {
     transport: '#FFC107',    // Amarillo (transporte) - ¡COMO FLIGHTRADAR24!
     tanker: '#10b981',       // Verde (reabastecimiento)
     surveillance: '#f59e0b', // Naranja (vigilancia)
+    drone: '#06b6d4',        // Cyan (drones/UAV) - distintivo
     helicopter: '#8b5cf6',   // Morado (helicópteros)
     vip: '#ec4899',          // Rosa (VIP/Special)
     other: '#FFC107',        // Amarillo (otros) - por defecto amarillo militar

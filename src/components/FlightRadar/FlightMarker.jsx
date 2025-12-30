@@ -2,10 +2,24 @@ import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
 import { getCategoryColor } from '../../services/flightRadarService';
 
-// Determinar si es helicóptero basado en el tipo
+// Determinar si es helicóptero basado en el tipo (lista ampliada)
 const isHelicopter = (type) => {
-  const heliTypes = ['H60', 'H47', 'H64', 'H53', 'UH60', 'CH47', 'AH64', 'MH60', 'HH60', 'S76', 'S92', 'EC', 'AS'];
-  return heliTypes.some(h => (type || '').toUpperCase().includes(h));
+  const heliPatterns = [
+    'CH47', 'UH60', 'AH64', 'MH60', 'HH60', 'H60', 'H47', 'H64', 'H53',
+    'V22',   // Osprey (tiltrotor)
+    'S70', 'S76', 'S92',   // Sikorsky
+    'EC', 'AS',     // Eurocopter / Airbus Helicopters
+    'A109', 'A139', 'A169', 'AW', // AgustaWestland/Leonardo
+    'B06', 'B07', 'B12', 'B47',   // Bell
+    'MD5', 'MD6', 'MD9',          // MD Helicopters
+    'R22', 'R44', 'R66',          // Robinson
+    'H125', 'H130', 'H135', 'H145', 'H155', 'H160', 'H175', 'H215', 'H225', // Airbus H-series
+    'BK17', 'NH90',               // Otros
+    'MI8', 'MI17', 'MI24', 'MI28', 'MI35', // Mil (rusos)
+    'KA52', 'KA27', 'KA32',       // Kamov (rusos)
+    'UH1', 'AH1',                 // Huey/Cobra
+  ];
+  return heliPatterns.some(h => (type || '').toUpperCase().includes(h));
 };
 
 /**
@@ -98,26 +112,80 @@ const getAircraftSVG = (category, color, heading) => {
         </svg>
       `;
 
-    // 🚁 HELICÓPTERO
+    // 🚁 HELICÓPTERO - Versión animada con hélices giratorias
     case 'helicopter':
+      // ID único para evitar conflictos de animación entre múltiples helicópteros
+      const heliId = `heli-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       return `
         <svg width="32" height="32" viewBox="0 0 100 100" style="${baseStyle}">
-          <!-- Rotor principal -->
-          <line x1="10" y1="25" x2="90" y2="25" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
-          <circle cx="50" cy="25" r="5" fill="${color}" stroke="#000" stroke-width="1"/>
-          <!-- Cabina -->
-          <ellipse cx="50" cy="45" rx="18" ry="15" fill="${color}" stroke="#000" stroke-width="2"/>
-          <!-- Ventana -->
-          <ellipse cx="50" cy="42" rx="10" ry="7" fill="#1e3a5f" stroke="#000" stroke-width="1"/>
-          <!-- Cola -->
-          <rect x="47" y="58" width="6" height="30" fill="${color}" stroke="#000" stroke-width="1"/>
-          <!-- Rotor cola -->
-          <ellipse cx="50" cy="90" rx="10" ry="3" fill="${color}" stroke="#000" stroke-width="1"/>
-          <!-- Patines -->
-          <line x1="30" y1="58" x2="30" y2="68" stroke="${color}" stroke-width="3"/>
-          <line x1="70" y1="58" x2="70" y2="68" stroke="${color}" stroke-width="3"/>
-          <line x1="22" y1="68" x2="40" y2="68" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
-          <line x1="60" y1="68" x2="78" y2="68" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+          <style>
+            #main-rotor-${heliId} {
+              transform-origin: 50px 30px;
+              animation: spin-main-${heliId} 0.15s linear infinite;
+            }
+            #tail-rotor-${heliId} {
+              transform-origin: 50px 85px;
+              animation: spin-tail-${heliId} 0.08s linear infinite;
+            }
+            @keyframes spin-main-${heliId} {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            @keyframes spin-tail-${heliId} {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+          </style>
+          
+          <!-- Fuselaje principal (orientado hacia arriba) -->
+          <rect x="40" y="35" width="20" height="40" fill="${color}" rx="8" ry="5" stroke="#000" stroke-width="1.5"/>
+          
+          <!-- Boom de cola -->
+          <rect x="45" y="72" width="10" height="18" fill="${color}" rx="3" ry="2" stroke="#000" stroke-width="1"/>
+          
+          <!-- Ventana de cabina (efecto cristal) -->
+          <ellipse cx="50" cy="42" rx="7" ry="6" fill="#0ea5e9" opacity="0.85" stroke="#000" stroke-width="0.8"/>
+          
+          <!-- Hélices principales (giratorias) -->
+          <g id="main-rotor-${heliId}">
+            <line x1="10" y1="30" x2="90" y2="30" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+            <line x1="50" y1="-10" x2="50" y2="70" stroke="${color}" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="50" cy="30" r="4" fill="#334155" stroke="#000" stroke-width="1"/>
+          </g>
+          
+          <!-- Rotor de cola (giratorio) -->
+          <g id="tail-rotor-${heliId}">
+            <line x1="40" y1="85" x2="60" y2="85" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+            <line x1="50" y1="78" x2="50" y2="92" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="50" cy="85" r="2" fill="#334155"/>
+          </g>
+          
+          <!-- Patines de aterrizaje -->
+          <line x1="35" y1="70" x2="35" y2="78" stroke="${color}" stroke-width="2.5"/>
+          <line x1="65" y1="70" x2="65" y2="78" stroke="${color}" stroke-width="2.5"/>
+          <line x1="28" y1="78" x2="42" y2="78" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+          <line x1="58" y1="78" x2="72" y2="78" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      `;
+
+    // 🛸 DRONE / UAV (RQ-4 Global Hawk, MQ-4C Triton, MQ-9 Reaper)
+    // Silueta característica: alas muy largas, fuselaje delgado, sensor dome frontal
+    case 'drone':
+      return `
+        <svg width="32" height="32" viewBox="0 0 100 100" style="${baseStyle}">
+          <!-- Alas muy largas (característica distintiva de drones HALE) -->
+          <path d="M50 45 L98 50 L95 54 L52 50 L48 50 L5 54 L2 50 Z" 
+                fill="${color}" stroke="#000" stroke-width="1.5"/>
+          <!-- Fuselaje delgado y aerodinámico -->
+          <ellipse cx="50" cy="50" rx="5" ry="35" fill="${color}" stroke="#000" stroke-width="1.5"/>
+          <!-- Sensor dome frontal (bulbo característico - cámara/radar) -->
+          <ellipse cx="50" cy="18" rx="8" ry="7" fill="#0ea5e9" stroke="#000" stroke-width="1.2"/>
+          <ellipse cx="50" cy="18" rx="4" ry="3" fill="#1e3a5f" opacity="0.8"/>
+          <!-- Cola en V invertida -->
+          <path d="M50 82 L60 96 L50 90 L40 96 Z" fill="${color}" stroke="#000" stroke-width="1.2"/>
+          <!-- Hélice trasera (pusher prop) -->
+          <circle cx="50" cy="88" r="4" fill="#334155" stroke="#000" stroke-width="1"/>
+          <line x1="42" y1="88" x2="58" y2="88" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
         </svg>
       `;
 
@@ -164,6 +232,7 @@ const getAircraftSVG = (category, color, heading) => {
  * - bomber: Silueta de bombardero (B-52 style)
  * - tanker: Silueta de tanquero (KC-135 style)
  * - surveillance: Silueta con radome AWACS
+ * - drone: Silueta UAV/HALE (RQ-4, MQ-4C, MQ-9) - alas largas, sensor dome
  * - helicopter: Helicóptero
  * - vip: Jet ejecutivo
  * - transport: Avión genérico (default)
@@ -183,7 +252,8 @@ export default function FlightMarker({ flight, map, onSelect, isSelected = false
     const color = isSelected ? '#ef4444' : (getCategoryColor(flight.category) || '#FFC107');
     const heading = flight.heading || 0;
     const category = flight.category || 'transport';
-    const isHeli = isHelicopter(flight.aircraft?.type);
+    const aircraftType = flight.aircraft?.type || '';
+    const isHeli = isHelicopter(aircraftType);
     
     // Detectar si la posición es estimada (transponder apagado)
     const isEstimated = flight.signal?.isTransponderActive === false;

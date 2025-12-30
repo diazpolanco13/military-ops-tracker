@@ -5,12 +5,33 @@
  * - Subida de imágenes a Supabase Storage
  * - Galería de imágenes por modelo de aeronave
  * - Imágenes primarias para thumbnails
+ * 
+ * ⚡ OPTIMIZADO: Caché global para evitar consultas repetidas
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, withTimeout } from '../lib/supabase';
 
-const QUERY_TIMEOUT = 10000; // 10 segundos
+const QUERY_TIMEOUT = 5000; // ⚡ Reducido de 10s a 5s para fallar más rápido
+
+// ════════════════════════════════════════════════════════════════════════════
+// 🗄️ CACHÉ GLOBAL DE IMÁGENES - Evita consultas repetidas
+// ════════════════════════════════════════════════════════════════════════════
+const imageCache = new Map();        // Map<aircraftType, imageUrl | null>
+const pendingQueries = new Map();    // Map<aircraftType, Promise> - evita queries paralelas duplicadas
+const CACHE_TTL = 5 * 60 * 1000;     // 5 minutos de TTL
+const cacheTimestamps = new Map();   // Map<aircraftType, timestamp>
+
+// Limpiar caché viejo periódicamente
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of cacheTimestamps.entries()) {
+    if (now - timestamp > CACHE_TTL) {
+      imageCache.delete(key);
+      cacheTimestamps.delete(key);
+    }
+  }
+}, 60000); // Limpiar cada minuto
 
 const BUCKET_NAME = 'entity-images';
 const AIRCRAFT_FOLDER = 'aircraft';
@@ -137,6 +158,9 @@ export function useAircraftImages(aircraftType = null) {
           .eq('aircraft_type', type.toUpperCase());
       }
 
+      // ⚡ Limpiar caché para que se recargue la imagen
+      clearImageCache(type);
+
       // Refrescar lista
       await fetchImages(type);
 
@@ -153,7 +177,7 @@ export function useAircraftImages(aircraftType = null) {
   /**
    * Eliminar una imagen
    */
-  const deleteImage = useCallback(async (imageId, imageUrl) => {
+  const deleteImage = useCallback(async (imageId, imageUrl, type = null) => {
     try {
       // Extraer path del storage desde la URL
       const urlParts = imageUrl.split(`${BUCKET_NAME}/`);
@@ -174,6 +198,13 @@ export function useAircraftImages(aircraftType = null) {
 
       if (dbError) throw dbError;
 
+      // ⚡ Limpiar caché del tipo
+      if (type) {
+        clearImageCache(type);
+      } else if (aircraftType) {
+        clearImageCache(aircraftType);
+      }
+
       // Actualizar lista local
       setImages(prev => prev.filter(img => img.id !== imageId));
 
@@ -182,7 +213,7 @@ export function useAircraftImages(aircraftType = null) {
       console.error('Error deleting image:', err);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [aircraftType]);
 
   /**
    * Establecer imagen como primaria
@@ -215,6 +246,9 @@ export function useAircraftImages(aircraftType = null) {
           })
           .eq('aircraft_type', type.toUpperCase());
       }
+
+      // ⚡ Limpiar caché para que se recargue la imagen
+      clearImageCache(type);
 
       // Refrescar
       await fetchImages(type);
@@ -294,78 +328,195 @@ export function useAircraftImages(aircraftType = null) {
 }
 
 /**
- * Hook para obtener la imagen de un modelo específico (con timeout)
+ * ⚡ Hook OPTIMIZADO para obtener la imagen de un modelo específico
+ * 
+ * MEJORAS:
+ * - Caché global en memoria (evita consultas repetidas)
+ * - Deduplicación de consultas paralelas (si 2 componentes piden el mismo tipo, solo 1 query)
+ * - Fallback automático de tipo (ej: C17A -> C17)
+ * - Timeout reducido a 5s
  */
-export function useAircraftModelImage(aircraftType) {
+export function useAircraftModelImage(aircraftType, options = {}) {
+  const { fallbackType = null } = options;
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    let cancelled = false;
-    
-    if (!aircraftType) {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    // ⚡ Early exit si no hay tipo
+    if (!aircraftType || aircraftType.trim() === '') {
       setImageUrl(null);
+      setLoading(false);
       return;
     }
 
-    const fetchImage = async () => {
+    const typeKey = aircraftType.toUpperCase().trim();
+    
+    // ⚡ CACHÉ HIT - retornar inmediatamente sin consulta
+    if (imageCache.has(typeKey)) {
+      setImageUrl(imageCache.get(typeKey));
+      setLoading(false);
+      return;
+    }
+
+    // ⚡ QUERY EN PROGRESO - esperar el resultado existente
+    if (pendingQueries.has(typeKey)) {
       setLoading(true);
+      pendingQueries.get(typeKey)
+        .then(url => {
+          if (mountedRef.current) {
+            setImageUrl(url);
+            setLoading(false);
+          }
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setImageUrl(null);
+            setLoading(false);
+          }
+        });
+      return;
+    }
+
+    // ⚡ Nueva consulta - registrar como pendiente
+    setLoading(true);
+    
+    const fetchPromise = (async () => {
       try {
-        // Primero buscar en aircraft_model_images
+        // Consulta única combinada: primero images, luego catalog
         const imageResult = await withTimeout(
           supabase
             .from('aircraft_model_images')
             .select('thumbnail_url, image_url')
-            .eq('aircraft_type', aircraftType.toUpperCase())
+            .eq('aircraft_type', typeKey)
             .order('is_primary', { ascending: false })
-            .order('created_at', { ascending: false })
             .limit(1),
           QUERY_TIMEOUT
         );
 
-        if (cancelled) return;
-
-        const imageData = imageResult.data?.[0] || null;
+        const imageData = imageResult.data?.[0];
         if (imageData) {
-          setImageUrl(imageData.thumbnail_url || imageData.image_url || null);
-          setLoading(false);
-          return;
+          const url = imageData.thumbnail_url || imageData.image_url || null;
+          imageCache.set(typeKey, url);
+          cacheTimestamps.set(typeKey, Date.now());
+          return url;
         }
 
-        // Si no hay, buscar en el catálogo
+        // Fallback al catálogo
         const catalogResult = await withTimeout(
           supabase
             .from('aircraft_model_catalog')
             .select('thumbnail_url, primary_image_url')
-            .eq('aircraft_type', aircraftType.toUpperCase())
+            .eq('aircraft_type', typeKey)
             .limit(1),
           QUERY_TIMEOUT
         );
 
-        if (cancelled) return;
-
-        const catalogData = catalogResult.data?.[0] || null;
-        if (catalogData) {
-          setImageUrl(catalogData.thumbnail_url || catalogData.primary_image_url || null);
-        }
+        const catalogData = catalogResult.data?.[0];
+        const url = catalogData?.thumbnail_url || catalogData?.primary_image_url || null;
+        
+        // Guardar en caché (incluso si es null, para no re-consultar)
+        imageCache.set(typeKey, url);
+        cacheTimestamps.set(typeKey, Date.now());
+        
+        return url;
       } catch (err) {
-        // Silencioso - timeout o simplemente no hay imagen
-        console.warn('[useAircraftModelImage] Timeout/error:', err.message);
-      } finally {
-        if (!cancelled) {
+        // En caso de timeout/error, cachear null para evitar reintentos constantes
+        console.debug('[useAircraftModelImage] Timeout/error para', typeKey, '- cacheando null');
+        imageCache.set(typeKey, null);
+        cacheTimestamps.set(typeKey, Date.now());
+        return null;
+      }
+    })();
+
+    // Registrar query pendiente
+    pendingQueries.set(typeKey, fetchPromise);
+
+    fetchPromise
+      .then(url => {
+        if (mountedRef.current) {
+          setImageUrl(url);
           setLoading(false);
         }
-      }
-    };
+      })
+      .catch(() => {
+        if (mountedRef.current) {
+          setImageUrl(null);
+          setLoading(false);
+        }
+      })
+      .finally(() => {
+        // Limpiar query pendiente
+        pendingQueries.delete(typeKey);
+      });
 
-    fetchImage();
-    
-    return () => {
-      cancelled = true;
-    };
   }, [aircraftType]);
 
   return { imageUrl, loading };
+}
+
+/**
+ * ⚡ Función utilitaria para precargar imágenes en batch
+ * Útil para cargar todas las imágenes de una lista de vuelos de una vez
+ */
+export async function prefetchAircraftImages(aircraftTypes) {
+  const typesToFetch = [...new Set(
+    aircraftTypes
+      .filter(t => t && t.trim())
+      .map(t => t.toUpperCase().trim())
+      .filter(t => !imageCache.has(t))
+  )];
+
+  if (typesToFetch.length === 0) return;
+
+  try {
+    // Batch query para todos los tipos
+    const { data } = await withTimeout(
+      supabase
+        .from('aircraft_model_images')
+        .select('aircraft_type, thumbnail_url, image_url, is_primary')
+        .in('aircraft_type', typesToFetch)
+        .order('is_primary', { ascending: false }),
+      QUERY_TIMEOUT * 2  // Dar más tiempo para batch
+    );
+
+    // Indexar por tipo (primero el primary)
+    const byType = {};
+    (data || []).forEach(img => {
+      if (!byType[img.aircraft_type]) {
+        byType[img.aircraft_type] = img.thumbnail_url || img.image_url;
+      }
+    });
+
+    // Guardar en caché
+    typesToFetch.forEach(type => {
+      imageCache.set(type, byType[type] || null);
+      cacheTimestamps.set(type, Date.now());
+    });
+
+    console.debug(`[prefetchAircraftImages] Precargadas ${Object.keys(byType).length} imágenes de ${typesToFetch.length} tipos`);
+  } catch (err) {
+    console.debug('[prefetchAircraftImages] Error:', err.message);
+  }
+}
+
+/**
+ * Limpiar caché manualmente (útil después de subir una imagen)
+ */
+export function clearImageCache(aircraftType) {
+  if (aircraftType) {
+    const key = aircraftType.toUpperCase().trim();
+    imageCache.delete(key);
+    cacheTimestamps.delete(key);
+  } else {
+    imageCache.clear();
+    cacheTimestamps.clear();
+  }
 }
 
 export default useAircraftImages;

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<body>
+<svg width="200" height="200" viewBox="0 0 100 100">
+  <!-- Main body (fuselage) - made horizontal and more rounded -->
+  <rect x="20" y="45" width="50" height="10" fill="#333" rx="10" ry="5" />
+  
+  <!-- Tail boom -->
+  <rect x="70" y="47.5" width="20" height="5" fill="#333" rx="5" ry="2.5" />
+  
+  <!-- Cabin window (replaced red circle with blue for glass effect) -->
+  <circle cx="30" cy="50" r="5" fill="#00aaff" opacity="0.7" />
+  
+  <!-- Main helices group (moved to top of body) -->
+  <g id="helices">
+    <line x1="5" y1="50" x2="85" y2="50" stroke="black" stroke-width="4" stroke-linecap="round"/>
+    <line x1="45" y1="10" x2="45" y2="90" stroke="black" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="45" cy="50" r="3" fill="#555" />
+  </g>
+  
+  <!-- Tail helices group (added small rotor) -->
+  <g id="tail_helices">
+    <line x1="85" y1="50" x2="95" y2="50" stroke="black" stroke-width="2" stroke-linecap="round"/>
+    <line x1="90" y1="45" x2="90" y2="55" stroke="black" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="90" cy="50" r="1.5" fill="#555" />
+  </g>
+  
+  <!-- Landing skids (simple addition for realism) -->
+  <rect x="25" y="55" width="10" height="2" fill="#222" rx="1" />
+  <rect x="55" y="55" width="10" height="2" fill="#222" rx="1" />
+</svg>
+<style>
+  #helices {
+    transform-origin: 45px 50px;
+    animation: girar 0.5s linear infinite; /* Slowed down a bit for better visibility */
+  }
+  #tail_helices {
+    transform-origin: 90px 50px;
+    animation: girar 0.2s linear infinite; /* Faster for tail rotor */
+  }
+  @keyframes girar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+</style>
+</body>
+</html>
