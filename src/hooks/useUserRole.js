@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 👤 Hook para obtener el rol y permisos del usuario actual
- * Obtiene el rol desde user_profiles y permisos desde role_permissions
+ * Optimizado: usa RealtimeManager centralizado
  */
 export function useUserRole() {
   const [userRole, setUserRole] = useState(null);
@@ -11,33 +12,7 @@ export function useUserRole() {
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
 
-  useEffect(() => {
-    loadUserRole();
-
-    // Escuchar cambios de autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadUserRole();
-    });
-
-    // Escuchar cambios en role_permissions (cuando admin edita permisos)
-    const rolePermissionsChannel = supabase
-      .channel('role_permissions_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'role_permissions' },
-        (payload) => {
-          console.log('🔄 Permisos actualizados en BD:', payload);
-          loadUserRole(); // Recargar permisos
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-      rolePermissionsChannel.unsubscribe();
-    };
-  }, []);
-
-  const loadUserRole = async () => {
+  const loadUserRole = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
@@ -49,7 +24,6 @@ export function useUserRole() {
         return;
       }
 
-      // Obtener perfil del usuario
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('id, role, nombre, apellido, cargo, organizacion')
@@ -65,8 +39,6 @@ export function useUserRole() {
         const role = profile?.role || 'viewer';
         setUserRole(role);
         setUserProfile(profile);
-
-        // Cargar permisos del rol
         await loadRolePermissions(role);
       }
     } catch (err) {
@@ -77,7 +49,7 @@ export function useUserRole() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const loadRolePermissions = async (role) => {
     try {
@@ -89,12 +61,10 @@ export function useUserRole() {
 
       if (error && error.code !== 'PGRST116') {
         console.warn('⚠️ Error cargando permisos:', error);
-        // Usar permisos por defecto según el rol
         setPermissions(getDefaultPermissions(role));
       } else if (data) {
         setPermissions(data.permissions || {});
       } else {
-        // Si no existe registro, usar permisos por defecto
         setPermissions(getDefaultPermissions(role));
       }
     } catch (err) {
@@ -133,7 +103,7 @@ export function useUserRole() {
         create_templates: false,
         manage_templates: false,
         manage_users: false,
-        access_settings: true  // ✅ Colaboradores pueden acceder a configuración básica
+        access_settings: true
       },
       analyst: {
         view_entities: true,
@@ -148,7 +118,7 @@ export function useUserRole() {
         create_templates: false,
         manage_templates: false,
         manage_users: false,
-        access_settings: true  // ✅ Analistas también pueden acceder a configuración
+        access_settings: true
       },
       viewer: {
         view_entities: true,
@@ -169,17 +139,34 @@ export function useUserRole() {
     return defaults[role] || defaults.viewer;
   };
 
-  // Funciones helper para verificar permisos específicos
+  useEffect(() => {
+    loadUserRole();
+
+    // Escuchar cambios de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      loadUserRole();
+    });
+
+    // 🔄 Suscripción centralizada para role_permissions
+    const unsubscribe = realtimeManager.subscribe('role_permissions', () => {
+      console.log('🔄 Permisos actualizados en BD');
+      loadUserRole();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      unsubscribe();
+    };
+  }, [loadUserRole]);
+
   const hasPermission = (permissionKey) => {
     return permissions[permissionKey] === true;
   };
 
-  // Funciones helper basadas en rol (retrocompatibilidad)
   const isAdmin = () => userRole === 'admin';
   const isCollaborator = () => userRole === 'operator' || userRole === 'analyst' || userRole === 'admin';
   const isViewer = () => userRole === 'viewer';
 
-  // Funciones helper basadas en permisos
   const canEdit = () => hasPermission('edit_entities');
   const canCreate = () => hasPermission('create_entities');
   const canDelete = () => hasPermission('delete_entities');
@@ -196,11 +183,9 @@ export function useUserRole() {
     permissions,
     userProfile,
     loading,
-    // Funciones basadas en rol
     isAdmin,
     isCollaborator,
     isViewer,
-    // Funciones basadas en permisos específicos
     hasPermission,
     canEdit,
     canCreate,
@@ -215,4 +200,3 @@ export function useUserRole() {
     refresh: loadUserRole
   };
 }
-

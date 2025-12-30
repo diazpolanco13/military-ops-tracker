@@ -25,11 +25,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
   realtime: {
     params: {
-      eventsPerSecond: 10, // Throttle para no saturar
+      eventsPerSecond: 5, // REDUCIDO de 10 a 5 para evitar saturación
     },
+    // Reconexión automática con backoff
+    timeout: 30000, // 30 segundos de timeout
+  },
+  global: {
+    headers: {
+      'x-client-info': 'sae-radar/2.0',
+    },
+  },
+  db: {
+    schema: 'public',
   },
 });
 
@@ -46,3 +57,57 @@ export async function testConnection() {
   }
 }
 
+// 🔄 Monitor de estado de conexión
+let connectionStatus = 'unknown';
+let reconnectTimer = null;
+
+export function getConnectionStatus() {
+  return connectionStatus;
+}
+
+// Verificar conexión periódicamente y reconectar si es necesario
+export function startConnectionMonitor(onStatusChange) {
+  const checkConnection = async () => {
+    try {
+      const { error } = await supabase.from('entities').select('id', { count: 'exact', head: true });
+      
+      if (error) {
+        if (connectionStatus !== 'disconnected') {
+          connectionStatus = 'disconnected';
+          console.warn('⚠️ Conexión perdida con Supabase');
+          onStatusChange?.('disconnected');
+        }
+      } else {
+        if (connectionStatus !== 'connected') {
+          connectionStatus = 'connected';
+          console.log('✅ Conexión restaurada con Supabase');
+          onStatusChange?.('connected');
+        }
+      }
+    } catch (err) {
+      if (connectionStatus !== 'error') {
+        connectionStatus = 'error';
+        console.error('❌ Error de conexión:', err.message);
+        onStatusChange?.('error');
+      }
+    }
+  };
+
+  // Verificar cada 30 segundos
+  checkConnection();
+  reconnectTimer = setInterval(checkConnection, 30000);
+
+  return () => {
+    if (reconnectTimer) {
+      clearInterval(reconnectTimer);
+    }
+  };
+}
+
+// Exponer para debug
+if (typeof window !== 'undefined') {
+  window.supabaseStatus = () => ({
+    connectionStatus,
+    url: supabaseUrl,
+  });
+}

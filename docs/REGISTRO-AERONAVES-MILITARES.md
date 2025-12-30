@@ -1,7 +1,7 @@
 # Sistema de Registro de Aeronaves Militares del Caribe
 
 > **Estado**: ✅ MVP en Producción (Dic 2025)  
-> **Última actualización**: 29 de diciembre de 2025
+> **Última actualización**: 30 de diciembre de 2025
 
 ## Índice
 
@@ -955,6 +955,15 @@ docs/
 
 ## Changelog
 
+### V16 (2025-12-30)
+- ✅ **RealtimeManager**: Nuevo singleton centralizado para gestión de canales Supabase
+- ✅ **Optimización de conexiones**: De 9 canales duplicados a 1-4 canales únicos por tabla
+- ✅ **Eliminado polling agresivo**: Removido polling cada 5s en useHiddenCount y useArchivedCount
+- ✅ **Throttling de eventos**: Mínimo 500ms entre notificaciones por tabla
+- ✅ **Reconexión automática**: Backoff exponencial cuando se pierde conexión
+- ✅ **Hooks actualizados**: useEntities, useEvents, useHiddenEntities, useArchivedEntities, useUserRole, useIncursionStats, EventsContext
+- ✅ **Archivo nuevo**: `src/lib/realtimeManager.js`
+
 ### V15 (2025-12-29)
 - ✅ **Historial de vuelos estilo FR24**: Tabla agrupada por fecha con estadísticas
 - ✅ **Trail en mapa Mapbox**: Línea del recorrido con marcadores inicio/fin
@@ -1012,7 +1021,9 @@ src/
 │       ├── FlightDetailsPanel.jsx      # Preview mejorado
 │       └── FlightRadarPanel.jsx        # Lista con imágenes
 ├── lib/
-│   └── maplibre.js                     # Estilos Mapbox (OUTDOORS)
+│   ├── maplibre.js                     # Estilos Mapbox (OUTDOORS)
+│   ├── supabase.js                     # Cliente Supabase (optimizado)
+│   └── realtimeManager.js              # ✨ NUEVO: Gestión centralizada de canales Realtime
 └── services/
     └── flightRadarService.js           # Servicio FR24
 

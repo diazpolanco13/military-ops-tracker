@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 🫥 Hook para gestionar entidades ocultas
- * Obtiene, muestra y gestiona entidades con is_visible = false
+ * Optimizado: usa RealtimeManager centralizado
  */
 export function useHiddenEntities() {
   const [hiddenEntities, setHiddenEntities] = useState([]);
@@ -11,19 +12,18 @@ export function useHiddenEntities() {
   const [error, setError] = useState(null);
 
   // 📡 Función para cargar entidades ocultas
-  const fetchHiddenEntities = async (silent = false) => {
+  const fetchHiddenEntities = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       
       const { data, error } = await supabase
         .from('entities')
         .select('*')
-        .eq('is_visible', false) // Solo ocultas
-        .is('archived_at', null) // No archivadas
+        .eq('is_visible', false)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
 
       setHiddenEntities(data || []);
       setError(null);
@@ -33,7 +33,7 @@ export function useHiddenEntities() {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   // 🔄 Mostrar una entidad oculta
   const showEntity = async (entityId) => {
@@ -45,10 +45,8 @@ export function useHiddenEntities() {
 
       if (error) throw error;
 
-      // Actualizar estado local
       setHiddenEntities(prev => prev.filter(entity => entity.id !== entityId));
       
-      // 🔄 Notificar al mapa que se actualice
       if (window.refetchEntities) {
         window.refetchEntities();
       }
@@ -71,10 +69,8 @@ export function useHiddenEntities() {
 
       if (error) throw error;
 
-      // Limpiar estado local
       setHiddenEntities([]);
       
-      // 🔄 Notificar al mapa que se actualice
       if (window.refetchEntities) {
         window.refetchEntities();
       }
@@ -93,13 +89,12 @@ export function useHiddenEntities() {
         .from('entities')
         .update({ 
           archived_at: new Date().toISOString(),
-          is_visible: false // Mantener oculta
+          is_visible: false
         })
         .eq('id', entityId);
 
       if (error) throw error;
 
-      // Remover de la lista de ocultas
       setHiddenEntities(prev => prev.filter(entity => entity.id !== entityId));
       
       return { success: true };
@@ -119,7 +114,6 @@ export function useHiddenEntities() {
 
       if (error) throw error;
 
-      // Remover de la lista de ocultas
       setHiddenEntities(prev => prev.filter(entity => entity.id !== entityId));
       
       return { success: true };
@@ -132,54 +126,35 @@ export function useHiddenEntities() {
   useEffect(() => {
     fetchHiddenEntities();
 
-    // 🔄 Suscripción a cambios en tiempo real
-    const subscription = supabase
-      .channel('hidden_entities_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'entities',
-          filter: 'is_visible=eq.false',
-        },
-        (payload) => {
-          console.log('🔄 Cambio en entidades ocultas:', payload);
-          
-          if (payload.eventType === 'INSERT') {
-            // Nueva entidad oculta
-            if (payload.new.is_visible === false && !payload.new.archived_at) {
-              setHiddenEntities(prev => [payload.new, ...prev]);
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            // Entidad actualizada
-            if (payload.new.is_visible === true || payload.new.archived_at) {
-              // Ya no está oculta, remover de la lista
-              setHiddenEntities(prev => prev.filter(entity => entity.id !== payload.new.id));
-            } else if (payload.new.is_visible === false && !payload.new.archived_at) {
-              // Ahora está oculta, agregar a la lista
-              setHiddenEntities(prev => {
-                const exists = prev.find(entity => entity.id === payload.new.id);
-                if (!exists) {
-                  return [payload.new, ...prev];
-                }
-                return prev.map(entity => 
-                  entity.id === payload.new.id ? payload.new : entity
-                );
-              });
-            }
-          } else if (payload.eventType === 'DELETE') {
-            // Entidad eliminada
-            setHiddenEntities(prev => prev.filter(entity => entity.id !== payload.old.id));
-          }
+    // 🔄 Suscripción centralizada
+    const unsubscribe = realtimeManager.subscribe('entities', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        if (payload.new.is_visible === false && !payload.new.archived_at) {
+          setHiddenEntities(prev => [payload.new, ...prev]);
         }
-      )
-      .subscribe();
+      } else if (payload.eventType === 'UPDATE') {
+        if (payload.new.is_visible === true || payload.new.archived_at) {
+          setHiddenEntities(prev => prev.filter(entity => entity.id !== payload.new.id));
+        } else if (payload.new.is_visible === false && !payload.new.archived_at) {
+          setHiddenEntities(prev => {
+            const exists = prev.find(entity => entity.id === payload.new.id);
+            if (!exists) {
+              return [payload.new, ...prev];
+            }
+            return prev.map(entity => 
+              entity.id === payload.new.id ? payload.new : entity
+            );
+          });
+        }
+      } else if (payload.eventType === 'DELETE') {
+        setHiddenEntities(prev => prev.filter(entity => entity.id !== payload.old.id));
+      }
+    });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [fetchHiddenEntities]);
 
   // 📊 Obtener estadísticas por tipo
   const getEntityCountsByType = () => {

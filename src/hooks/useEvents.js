@@ -1,34 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * Hook para gestionar eventos del timeline
+ * Optimizado: usa RealtimeManager centralizado
  */
 export function useEvents() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Cargar eventos
-  useEffect(() => {
-    loadEvents();
-
-    // Suscribirse a cambios en tiempo real
-    const subscription = supabase
-      .channel('events_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'events' },
-        () => {
-          loadEvents();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('events')
@@ -43,15 +26,33 @@ export function useEvents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+
+    // 🔄 Suscripción centralizada para eventos
+    const unsubscribe = realtimeManager.subscribe('events', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setEvents(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setEvents(prev => prev.map(e => e.id === payload.new.id ? payload.new : e));
+      } else if (payload.eventType === 'DELETE') {
+        setEvents(prev => prev.filter(e => e.id !== payload.old.id));
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [loadEvents]);
 
   // Crear evento
   const createEvent = async (_, eventData) => {
     try {
-      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
       let eventDate = eventData.event_date;
       if (eventDate && eventDate.length === 16) {
-        eventDate = eventDate + ':00'; // Agregar segundos
+        eventDate = eventDate + ':00';
       }
       
       const { data, error } = await supabase
@@ -66,7 +67,7 @@ export function useEvents() {
 
       if (error) throw error;
 
-      setEvents(prev => [data, ...prev]);
+      // El realtime ya actualizará el estado
       return { success: true, data };
     } catch (error) {
       console.error('Error creando evento:', error);
@@ -77,13 +78,11 @@ export function useEvents() {
   // Actualizar evento
   const updateEvent = async (id, eventData) => {
     try {
-      // Limpiar datos: solo campos actualizables
       const { id: _, created_at, created_by, ...cleanData } = eventData;
       
-      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
       let eventDate = cleanData.event_date;
       if (eventDate && eventDate.length === 16) {
-        eventDate = eventDate + ':00'; // Agregar segundos
+        eventDate = eventDate + ':00';
       }
       
       const { data, error } = await supabase
@@ -99,12 +98,6 @@ export function useEvents() {
 
       if (error) throw error;
 
-      if (data) {
-        setEvents(prev => 
-          prev.map(event => event.id === id ? data : event)
-        );
-      }
-      
       return { success: true, data };
     } catch (error) {
       console.error('Error actualizando evento:', error);
@@ -122,7 +115,6 @@ export function useEvents() {
 
       if (error) throw error;
 
-      setEvents(prev => prev.filter(event => event.id !== id));
       return { success: true };
     } catch (error) {
       console.error('Error eliminando evento:', error);
@@ -139,4 +131,3 @@ export function useEvents() {
     refresh: loadEvents
   };
 }
-

@@ -1,10 +1,10 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * Context global para eventos del timeline
- * Permite que todos los componentes compartan el mismo estado de eventos
- * y reciban actualizaciones en tiempo real
+ * Optimizado: usa RealtimeManager centralizado
  */
 const EventsContext = createContext();
 
@@ -13,7 +13,7 @@ export const EventsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Cargar eventos
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('events')
@@ -28,36 +28,35 @@ export const EventsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Cargar eventos al inicio
   useEffect(() => {
     loadEvents();
 
-    // Suscribirse a cambios en tiempo real
-    const subscription = supabase
-      .channel('events_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'events' },
-        (payload) => {
-          console.log('🔄 Cambio detectado en eventos:', payload);
-          loadEvents(); // Recargar todos los eventos
-        }
-      )
-      .subscribe();
+    // 🔄 Suscripción centralizada
+    const unsubscribe = realtimeManager.subscribe('events', (payload) => {
+      console.log('🔄 Cambio detectado en eventos:', payload.eventType);
+      if (payload.eventType === 'INSERT') {
+        setEvents(prev => [payload.new, ...prev]);
+      } else if (payload.eventType === 'UPDATE') {
+        setEvents(prev => prev.map(e => e.id === payload.new.id ? payload.new : e));
+      } else if (payload.eventType === 'DELETE') {
+        setEvents(prev => prev.filter(e => e.id !== payload.old.id));
+      }
+    });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [loadEvents]);
 
   // Crear evento
   const createEvent = async (_, eventData) => {
     try {
-      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
       let eventDate = eventData.event_date;
       if (eventDate && eventDate.length === 16) {
-        eventDate = eventDate + ':00'; // Agregar segundos
+        eventDate = eventDate + ':00';
       }
       
       const { data, error } = await supabase
@@ -72,9 +71,8 @@ export const EventsProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Actualizar estado local inmediatamente (optimistic update)
-      setEvents(prev => [data, ...prev]);
-      console.log('✅ Evento creado localmente:', data);
+      // Realtime ya actualizará el estado
+      console.log('✅ Evento creado:', data);
       
       return { success: true, data };
     } catch (error) {
@@ -86,13 +84,11 @@ export const EventsProvider = ({ children }) => {
   // Actualizar evento
   const updateEvent = async (id, eventData) => {
     try {
-      // Limpiar datos: solo campos actualizables
       const { id: _, created_at, created_by, ...cleanData } = eventData;
       
-      // Asegurar que event_date tenga segundos (:00) para formato completo ISO
       let eventDate = cleanData.event_date;
       if (eventDate && eventDate.length === 16) {
-        eventDate = eventDate + ':00'; // Agregar segundos
+        eventDate = eventDate + ':00';
       }
       
       const { data, error } = await supabase
@@ -108,13 +104,7 @@ export const EventsProvider = ({ children }) => {
 
       if (error) throw error;
 
-      if (data) {
-        // Actualizar estado local inmediatamente (optimistic update)
-        setEvents(prev => 
-          prev.map(event => event.id === id ? data : event)
-        );
-        console.log('✅ Evento actualizado localmente:', data);
-      }
+      console.log('✅ Evento actualizado:', data);
       
       return { success: true, data };
     } catch (error) {
@@ -133,9 +123,7 @@ export const EventsProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // Actualizar estado local inmediatamente (optimistic update)
-      setEvents(prev => prev.filter(event => event.id !== id));
-      console.log('✅ Evento eliminado localmente:', id);
+      console.log('✅ Evento eliminado:', id);
       
       return { success: true };
     } catch (error) {
@@ -168,4 +156,3 @@ export const useEventsContext = () => {
   }
   return context;
 };
-

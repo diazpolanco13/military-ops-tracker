@@ -1,26 +1,25 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { useEntityActions } from './useEntityActions';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 🗃️ Hook para gestionar entidades archivadas
- * Permite restaurar y eliminar permanentemente entidades archivadas
+ * Optimizado: usa RealtimeManager centralizado
  */
 export function useArchivedEntities() {
   const [archivedEntities, setArchivedEntities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { deleteEntity } = useEntityActions();
 
   // 📡 Función para cargar entidades archivadas
-  const fetchArchivedEntities = async (silent = false) => {
+  const fetchArchivedEntities = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const { data, error } = await supabase
         .from('entities')
         .select('*')
-        .not('archived_at', 'is', null) // Solo archivadas
-        .order('archived_at', { ascending: false }); // Más recientes primero
+        .not('archived_at', 'is', null)
+        .order('archived_at', { ascending: false });
 
       if (error) throw error;
 
@@ -32,35 +31,26 @@ export function useArchivedEntities() {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchArchivedEntities();
 
-    // 🔄 Suscripción a cambios en tiempo real
-    const subscription = supabase
-      .channel('archived_entities_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'entities',
-        },
-        (payload) => {
-          console.log('🔄 Cambio detectado en entidades archivadas:', payload);
-          // Actualizar después de cualquier cambio
-          setTimeout(() => {
-            fetchArchivedEntities(true); // Silent para no mostrar loading
-          }, 100);
-        }
-      )
-      .subscribe();
+    // 🔄 Suscripción centralizada
+    const unsubscribe = realtimeManager.subscribe('entities', (payload) => {
+      // Solo recargar si el cambio afecta archivado
+      if (
+        payload.new?.archived_at !== payload.old?.archived_at ||
+        payload.eventType === 'DELETE'
+      ) {
+        fetchArchivedEntities(true);
+      }
+    });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [fetchArchivedEntities]);
 
   // 🔄 Restaurar una entidad archivada
   const restoreEntity = async (entityId) => {
@@ -69,16 +59,14 @@ export function useArchivedEntities() {
         .from('entities')
         .update({ 
           archived_at: null,
-          is_visible: true // Hacer visible al restaurar
+          is_visible: true
         })
         .eq('id', entityId);
 
       if (error) throw error;
 
-      // Actualizar estado local
       setArchivedEntities(prev => prev.filter(entity => entity.id !== entityId));
       
-      // 🔄 Notificar al mapa que se actualice
       if (window.refetchEntities) {
         window.refetchEntities();
       }
@@ -97,16 +85,14 @@ export function useArchivedEntities() {
         .from('entities')
         .update({ 
           archived_at: null,
-          is_visible: true // Hacer visibles al restaurar
+          is_visible: true
         })
         .not('archived_at', 'is', null);
 
       if (error) throw error;
 
-      // Limpiar estado local
       setArchivedEntities([]);
       
-      // 🔄 Notificar al mapa que se actualice
       if (window.refetchEntities) {
         window.refetchEntities();
       }
@@ -128,7 +114,6 @@ export function useArchivedEntities() {
 
       if (error) throw error;
 
-      // Actualizar estado local
       setArchivedEntities(prev => prev.filter(entity => entity.id !== entityId));
       
       return { success: true };

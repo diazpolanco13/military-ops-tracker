@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 🔢 Hook para obtener el conteo de entidades archivadas
- * Optimizado para mostrar en navbar sin cargar todas las entidades
+ * Optimizado: usa RealtimeManager centralizado sin polling agresivo
  */
 export function useArchivedCount() {
   const [archivedCount, setArchivedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // 📡 Función para obtener solo el conteo
-  const fetchArchivedCount = async () => {
+  const fetchArchivedCount = useCallback(async () => {
     try {
       const { count, error } = await supabase
         .from('entities')
         .select('*', { count: 'exact', head: true })
-        .not('archived_at', 'is', null); // Solo archivadas
+        .not('archived_at', 'is', null);
 
       if (error) throw error;
-
       setArchivedCount(count || 0);
     } catch (err) {
       console.error('❌ Error al obtener conteo de archivadas:', err);
@@ -26,40 +26,29 @@ export function useArchivedCount() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    // Fetch inicial
     fetchArchivedCount();
 
-    // 🔄 Suscripción a cambios en tiempo real
-    const subscription = supabase
-      .channel('archived_count_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'entities',
-        },
-        (payload) => {
-          // Actualizar conteo después de cualquier cambio
-          setTimeout(() => {
-            fetchArchivedCount();
-          }, 100);
-        }
-      )
-      .subscribe();
+    // 🔄 Suscripción centralizada (sin crear canal duplicado)
+    const unsubscribe = realtimeManager.subscribe('entities', (payload) => {
+      // Solo actualizar si el cambio afecta archivado
+      if (
+        payload.new?.archived_at !== payload.old?.archived_at ||
+        payload.eventType === 'DELETE'
+      ) {
+        fetchArchivedCount();
+      }
+    });
 
-    // 🔄 Actualización periódica como respaldo (cada 5 segundos)
-    const interval = setInterval(() => {
-      fetchArchivedCount();
-    }, 5000);
+    // ELIMINADO: El polling cada 5 segundos que saturaba la API
 
     return () => {
-      subscription.unsubscribe();
-      clearInterval(interval);
+      unsubscribe();
     };
-  }, []);
+  }, [fetchArchivedCount]);
 
   return {
     archivedCount,

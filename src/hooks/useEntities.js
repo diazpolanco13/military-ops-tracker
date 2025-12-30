@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { realtimeManager } from '../lib/realtimeManager';
 
 /**
  * 🎯 Hook para obtener entidades militares desde Supabase
- * Con suscripción en tiempo real
+ * Optimizado: usa RealtimeManager centralizado para evitar canales duplicados
  */
 export function useEntities() {
   const [entities, setEntities] = useState([]);
@@ -11,14 +12,14 @@ export function useEntities() {
   const [error, setError] = useState(null);
 
   // 📡 Función para cargar entidades (extraída para reutilizar)
-  const fetchEntities = async (silent = false) => {
+  const fetchEntities = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const { data, error } = await supabase
         .from('entities')
         .select('*')
-        .eq('is_visible', true) // Solo visibles
-        .is('archived_at', null) // Solo no archivadas
+        .eq('is_visible', true)
+        .is('archived_at', null)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -31,57 +32,54 @@ export function useEntities() {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchEntities();
 
-    // 🔄 Suscripción a cambios en tiempo real
-    const subscription = supabase
-      .channel('entities_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'entities',
-        },
-        (payload) => {
-          console.log('🔄 Cambio detectado:', payload);
+    // 🔄 Suscripción centralizada usando RealtimeManager
+    const unsubscribe = realtimeManager.subscribe('entities', (payload) => {
+      console.log('🔄 Cambio detectado:', payload.eventType);
 
-          if (payload.eventType === 'INSERT') {
-            setEntities((prev) => [...prev, payload.new]);
-          } else if (payload.eventType === 'UPDATE') {
-            setEntities((prev) =>
-              prev.map((entity) =>
-                entity.id === payload.new.id ? payload.new : entity
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setEntities((prev) =>
-              prev.filter((entity) => entity.id !== payload.old.id)
-            );
-          }
+      if (payload.eventType === 'INSERT') {
+        // Solo agregar si es visible y no archivada
+        if (payload.new?.is_visible && !payload.new?.archived_at) {
+          setEntities((prev) => [...prev, payload.new]);
         }
-      )
-      .subscribe();
+      } else if (payload.eventType === 'UPDATE') {
+        setEntities((prev) => {
+          const updated = payload.new;
+          // Si dejó de ser visible o fue archivada, removerla
+          if (!updated.is_visible || updated.archived_at) {
+            return prev.filter((e) => e.id !== updated.id);
+          }
+          // Si ya existía, actualizarla
+          const exists = prev.some((e) => e.id === updated.id);
+          if (exists) {
+            return prev.map((e) => (e.id === updated.id ? updated : e));
+          }
+          // Si no existía pero ahora es visible, agregarla
+          return [...prev, updated];
+        });
+      } else if (payload.eventType === 'DELETE') {
+        setEntities((prev) => prev.filter((e) => e.id !== payload.old.id));
+      }
+    });
 
-    // Cleanup
     return () => {
-      subscription.unsubscribe();
+      unsubscribe();
     };
-  }, []);
+  }, [fetchEntities]);
 
   // Función para agregar una entidad manualmente (sin refetch completo)
   const addEntity = (newEntity) => {
     setEntities((prev) => [...prev, newEntity]);
   };
 
-  // Función para remover una entidad del estado (cuando se oculta/archiva/elimina)
+  // Función para remover una entidad del estado
   const removeEntity = (entityId) => {
-    setEntities((prev) => prev.filter(e => e.id !== entityId));
+    setEntities((prev) => prev.filter((e) => e.id !== entityId));
   };
 
   return { entities, loading, error, refetch: fetchEntities, addEntity, removeEntity };
 }
-
