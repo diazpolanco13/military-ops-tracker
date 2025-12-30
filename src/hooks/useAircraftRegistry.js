@@ -10,7 +10,9 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
+
+const QUERY_TIMEOUT = 15000; // 15 segundos para listas grandes
 
 /**
  * Hook principal para el registro de aeronaves
@@ -315,72 +317,106 @@ export function useAircraftRegistry(options = {}) {
     }
   }, [fetchAircraft]);
 
-  // Cargar datos iniciales - solo cuando enabled cambia
+  // Cargar datos iniciales - solo cuando enabled cambia (con timeout)
   useEffect(() => {
-    if (enabled) {
-      // Ejecutar queries solo al montar/habilitar
-      const loadData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          // Fetch aircraft
-          const { data: aircraftData, error: aircraftError } = await supabase
+    if (!enabled) return;
+    
+    let cancelled = false;
+    
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch aircraft con timeout
+        const aircraftResult = await withTimeout(
+          supabase
             .from('military_aircraft_registry')
             .select('*')
-            .order('last_seen', { ascending: false });
-          
-          if (aircraftError) throw aircraftError;
+            .order('last_seen', { ascending: false }),
+          QUERY_TIMEOUT
+        );
+        
+        if (cancelled) return;
+        if (aircraftResult.error) throw aircraftResult.error;
+        
+        const aircraftData = aircraftResult.data || [];
 
-          // Obtener tipos únicos de aeronaves para buscar imágenes
-          const uniqueTypes = [...new Set(aircraftData?.map(a => a.aircraft_type).filter(Boolean))];
-          
-          // Cargar catálogo completo de modelos (incluyendo especificaciones)
-          let modelCatalog = {};
-          if (uniqueTypes.length > 0) {
-            const { data: catalogData } = await supabase
-              .from('aircraft_model_catalog')
-              .select('*')
-              .in('aircraft_type', uniqueTypes);
+        // Obtener tipos únicos de aeronaves para buscar imágenes
+        const uniqueTypes = [...new Set(aircraftData.map(a => a.aircraft_type).filter(Boolean))];
+        
+        // Cargar catálogo completo de modelos (con timeout)
+        let modelCatalog = {};
+        if (uniqueTypes.length > 0) {
+          try {
+            const catalogResult = await withTimeout(
+              supabase
+                .from('aircraft_model_catalog')
+                .select('*')
+                .in('aircraft_type', uniqueTypes),
+              QUERY_TIMEOUT
+            );
             
-            if (catalogData) {
-              catalogData.forEach(m => {
+            if (!cancelled && catalogResult.data) {
+              catalogResult.data.forEach(m => {
                 modelCatalog[m.aircraft_type] = m;
               });
             }
+          } catch (catalogErr) {
+            console.warn('[useAircraftRegistry] Catalog timeout:', catalogErr.message);
+            // Continuar sin catálogo
           }
+        }
 
-          // Asociar datos del catálogo a cada aeronave
-          const aircraftWithCatalog = (aircraftData || []).map(a => {
-            const catalogInfo = modelCatalog[a.aircraft_type] || null;
-            return {
-              ...a,
-              // Si aircraft_model es igual al código, usar el nombre completo del catálogo
-              aircraft_model: (a.aircraft_model === a.aircraft_type && catalogInfo) 
-                ? catalogInfo.aircraft_model 
-                : a.aircraft_model,
-              model: catalogInfo
-            };
-          });
+        if (cancelled) return;
 
-          // Mezclar última presencia por aeronave (batch)
-          const icaoList = (aircraftWithCatalog || []).map((r) => r.icao24).filter(Boolean);
-          let aircraftWithPresence = aircraftWithCatalog;
-          if (icaoList.length > 0) {
-            const { data: presenceRows } = await supabase
-              .from('aircraft_last_presence')
-              .select('*')
-              .in('icao24', icaoList);
-            aircraftWithPresence = mergeLastPresence(aircraftWithCatalog, presenceRows);
+        // Asociar datos del catálogo a cada aeronave
+        const aircraftWithCatalog = aircraftData.map(a => {
+          const catalogInfo = modelCatalog[a.aircraft_type] || null;
+          return {
+            ...a,
+            aircraft_model: (a.aircraft_model === a.aircraft_type && catalogInfo) 
+              ? catalogInfo.aircraft_model 
+              : a.aircraft_model,
+            model: catalogInfo
+          };
+        });
+
+        // Mezclar última presencia por aeronave (con timeout)
+        const icaoList = aircraftWithCatalog.map((r) => r.icao24).filter(Boolean);
+        let aircraftWithPresence = aircraftWithCatalog;
+        if (icaoList.length > 0) {
+          try {
+            const presenceResult = await withTimeout(
+              supabase
+                .from('aircraft_last_presence')
+                .select('*')
+                .in('icao24', icaoList),
+              QUERY_TIMEOUT
+            );
+            
+            if (!cancelled && presenceResult.data) {
+              aircraftWithPresence = mergeLastPresence(aircraftWithCatalog, presenceResult.data);
+            }
+          } catch (presenceErr) {
+            console.warn('[useAircraftRegistry] Presence timeout:', presenceErr.message);
+            // Continuar sin presencia
           }
+        }
 
-          setAircraft(aircraftWithPresence);
+        if (cancelled) return;
+        setAircraft(aircraftWithPresence);
 
-          // Fetch stats
-          const { data: statsData, error: statsError } = await supabase
-            .from('military_aircraft_registry')
-            .select('icao24, aircraft_type, probable_country, military_branch, total_incursions, is_new_today, first_seen_date');
+        // Fetch stats (sin bloquear si falla)
+        try {
+          const statsResult = await withTimeout(
+            supabase
+              .from('military_aircraft_registry')
+              .select('icao24, aircraft_type, probable_country, military_branch, total_incursions, is_new_today, first_seen_date'),
+            QUERY_TIMEOUT
+          );
           
-          if (!statsError && statsData) {
+          if (!cancelled && statsResult.data) {
+            const statsData = statsResult.data;
             const totalAircraft = statsData.length;
             const newToday = statsData.filter(a => a.is_new_today).length;
             const withIncursions = statsData.filter(a => a.total_incursions > 0).length;
@@ -391,17 +427,29 @@ export function useAircraftRegistry(options = {}) {
             }, {});
             setStats({ totalAircraft, newToday, withIncursions, byCountry });
           }
-        } catch (err) {
-          console.error('Error loading aircraft data:', err);
-          setError(err.message);
-        } finally {
+        } catch (statsErr) {
+          console.warn('[useAircraftRegistry] Stats timeout:', statsErr.message);
+        }
+      } catch (err) {
+        console.error('[useAircraftRegistry] Error loading data:', err);
+        if (!cancelled) {
+          setError(err.message?.includes('Timeout') 
+            ? 'Tiempo de espera agotado. La conexión es lenta.' 
+            : err.message);
+        }
+      } finally {
+        if (!cancelled) {
           setLoading(false);
         }
-      };
-      
-      loadData();
-    }
-  }, [enabled]); // Solo depende de enabled
+      }
+    };
+    
+    loadData();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, mergeLastPresence]);
 
   // Auto-refresh (deshabilitado por defecto)
   useEffect(() => {

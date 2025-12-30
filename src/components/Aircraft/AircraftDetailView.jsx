@@ -36,13 +36,18 @@ import {
   Users,
   Ruler,
   Zap,
-  Anchor
+  Anchor,
+  RefreshCw,
+  WifiOff
 } from 'lucide-react';
 import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
 import { useAircraftImages } from '../../hooks/useAircraftImages';
-import { supabase } from '../../lib/supabase';
+import { supabase, withTimeout } from '../../lib/supabase';
 import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
 import { getCountryByICAO24 } from '../../services/flightRadarService';
+
+// Timeout para consultas (10 segundos)
+const QUERY_TIMEOUT = 10000;
 
 /**
  * 🎖️ VISTA DE DETALLE DE AERONAVE (PANTALLA COMPLETA)
@@ -66,7 +71,7 @@ export default function AircraftDetailView({ aircraft, onClose }) {
 
   const { updateNotes, recalculateBase } = useAircraftRegistry();
   
-  // Cargar modelo del catálogo si no viene incluido
+  // Cargar modelo del catálogo si no viene incluido (con timeout)
   useEffect(() => {
     let cancelled = false;
     
@@ -75,20 +80,22 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     
     const loadModelFromCatalog = async () => {
       try {
-        // NOTA: no usamos `.single()` aquí porque si no existe el tipo en el catálogo,
-        // PostgREST responde 406 y ensucia la consola; con `limit(1)` recibimos 200 + [].
-        const { data, error } = await supabase
-          .from('aircraft_model_catalog')
-          .select('*')
-          .eq('aircraft_type', aircraft.aircraft_type)
-          .limit(1);
+        const result = await withTimeout(
+          supabase
+            .from('aircraft_model_catalog')
+            .select('*')
+            .eq('aircraft_type', aircraft.aircraft_type)
+            .limit(1),
+          QUERY_TIMEOUT
+        );
 
-        const row = data?.[0] || null;
-        if (!cancelled && !error && row) {
+        const row = result.data?.[0] || null;
+        if (!cancelled && !result.error && row) {
           setModelData(row);
         }
       } catch (err) {
-        // Silencioso - el modelo simplemente no está en el catálogo
+        // Silencioso - timeout o el modelo simplemente no está en el catálogo
+        console.warn('[AircraftDetailView] Model catalog timeout/error:', err.message);
       }
     };
     
@@ -99,7 +106,7 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     };
   }, [aircraft?.aircraft_type, modelData]);
 
-  // Cargar última ubicación (para mostrar último país detectado y coords en Identificación)
+  // Cargar última ubicación (con timeout)
   useEffect(() => {
     let cancelled = false;
 
@@ -110,19 +117,23 @@ export default function AircraftDetailView({ aircraft, onClose }) {
 
     const loadLastLocation = async () => {
       try {
-        const { data, error } = await supabase
-          .from('aircraft_location_history')
-          .select('callsign, latitude, longitude, country_code, country_name, detected_at, origin_icao, destination_icao')
-          .eq('icao24', aircraft.icao24.toUpperCase())
-          .order('detected_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const result = await withTimeout(
+          supabase
+            .from('aircraft_location_history')
+            .select('callsign, latitude, longitude, country_code, country_name, detected_at, origin_icao, destination_icao')
+            .eq('icao24', aircraft.icao24.toUpperCase())
+            .order('detected_at', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          QUERY_TIMEOUT
+        );
 
-        if (!cancelled && !error) {
-          setLastLocation(data || null);
+        if (!cancelled && !result.error) {
+          setLastLocation(result.data || null);
         }
       } catch (e) {
-        // silencioso: es solo UI
+        // Timeout o error - silencioso
+        console.warn('[AircraftDetailView] Last location timeout/error:', e.message);
         if (!cancelled) setLastLocation(null);
       }
     };
@@ -150,9 +161,8 @@ export default function AircraftDetailView({ aircraft, onClose }) {
     }
   }, [images.length, currentImageIndex]);
 
-  // Cargar historial cuando se selecciona la tab "history"
+  // Cargar historial cuando se selecciona la tab "history" (con timeout)
   useEffect(() => {
-    // Bandera local para este efecto
     let cancelled = false;
     
     if (activeTab !== 'history' || !aircraft?.icao24) {
@@ -164,29 +174,31 @@ export default function AircraftDetailView({ aircraft, onClose }) {
       setHistoryError(null);
       
       try {
-        const { data, error } = await supabase
-          .from('aircraft_location_history')
-          .select('*')
-          .eq('icao24', aircraft.icao24.toUpperCase())
-          .order('detected_at', { ascending: false })
-          .limit(50);
+        const result = await withTimeout(
+          supabase
+            .from('aircraft_location_history')
+            .select('*')
+            .eq('icao24', aircraft.icao24.toUpperCase())
+            .order('detected_at', { ascending: false })
+            .limit(50),
+          QUERY_TIMEOUT
+        );
         
         if (cancelled) return;
         
-        if (error) throw error;
+        if (result.error) throw result.error;
         
-        // Hacer geocoding de registros sin país (en background)
-        const recordsWithoutCountry = data?.filter(r => !r.country_code && r.latitude && r.longitude) || [];
+        const data = result.data || [];
+        
+        // Hacer geocoding de registros sin país (en background, sin bloquear)
+        const recordsWithoutCountry = data.filter(r => !r.country_code && r.latitude && r.longitude);
         
         if (recordsWithoutCountry.length > 0) {
           // Procesar en background sin bloquear la UI
-          batchGeocodeHistory(recordsWithoutCountry.slice(0, 10)) // Limitar a 10 por el rate limit
+          batchGeocodeHistory(recordsWithoutCountry.slice(0, 10))
             .then(geocoded => {
               if (!cancelled) {
-                // Actualizar la BD con los países detectados
                 updateHistoryWithCountries(geocoded);
-                
-                // Actualizar el estado local
                 const updatedHistory = data.map(h => {
                   const geocodedItem = geocoded.find(g => g.id === h.id);
                   if (geocodedItem?.country) {
@@ -204,11 +216,13 @@ export default function AircraftDetailView({ aircraft, onClose }) {
             .catch(console.error);
         }
         
-        setHistory(data || []);
+        setHistory(data);
       } catch (err) {
-        console.error('[AircraftDetailView] Error loading history:', err);
+        console.error('[AircraftDetailView] Error/timeout loading history:', err);
         if (!cancelled) {
-          setHistoryError(err.message);
+          setHistoryError(err.message?.includes('Timeout') 
+            ? 'Tiempo de espera agotado. Intenta de nuevo.' 
+            : err.message);
           setHistory([]);
         }
       } finally {

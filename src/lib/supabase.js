@@ -111,3 +111,66 @@ if (typeof window !== 'undefined') {
     url: supabaseUrl,
   });
 }
+
+/**
+ * 🕐 Helper para ejecutar consultas con timeout
+ * Evita que la app se cuelgue si Supabase no responde
+ * 
+ * @param {Promise} promise - La promesa a ejecutar
+ * @param {number} timeoutMs - Timeout en milisegundos (default: 10000)
+ * @returns {Promise} - La promesa con timeout
+ */
+export async function withTimeout(promise, timeoutMs = 10000) {
+  let timeoutId;
+  
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`Timeout: la operación tardó más de ${timeoutMs/1000}s`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
+/**
+ * 🔄 Wrapper para consultas Supabase con timeout y retry
+ * 
+ * @param {Function} queryFn - Función que retorna la promesa de Supabase
+ * @param {Object} options - Opciones
+ * @returns {Promise} - Resultado de la consulta
+ */
+export async function safeQuery(queryFn, options = {}) {
+  const { 
+    timeout = 10000, 
+    retries = 1,
+    onTimeout = null,
+    silent = false 
+  } = options;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const result = await withTimeout(queryFn(), timeout);
+      return result;
+    } catch (error) {
+      const isTimeout = error.message?.includes('Timeout');
+      
+      if (isTimeout && attempt < retries) {
+        if (!silent) console.warn(`⏳ Retry ${attempt + 1}/${retries} después de timeout...`);
+        continue;
+      }
+      
+      if (isTimeout && onTimeout) {
+        onTimeout(error);
+      }
+      
+      throw error;
+    }
+  }
+}

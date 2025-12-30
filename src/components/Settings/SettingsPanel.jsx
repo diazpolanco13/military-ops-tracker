@@ -1,4 +1,4 @@
-import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu, Radar, ClipboardList } from 'lucide-react';
+import { X, Settings, Layers, Eye, Zap, Tag, Monitor, Bot, Sliders, Map, Video, Cloud, CloudRain, Thermometer, Wind, Gauge, Users, Shield, Menu, Radar, ClipboardList, Activity } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getActiveWeatherLayers, saveActiveWeatherLayers, WEATHER_LAYERS } from '../Weather/WeatherLayers';
 import { useUserRole } from '../../hooks/useUserRole';
@@ -6,6 +6,7 @@ import UserManagement from '../Auth/UserManagement';
 import RolePermissionsEditor from './RolePermissionsEditor';
 import IncursionMonitorPanel from './IncursionMonitorPanel';
 import AuditSection from './AuditSection';
+import SystemHealthPanel from './SystemHealthPanel';
 
 /**
  * ⚙️ Panel de Configuración
@@ -154,6 +155,7 @@ export default function SettingsPanel({ onClose }) {
     { id: 'etiquetas', label: 'Etiquetas', icon: Tag, adminOnly: false },
     { id: 'mapa', label: 'Cámara Mapa', icon: Video, adminOnly: false },
     { id: 'incursiones', label: 'Monitor Incursiones', icon: Radar, adminOnly: true },
+    { id: 'sistema', label: 'Estado Sistema', icon: Activity, adminOnly: true },
     { id: 'usuarios', label: 'Usuarios', icon: Users, adminOnly: true },
     { id: 'permisos', label: 'Permisos', icon: Shield, adminOnly: true },
     { id: 'auditoria', label: 'Auditoría', icon: ClipboardList, adminOnly: true },
@@ -947,6 +949,13 @@ export default function SettingsPanel({ onClose }) {
           {/* TAB: Monitor de Incursiones */}
           {activeTab === 'incursiones' && (
             <IncursionMonitorPanel />
+          )}
+
+          {/* TAB: Estado del Sistema */}
+          {activeTab === 'sistema' && (
+            <div className="space-y-6">
+              <SystemHealthPanel />
+            </div>
           )}
 
           {/* TAB: Gestión de Usuarios */}

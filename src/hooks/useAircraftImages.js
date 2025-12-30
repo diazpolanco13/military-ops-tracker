@@ -8,7 +8,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
+
+const QUERY_TIMEOUT = 10000; // 10 segundos
 
 const BUCKET_NAME = 'entity-images';
 const AIRCRAFT_FOLDER = 'aircraft';
@@ -224,9 +226,8 @@ export function useAircraftImages(aircraftType = null) {
     }
   }, [fetchImages]);
 
-  // Cargar al montar si hay tipo
+  // Cargar al montar si hay tipo (con timeout)
   useEffect(() => {
-    // Bandera local para este efecto específico
     let cancelled = false;
     
     if (!aircraftType) {
@@ -240,22 +241,26 @@ export function useAircraftImages(aircraftType = null) {
       setError(null);
       
       try {
-        const { data, error: queryError } = await supabase
-          .from('aircraft_model_images')
-          .select('*')
-          .eq('aircraft_type', aircraftType.toUpperCase())
-          .order('is_primary', { ascending: false })
-          .order('created_at', { ascending: false });
+        const result = await withTimeout(
+          supabase
+            .from('aircraft_model_images')
+            .select('*')
+            .eq('aircraft_type', aircraftType.toUpperCase())
+            .order('is_primary', { ascending: false })
+            .order('created_at', { ascending: false }),
+          QUERY_TIMEOUT
+        );
         
-        // Si el efecto fue cancelado, no actualizar estado
         if (cancelled) return;
         
-        if (queryError) throw queryError;
-        setImages(data || []);
+        if (result.error) throw result.error;
+        setImages(result.data || []);
       } catch (err) {
-        console.error('[useAircraftImages] Error:', err);
+        console.error('[useAircraftImages] Error/timeout:', err.message);
         if (!cancelled) {
-          setError(err.message);
+          setError(err.message?.includes('Timeout') 
+            ? 'Tiempo de espera agotado' 
+            : err.message);
           setImages([]);
         }
       } finally {
@@ -267,7 +272,6 @@ export function useAircraftImages(aircraftType = null) {
     
     loadImages();
     
-    // Cleanup: cancelar esta petición específica
     return () => {
       cancelled = true;
     };
@@ -290,7 +294,7 @@ export function useAircraftImages(aircraftType = null) {
 }
 
 /**
- * Hook para obtener la imagen de un modelo específico
+ * Hook para obtener la imagen de un modelo específico (con timeout)
  */
 export function useAircraftModelImage(aircraftType) {
   const [imageUrl, setImageUrl] = useState(null);
@@ -307,18 +311,21 @@ export function useAircraftModelImage(aircraftType) {
     const fetchImage = async () => {
       setLoading(true);
       try {
-        // Primero buscar en aircraft_model_images (sin `.single()` para evitar 406 cuando no hay filas)
-        const { data: imageRows } = await supabase
-          .from('aircraft_model_images')
-          .select('thumbnail_url, image_url')
-          .eq('aircraft_type', aircraftType.toUpperCase())
-          .order('is_primary', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(1);
+        // Primero buscar en aircraft_model_images
+        const imageResult = await withTimeout(
+          supabase
+            .from('aircraft_model_images')
+            .select('thumbnail_url, image_url')
+            .eq('aircraft_type', aircraftType.toUpperCase())
+            .order('is_primary', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(1),
+          QUERY_TIMEOUT
+        );
 
         if (cancelled) return;
 
-        const imageData = imageRows?.[0] || null;
+        const imageData = imageResult.data?.[0] || null;
         if (imageData) {
           setImageUrl(imageData.thumbnail_url || imageData.image_url || null);
           setLoading(false);
@@ -326,20 +333,24 @@ export function useAircraftModelImage(aircraftType) {
         }
 
         // Si no hay, buscar en el catálogo
-        const { data: catalogRows } = await supabase
-          .from('aircraft_model_catalog')
-          .select('thumbnail_url, primary_image_url')
-          .eq('aircraft_type', aircraftType.toUpperCase())
-          .limit(1);
+        const catalogResult = await withTimeout(
+          supabase
+            .from('aircraft_model_catalog')
+            .select('thumbnail_url, primary_image_url')
+            .eq('aircraft_type', aircraftType.toUpperCase())
+            .limit(1),
+          QUERY_TIMEOUT
+        );
 
         if (cancelled) return;
 
-        const catalogData = catalogRows?.[0] || null;
+        const catalogData = catalogResult.data?.[0] || null;
         if (catalogData) {
           setImageUrl(catalogData.thumbnail_url || catalogData.primary_image_url || null);
         }
       } catch (err) {
-        // Silencioso - simplemente no hay imagen
+        // Silencioso - timeout o simplemente no hay imagen
+        console.warn('[useAircraftModelImage] Timeout/error:', err.message);
       } finally {
         if (!cancelled) {
           setLoading(false);
