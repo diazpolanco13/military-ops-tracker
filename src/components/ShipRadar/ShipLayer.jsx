@@ -84,19 +84,29 @@ export default function ShipLayer({
 
     const init = async () => {
       try {
-        // Cargar iconos si no existen
-        if (!map.hasImage('ship-military')) {
-          const militaryImg = await svgToImage(createShipSVG(COLORS.military));
-          map.addImage('ship-military', militaryImg);
-        }
-        if (!map.hasImage('ship-tanker')) {
-          const tankerImg = await svgToImage(createShipSVG(COLORS.tanker));
-          map.addImage('ship-tanker', tankerImg);
-        }
-        if (!map.hasImage('ship-selected')) {
-          const selectedImg = await svgToImage(createShipSVG(COLORS.selected));
-          map.addImage('ship-selected', selectedImg);
-        }
+        // Cargar iconos si no existen (con try/catch individual para evitar errores de duplicación)
+        const addImageSafe = async (name, svg) => {
+          if (!map.hasImage(name)) {
+            try {
+              const img = await svgToImage(svg);
+              // Verificar de nuevo después del await (evita race condition)
+              if (!map.hasImage(name)) {
+                map.addImage(name, img);
+              }
+            } catch (e) {
+              // Ignorar error si la imagen ya existe
+              if (!e.message?.includes('already exists')) {
+                console.warn(`⚠️ Error cargando imagen ${name}:`, e.message);
+              }
+            }
+          }
+        };
+
+        await Promise.all([
+          addImageSafe('ship-military', createShipSVG(COLORS.military)),
+          addImageSafe('ship-tanker', createShipSVG(COLORS.tanker)),
+          addImageSafe('ship-selected', createShipSVG(COLORS.selected))
+        ]);
 
         // Limpiar si ya existe
         if (map.getLayer(LAYER_ID)) {

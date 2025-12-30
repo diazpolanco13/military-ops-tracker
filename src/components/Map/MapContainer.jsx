@@ -256,37 +256,38 @@ export default function MapContainer({
   }, []);
   
   // 🎯 Memorizar códigos de países visibles (recalcular cuando cambien settings o updateTrigger)
+  // ⚡ MEJORA: Ya no depende de loadingMaritime porque settings tiene defaults locales
   const visibleCountryCodes = useMemo(() => {
-    if (!settings || loadingMaritime) return [];
+    if (!settings || settings.length === 0) return [];
     const codes = settings.filter(s => s.is_visible).map(s => s.country_code);
     console.log('🗺️ Países visibles solicitados:', {
       total: codes.length,
       codes: codes,
       updateTrigger: updateTrigger,
-      allSettings: settings.map(s => ({ code: s.country_code, name: s.country_name, visible: s.is_visible }))
+      fromDefaults: loadingMaritime ? '(defaults)' : '(Supabase)'
     });
     return codes;
-  }, [settings, loadingMaritime, updateTrigger]);
+  }, [settings, updateTrigger, loadingMaritime]);
   
   // 🎨 Memorizar mapa de colores (recalcular cuando cambien settings o updateTrigger)
   const colorMap = useMemo(() => {
-    if (!settings || loadingMaritime) return {};
+    if (!settings || settings.length === 0) return {};
     const colors = {};
     settings.forEach(s => {
       colors[s.country_code] = s.color;
     });
     return colors;
-  }, [settings, loadingMaritime, updateTrigger]);
+  }, [settings, updateTrigger]);
 
   // 🎨 Memorizar mapa de opacidades
   const opacityMap = useMemo(() => {
-    if (!settings || loadingMaritime) return {};
+    if (!settings || settings.length === 0) return {};
     const opacities = {};
     settings.forEach(s => {
       opacities[s.country_code] = s.opacity || 0.2;
     });
     return opacities;
-  }, [settings, loadingMaritime, updateTrigger]);
+  }, [settings, updateTrigger]);
 
   // 🌊 Hook para obtener límites desde archivos LOCALES (INSTANTÁNEO)
   const { boundaries, loading: boundariesLoading, cacheHit } = useMaritimeBoundariesLocal(

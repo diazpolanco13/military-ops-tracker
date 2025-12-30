@@ -2,36 +2,50 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 /**
- * 🌊 Hook para gestionar configuración de límites marítimos desde BD
- * CRUD completo para maritime_boundaries_settings
+ * 🌊 VALORES POR DEFECTO LOCALES
+ * Usados cuando Supabase no está disponible o tarda
+ * Solo Venezuela visible por defecto (el Esequibo tiene su propia capa)
+ * 
+ * 🎨 Colores más claros/suaves para mejor visualización
+ */
+const DEFAULT_SETTINGS = [
+  { country_code: 'VEN', country_name: 'Venezuela', color: '#f87171', is_visible: true, opacity: 0.25 },  // Rojo más claro
+  { country_code: 'COL', country_name: 'Colombia', color: '#fcd34d', is_visible: false, opacity: 0.25 }, // Amarillo claro
+  { country_code: 'GUY', country_name: 'Guyana', color: '#6ee7b7', is_visible: false, opacity: 0.25 },   // Verde claro
+  { country_code: 'TTO', country_name: 'Trinidad y Tobago', color: '#7dd3fc', is_visible: false, opacity: 0.25 },
+  { country_code: 'CUB', country_name: 'Cuba', color: '#fdba74', is_visible: false, opacity: 0.25 },
+  { country_code: 'DOM', country_name: 'República Dominicana', color: '#5eead4', is_visible: false, opacity: 0.25 },
+  { country_code: 'USA', country_name: 'Estados Unidos', color: '#67e8f9', is_visible: false, opacity: 0.25 },
+];
+
+/**
+ * 🌊 Hook para gestionar configuración de límites marítimos
+ * 
+ * ⚡ USA SOLO DEFAULTS LOCALES para visualización del mapa
+ * 📡 La tabla de Supabase (maritime_boundaries_settings) se mantiene
+ *    para el bot de Telegram que detecta incursiones
+ * 
+ * Esto evita duplicación de capas y carga instantánea
  */
 export function useMaritimeSettings() {
-  const [settings, setSettings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // SOLO usar defaults locales - NO consultar Supabase para visualización
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+  const [loading, setLoading] = useState(false); // No hay loading porque es local
   const [error, setError] = useState(null);
-  const [updateTrigger, setUpdateTrigger] = useState(0); // Para forzar re-renders
+  const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [usingDefaults] = useState(true); // Siempre true ahora
 
-  // Fetch inicial
+  // NO fetch de Supabase - usar solo defaults locales
+  // La tabla de Supabase se mantiene para el bot de Telegram
   useEffect(() => {
-    fetchSettings();
+    console.log('⚡ Maritime settings: usando configuración LOCAL (instantáneo)');
+    console.log('📡 Nota: La tabla de Supabase se mantiene para el bot de Telegram');
   }, []);
 
+  // Función para refetch (no hace nada, pero mantiene compatibilidad)
   async function fetchSettings() {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('maritime_boundaries_settings')
-        .select('*')
-        .order('country_name');
-
-      if (error) throw error;
-      setSettings(data || []);
-    } catch (err) {
-      console.error('Error fetching maritime settings:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    console.log('ℹ️ fetchSettings: usando defaults locales, Supabase no se consulta para visualización');
+    // No hacer nada - mantener defaults
   }
 
   /**
@@ -303,6 +317,7 @@ export function useMaritimeSettings() {
     settings,
     loading,
     error,
+    usingDefaults, // true si estamos usando valores locales (Supabase no disponible)
     updateTrigger, // Para que los componentes puedan detectar cambios
     addCountry,
     toggleVisibility,
