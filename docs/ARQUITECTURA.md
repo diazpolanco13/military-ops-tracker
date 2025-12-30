@@ -288,8 +288,21 @@ SCREENSHOT_AUTH_TOKEN=xxx
 |------------|------------|--------|
 | Vuelos en mapa | 30 seg | API Pública FR24 |
 | Trail de vuelo | On-click | API Pagada FR24 |
-| Monitor de alertas | 3 min | Cron + FR24 API |
-| Cierre de sesiones | 5 min | Cron |
+| Monitor de incursiones | **2 min** | Cron `military-airspace-monitor-cron` |
+| Cierre de sesiones | **5 min** | Cron `incursion-session-closer-cron` |
+| Registro de aeronaves | 5 min | Cron `aircraft-registry-collector` |
 | Buques AIS | 1 min | AISStream WebSocket |
 | Límites marítimos | On-demand | Marine Regions API |
+
+## Cron Jobs (pg_cron)
+
+| Job ID | Nombre | Schedule | Función |
+|--------|--------|----------|---------|
+| 2 | `situation-report-every-10-min` | `*/10 * * * *` | Reportes de situación |
+| 3 | `aircraft-registry-collector` | `*/5 * * * *` | Recolección de aeronaves |
+| 4 | `reset-new-today-flags` | `0 4 * * *` | Reset de flags diarios |
+| 5 | `military-airspace-monitor-cron` | `*/2 * * * *` | **Detección de incursiones** |
+| 6 | `incursion-session-closer-cron` | `*/5 * * * *` | **Cierre de sesiones** |
+
+> **Nota V34**: Los cron jobs 5 y 6 fueron añadidos el 30/12/2025 para garantizar monitoreo 24/7 independiente del frontend.
 
