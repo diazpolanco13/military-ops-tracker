@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   X, 
   RefreshCw, 
@@ -31,7 +31,7 @@ import AircraftDetailView from './AircraftDetailView';
  * Panel principal para visualizar y gestionar el inventario de aeronaves
  * militares detectadas en el Caribe.
  */
-export default function AircraftRegistryPanel({ isOpen, onClose }) {
+export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAircraft, onAircraftSelected }) {
   const [activeTab, setActiveTab] = useState('registry');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +43,14 @@ export default function AircraftRegistryPanel({ isOpen, onClose }) {
     hasIncursions: false,
   });
   const [showFilters, setShowFilters] = useState(false);
+
+  // 🔍 Auto-seleccionar aeronave cuando viene de la búsqueda
+  useEffect(() => {
+    if (preSelectedAircraft && isOpen) {
+      setSelectedAircraft(preSelectedAircraft);
+      onAircraftSelected?.(); // Notificar que ya se procesó
+    }
+  }, [preSelectedAircraft, isOpen, onAircraftSelected]);
 
   const { 
     aircraft, 

@@ -116,6 +116,7 @@ export default function TopNavigationBar({
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAircraftRegistry, setShowAircraftRegistry] = useState(false);
+  const [preSelectedAircraft, setPreSelectedAircraft] = useState(null); // Aeronave preseleccionada desde búsqueda
   // showAuditPanel eliminado - ahora integrado en SettingsPanel
   const userMenuRef = useRef(null);
   const { hiddenCount } = useHiddenCount();
@@ -146,6 +147,20 @@ export default function TopNavigationBar({
 
     window.addEventListener('openMaritimePanel', handleOpenMaritimePanel);
     return () => window.removeEventListener('openMaritimePanel', handleOpenMaritimePanel);
+  }, []);
+
+  // 🔍 Escuchar evento para abrir inventario desde búsqueda
+  useEffect(() => {
+    const handleOpenAircraftFromSearch = (event) => {
+      const { aircraft } = event.detail || {};
+      if (aircraft) {
+        setPreSelectedAircraft(aircraft);
+        setShowAircraftRegistry(true);
+      }
+    };
+
+    window.addEventListener('openAircraftFromSearch', handleOpenAircraftFromSearch);
+    return () => window.removeEventListener('openAircraftFromSearch', handleOpenAircraftFromSearch);
   }, []);
 
   // Cerrar panel de configuración si no tiene permiso
@@ -535,7 +550,12 @@ export default function TopNavigationBar({
       {/* Panel de Registro de Aeronaves Militares */}
       <AircraftRegistryPanel
         isOpen={showAircraftRegistry}
-        onClose={() => setShowAircraftRegistry(false)}
+        onClose={() => {
+          setShowAircraftRegistry(false);
+          setPreSelectedAircraft(null); // Limpiar preselección al cerrar
+        }}
+        preSelectedAircraft={preSelectedAircraft}
+        onAircraftSelected={() => setPreSelectedAircraft(null)} // Limpiar después de seleccionar
       />
     </>
   );
