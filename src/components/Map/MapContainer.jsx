@@ -21,29 +21,13 @@ import { supabase } from '../../lib/supabase';
 import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
 import { useFlightRadar } from '../../hooks/useFlightRadar';
 import FlightLayer from '../FlightRadar/FlightLayer';
-import FlightMarker from '../FlightRadar/FlightMarker';
+// FlightMarker removido - todos los vuelos ahora usan FlightLayer (Mapbox nativo)
 import FlightTrailLayer from '../FlightRadar/FlightTrailLayer';
 import FlightRadarPanel from '../FlightRadar/FlightRadarPanel';
 import FlightDetailsPanel from '../FlightRadar/FlightDetailsPanel';
 import FlightRadarBottomBar from '../FlightRadar/FlightRadarBottomBar';
 
-// Función para detectar helicópteros (sistema híbrido)
-const isHelicopterType = (type) => {
-  const heliPatterns = [
-    'CH47', 'UH60', 'AH64', 'MH60', 'HH60', 'H60', 'H47', 'H64', 'H53',
-    'V22', 'S70', 'S76', 'S92', 'EC', 'AS',
-    'A109', 'A139', 'A169', 'AW',
-    'B06', 'B07', 'B12', 'B47',
-    'MD5', 'MD6', 'MD9',
-    'R22', 'R44', 'R66',
-    'H125', 'H130', 'H135', 'H145', 'H155', 'H160', 'H175', 'H215', 'H225',
-    'BK17', 'NH90',
-    'MI8', 'MI17', 'MI24', 'MI28', 'MI35',
-    'KA52', 'KA27', 'KA32',
-    'UH1', 'AH1',
-  ];
-  return heliPatterns.some(h => (type || '').toUpperCase().includes(h));
-};
+// Sistema híbrido de helicópteros REMOVIDO - todos usan FlightLayer (Mapbox nativo)
 // FlightRadar service ahora usado desde el hook
 
 // 🚢 ShipRadar - Tracking de buques AIS
@@ -912,30 +896,16 @@ export default function MapContainer({
           })
       }
 
-      {/* ✈️ VUELOS EN TIEMPO REAL - FlightRadar24 (Sistema Híbrido) */}
+      {/* ✈️ VUELOS EN TIEMPO REAL - FlightRadar24 (Mapbox nativo) */}
       {mapLoaded && isFlightRadarEnabled && (
         <>
-          {/* Capa nativa Mapbox para vuelos NO helicópteros (performante) */}
+          {/* Capa nativa Mapbox para TODOS los vuelos (performante, posición correcta) */}
           <FlightLayer
             map={map.current}
-            flights={flightsWithCategory.filter(f => !isHelicopterType(f.aircraft?.type))}
+            flights={flightsWithCategory}
             selectedFlight={selectedFlight}
             onFlightClick={setSelectedFlight}
           />
-          
-          {/* 🚁 Marcadores HTML animados para HELICÓPTEROS (hélices girando) */}
-          {flightsWithCategory
-            .filter(f => isHelicopterType(f.aircraft?.type))
-            .map(flight => (
-              <FlightMarker
-                key={flight.id}
-                flight={{ ...flight, category: 'helicopter' }}
-                map={map.current}
-                onSelect={setSelectedFlight}
-                isSelected={selectedFlight?.id === flight.id}
-              />
-            ))
-          }
           
           {/* Capa de trayectoria del vuelo seleccionado (se inserta debajo de flights) */}
           <FlightTrailLayer
