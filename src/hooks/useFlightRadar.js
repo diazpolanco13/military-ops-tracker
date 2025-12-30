@@ -59,20 +59,22 @@ export function stopAirspaceMonitor() {
 }
 
 // ====== HOOK PRINCIPAL ======
-// ✅ Ahora usa API pública GRATUITA para el frontend
-// La API pagada solo se usa en military-airspace-monitor (alertas Telegram)
+// ✅ V2: Lee de cache centralizado en Supabase
+// El cache se actualiza por Edge Function (1 sola petición para todos los usuarios)
 export function useFlightRadar({ 
   autoUpdate = true,
-  updateInterval = 30000,  // 30 segundos - API gratuita, sin límite
+  updateInterval = 30000,  // 30 segundos - polling del cache
   enabled = true,
   militaryOnly = false,
   bounds = null,
+  useCache = true, // Nuevo: usar cache centralizado
 } = {}) {
   const [allFlights, setAllFlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [isActive, setIsActive] = useState(enabled);
+  const [cacheAge, setCacheAge] = useState(null); // Edad del cache en segundos
 
   // Cache local para evitar queries repetidas al catálogo en cada refresh
   const aircraftCatalogCacheRef = useRef(new Map()); // type -> catalog row
@@ -219,8 +221,44 @@ export function useFlightRadar({
   }, [bounds]);
 
   /**
+   * Obtener vuelos del CACHE centralizado (Supabase)
+   * ✅ OPTIMIZADO: No llama a FlightRadar24 directamente
+   * El cache se actualiza por Edge Function cada 30s
+   */
+  const fetchFromCache = useCallback(async () => {
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('flights_cache')
+        .select('flights, military_count, last_updated_at, total_fetched')
+        .eq('id', 'military_flights')
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (data?.flights) {
+        // Calcular edad del cache
+        const cacheTime = new Date(data.last_updated_at);
+        const ageSeconds = Math.round((Date.now() - cacheTime.getTime()) / 1000);
+        setCacheAge(ageSeconds);
+
+        return {
+          flights: data.flights,
+          militaryCount: data.military_count,
+          totalFetched: data.total_fetched,
+          lastUpdated: cacheTime,
+          ageSeconds,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.warn('⚠️ Error leyendo cache:', err.message);
+      return null;
+    }
+  }, []);
+
+  /**
    * Obtener vuelos militares/gobierno
-   * ⚠️ NO borra vuelos existentes si hay error (preserva última actualización)
+   * ✅ V2: Primero intenta cache, fallback a API directa
    */
   const fetchFlights = useCallback(async () => {
     if (!isActive) return;
@@ -232,17 +270,35 @@ export function useFlightRadar({
       }
       setError(null);
 
-      // Usar bounds del viewport o los por defecto
-      const currentBounds = boundsRef.current;
-      
-      let flightsData;
-      
-      if (militaryOnly) {
-        // Modo original: solo militares con bounds
-        flightsData = await getMilitaryFlights(currentBounds);
-      } else {
-        // Modo completo: todos los vuelos militares con categoría
-        flightsData = await getAllFlights(currentBounds);
+      let flightsData = [];
+      let fromCache = false;
+
+      // 1. Intentar leer del cache centralizado
+      if (useCache) {
+        const cacheResult = await fetchFromCache();
+        
+        if (cacheResult && cacheResult.flights.length > 0) {
+          // Cache válido (menos de 2 minutos)
+          if (cacheResult.ageSeconds < 120) {
+            flightsData = cacheResult.flights;
+            fromCache = true;
+            console.log(`✅ Cache: ${cacheResult.militaryCount} vuelos militares (de ${cacheResult.totalFetched} total, edad: ${cacheResult.ageSeconds}s)`);
+          } else {
+            console.warn(`⚠️ Cache viejo (${cacheResult.ageSeconds}s), usando API directa`);
+          }
+        }
+      }
+
+      // 2. Fallback: API directa si no hay cache válido
+      if (!fromCache) {
+        const currentBounds = boundsRef.current;
+        
+        if (militaryOnly) {
+          flightsData = await getMilitaryFlights(currentBounds);
+        } else {
+          flightsData = await getAllFlights(currentBounds);
+        }
+        console.log(`✅ API directa: ${flightsData.length} vuelos cargados`);
       }
 
       if (!isMountedRef.current) return;
@@ -254,23 +310,19 @@ export function useFlightRadar({
         setAllFlights(enriched);
         setLastUpdate(new Date());
         isFirstLoadRef.current = false;
-        console.log(`✅ FlightRadar24: ${flightsData.length} vuelos cargados`);
       } else if (flightsData && flightsData.length === 0) {
-        // Si la API devuelve vacío, mantener los vuelos anteriores pero notificar
-        console.warn('⚠️ API devolvió 0 vuelos, manteniendo datos anteriores');
+        console.warn('⚠️ Sin vuelos, manteniendo datos anteriores');
       }
     } catch (err) {
       if (!isMountedRef.current) return;
-      
-      // ⚠️ NO borrar vuelos existentes - solo loguear el error
-      console.error('❌ Error fetching flights (manteniendo datos anteriores):', err);
+      console.error('❌ Error fetching flights:', err);
       setError(err.message);
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
       }
     }
-  }, [isActive, militaryOnly]);
+  }, [isActive, militaryOnly, useCache, fetchFromCache, enrichFlightsWithCatalog]);
 
   /**
    * Vuelos filtrados según categorías activas
@@ -489,6 +541,27 @@ export function useFlightRadar({
     }
   }, [fetchFlights]);
 
+  /**
+   * Disparar actualización del cache (llama a Edge Function)
+   * Solo usar si el cache está muy viejo (>2 min)
+   */
+  const triggerCacheUpdate = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/flights-cache-updater`,
+        { method: 'POST' }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🔄 Cache actualizado:', result);
+        // Refrescar después de actualizar
+        setTimeout(fetchFlights, 500);
+      }
+    } catch (err) {
+      console.error('Error actualizando cache:', err);
+    }
+  }, [fetchFlights]);
+
   return {
     // Estado
     flights,           // Vuelos filtrados
@@ -498,12 +571,14 @@ export function useFlightRadar({
     lastUpdate,
     isActive,
     categoryFilters,   // Filtros activos
+    cacheAge,          // Edad del cache en segundos
 
     // Acciones
     startTracking,
     pauseTracking,
     refetch,
     clearFlights,
+    triggerCacheUpdate, // 🔄 Disparar actualización del cache
 
     // Filtros
     setFilters,
