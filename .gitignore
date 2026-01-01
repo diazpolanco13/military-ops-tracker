@@ -30,3 +30,6 @@ dist-ssr
 
 # Supabase functions backup (deployed separately)
 _supabase_functions_backup
+
+# MCP Configuration (contains sensitive tokens)
+.mcp.json
