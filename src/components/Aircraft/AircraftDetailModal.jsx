@@ -19,7 +19,7 @@ import {
   Activity,
   Camera
 } from 'lucide-react';
-import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
+import { useAircraftRegistryActions } from '../../hooks/useAircraftRegistryActions';
 import AircraftImageGallery from './AircraftImageGallery';
 
 /**
@@ -38,7 +38,7 @@ export default function AircraftDetailModal({ aircraft, onClose }) {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notes, setNotes] = useState(aircraft?.notes || '');
 
-  const { getLocationHistory, updateNotes, recalculateBase } = useAircraftRegistry();
+  const { getLocationHistory, updateNotes, recalculateBase } = useAircraftRegistryActions();
 
   // Cargar historial cuando se selecciona la tab
   useEffect(() => {

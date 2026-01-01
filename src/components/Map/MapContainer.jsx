@@ -19,6 +19,7 @@ import { useSelection } from '../../stores/SelectionContext';
 import { useDrawingTools } from '../../stores/DrawingToolsContext';
 import { supabase } from '../../lib/supabase';
 import { toggleWeatherLayer, getActiveWeatherLayers } from '../Weather/WeatherLayers';
+// Nota: `useFlightRadar` se usa como fallback si no se inyecta `flightRadar` desde App.
 import { useFlightRadar } from '../../hooks/useFlightRadar';
 import FlightLayer from '../FlightRadar/FlightLayer';
 // FlightMarker removido - todos los vuelos ahora usan FlightLayer (Mapbox nativo)
@@ -49,7 +50,11 @@ export default function MapContainer({
   timelineVisible = false,
   onToggleTimeline,
   calendarVisible = false,
-  onToggleCalendar
+  onToggleCalendar,
+  // FlightRadar deduplicado (hoisted en App)
+  flightRadar = null,
+  isFlightRadarEnabled: isFlightRadarEnabledProp,
+  setIsFlightRadarEnabled: setIsFlightRadarEnabledProp,
 }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -74,10 +79,18 @@ export default function MapContainer({
   // ✈️ FlightRadar24 Integration
   const [showFlightRadarPanel, setShowFlightRadarPanel] = useState(false);
   const [selectedFlight, setSelectedFlight] = useState(null);
-  const [isFlightRadarEnabled, setIsFlightRadarEnabled] = useState(true);
+  const isFlightRadarEnabled = isFlightRadarEnabledProp ?? true;
+  const setIsFlightRadarEnabled = setIsFlightRadarEnabledProp ?? (() => {});
   
   // 📊 Panel de estadísticas de incursiones
   const [showIncursionStats, setShowIncursionStats] = useState(false);
+  // ✅ Preferir instancia deduplicada desde App; fallback al hook local si no se pasa.
+  const flightRadarInternal = useFlightRadar({
+    autoUpdate: true,
+    updateInterval: 30000, // 30 segundos
+    enabled: isFlightRadarEnabled,
+    militaryOnly: false,
+  });
   const {
     flights,
     loading: flightsLoading,
@@ -90,12 +103,7 @@ export default function MapContainer({
     categoryFilters,
     setFilters,
     totalFlights,
-  } = useFlightRadar({
-    autoUpdate: true,
-    updateInterval: 30000, // 30 segundos
-    enabled: isFlightRadarEnabled,
-    militaryOnly: false, // Cargar todos para poder filtrar
-  });
+  } = flightRadar || flightRadarInternal;
 
   // Alias para compatibilidad con FlightRadarBottomBar
   const flightFilters = categoryFilters;

@@ -17,6 +17,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Shapes } from 'lucide-react';
 import { useCreateEntity } from './hooks/useCreateEntity';
 import { useAuth } from './hooks/useAuth';
+import { useFlightRadar } from './hooks/useFlightRadar';
 import { SelectionProvider } from './stores/SelectionContext';
 import { LockProvider } from './stores/LockContext';
 import { MaritimeBoundariesProvider } from './stores/MaritimeBoundariesContext';
@@ -62,6 +63,16 @@ function App() {
   const [preSelectedEntityId, setPreSelectedEntityId] = useState(null); // Entidad pre-seleccionada para filtrar timeline
   const [showSettingsPanel, setShowSettingsPanel] = useState(false); // Estado del panel de configuración
   const { createFromTemplate, creating } = useCreateEntity();
+
+  // ✈️ FlightRadar (DEDUP): una sola instancia para toda la app.
+  // Esto evita que `SearchBar` y `MapContainer` creen polling/realtime duplicados.
+  const [isFlightRadarEnabled, setIsFlightRadarEnabled] = useState(true);
+  const flightRadar = useFlightRadar({
+    autoUpdate: true,
+    updateInterval: 30000,
+    enabled: isFlightRadarEnabled,
+    militaryOnly: false,
+  });
 
   // Escuchar eventos para abrir/cerrar panel de configuración
   useEffect(() => {
@@ -193,6 +204,9 @@ function App() {
           onToggleTimeline={() => setShowEventTimeline(!showEventTimeline)}
           calendarVisible={showCalendar}
           onToggleCalendar={() => setShowCalendar(!showCalendar)}
+          flightRadar={flightRadar}
+          isFlightRadarEnabled={isFlightRadarEnabled}
+          setIsFlightRadarEnabled={setIsFlightRadarEnabled}
         />
         
         {/* Paleta como overlay (fixed) */}
@@ -250,8 +264,10 @@ function App() {
           />
         )}
 
-        {/* Barra de Búsqueda - Siempre visible (controlable desde Ver) */}
-        <SearchBar map={mapInstance} isVisible={showSearch} />
+        {/* Barra de Búsqueda - Montar SOLO si está visible (evita hooks en background) */}
+        {showSearch && (
+          <SearchBar map={mapInstance} isVisible={showSearch} flights={flightRadar.flights} />
+        )}
 
         {/* Timeline de Eventos - Sidebar derecho */}
         {showEventTimeline && (

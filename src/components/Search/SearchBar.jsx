@@ -1,18 +1,16 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, X, MapPin, Ship, Plane, Users, Truck, Radio, Database, Navigation } from 'lucide-react';
 import { useEntities } from '../../hooks/useEntities';
-import { useFlightRadar } from '../../hooks/useFlightRadar';
 import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
 
 /**
  * 🔍 Barra de Búsqueda Unificada
  * Busca en: Entidades del mapa, Vuelos activos (FlightRadar24), Inventario de aeronaves
  */
-export default function SearchBar({ map, isVisible, onAircraftSelect, onFlightSelect }) {
+export default function SearchBar({ map, isVisible, flights = [], onAircraftSelect, onFlightSelect }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const { entities } = useEntities();
-  const { flights } = useFlightRadar();
   const { aircraft: inventoryAircraft } = useAircraftRegistry();
   const inputRef = useRef(null);
 

@@ -38,6 +38,7 @@ export function useAircraftRegistry(options = {}) {
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [reloadToken, setReloadToken] = useState(0); // fuerza refetch paginado sin full-table
 
   const mergeLastPresence = useCallback((aircraftRows, lastPresenceRows) => {
     const byIcao = {};
@@ -59,6 +60,10 @@ export function useAircraftRegistry(options = {}) {
         last_position_lon: p.last_position_lon,
       };
     });
+  }, []);
+
+  const reloadCurrentPage = useCallback(() => {
+    setReloadToken((x) => x + 1);
   }, []);
 
   /**
@@ -296,14 +301,20 @@ export function useAircraftRegistry(options = {}) {
 
       if (updateError) throw updateError;
       
-      // Refrescar lista
-      await fetchAircraft();
+      // ✅ Evitar refetch full-table: actualizar estado local si la aeronave está en la página actual
+      setAircraft((prev) =>
+        (prev || []).map((a) =>
+          a?.icao24?.toUpperCase() === icao24.toUpperCase()
+            ? { ...a, notes }
+            : a
+        )
+      );
       return { success: true };
     } catch (err) {
       console.error('Error updating notes:', err);
       return { success: false, error: err.message };
     }
-  }, [fetchAircraft]);
+  }, []);
 
   /**
    * Recalcular base probable
@@ -315,14 +326,14 @@ export function useAircraftRegistry(options = {}) {
 
       if (rpcError) throw rpcError;
       
-      // Refrescar lista
-      await fetchAircraft();
+      // ✅ Evitar refetch full-table: refrescar SOLO la página actual
+      reloadCurrentPage();
       return { success: true };
     } catch (err) {
       console.error('Error recalculating base:', err);
       return { success: false, error: err.message };
     }
-  }, [fetchAircraft]);
+  }, [reloadCurrentPage]);
 
   // Cargar datos con PAGINACIÓN (con timeout)
   useEffect(() => {
@@ -451,18 +462,18 @@ export function useAircraftRegistry(options = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, currentPage, pageSize, mergeLastPresence]); // Recargar al cambiar página
+  }, [enabled, currentPage, pageSize, mergeLastPresence, reloadToken]); // Recargar al cambiar página / refresh manual
 
   // Auto-refresh (deshabilitado por defecto)
   useEffect(() => {
     if (!enabled || !autoRefresh) return;
 
     const interval = setInterval(() => {
-      fetchAircraft();
+      reloadCurrentPage();
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [enabled, autoRefresh, refreshInterval]); // Removido fetchAircraft de deps
+  }, [enabled, autoRefresh, refreshInterval, reloadCurrentPage]);
 
   // Datos computados
   const topIncursionAircraft = useMemo(() => {
@@ -518,7 +529,7 @@ export function useAircraftRegistry(options = {}) {
     recentlySeenAircraft,
 
     // Funciones
-    refetch: fetchAircraft,
+    refetch: reloadCurrentPage,
     refreshStats: fetchStats,
     getByIcao24,
     getLocationHistory,

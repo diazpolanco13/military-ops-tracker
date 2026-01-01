@@ -40,7 +40,7 @@ import {
   RefreshCw,
   WifiOff
 } from 'lucide-react';
-import { useAircraftRegistry } from '../../hooks/useAircraftRegistry';
+import { useAircraftRegistryActions } from '../../hooks/useAircraftRegistryActions';
 import { useAircraftImages } from '../../hooks/useAircraftImages';
 import { supabase, withTimeout } from '../../lib/supabase';
 import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
@@ -72,7 +72,7 @@ export default function AircraftDetailView({ aircraft, onClose }) {
   const [lastLocation, setLastLocation] = useState(null);
   
 
-  const { updateNotes, recalculateBase } = useAircraftRegistry();
+  const { updateNotes, recalculateBase } = useAircraftRegistryActions();
   
   // Cargar modelo del catálogo si no viene incluido (con timeout)
   useEffect(() => {
