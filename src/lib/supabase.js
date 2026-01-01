@@ -21,6 +21,41 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.log('Asegúrate de tener VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en tu archivo .env');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 📈 Métricas (solo cliente): contador de requests a Supabase para detectar ráfagas
+// - No requiere cambios en Supabase.
+// - Se alimenta desde el fetch global del cliente.
+// - Se expone en window para debug: window.supabaseMetrics()
+// ─────────────────────────────────────────────────────────────────────────────
+const __supabaseMetrics = {
+  startedAt: Date.now(),
+  total: 0,
+  byPath: {}, // "/rest/v1/entities": count
+  byStatus: {}, // "200": count
+  last: [], // últimos N requests
+};
+
+function __recordSupabaseRequest({ url, status, ms, method }) {
+  try {
+    __supabaseMetrics.total += 1;
+    const u = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const key = `${u.pathname}`;
+    __supabaseMetrics.byPath[key] = (__supabaseMetrics.byPath[key] || 0) + 1;
+    const s = String(status || '0');
+    __supabaseMetrics.byStatus[s] = (__supabaseMetrics.byStatus[s] || 0) + 1;
+    __supabaseMetrics.last.unshift({
+      t: Date.now(),
+      method: method || 'GET',
+      path: key,
+      status: status || 0,
+      ms: ms || 0,
+    });
+    if (__supabaseMetrics.last.length > 50) __supabaseMetrics.last.length = 50;
+  } catch {
+    // no-op
+  }
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -37,6 +72,28 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'x-client-info': 'sae-radar/2.0',
+    },
+    // Instrumentar requests HTTP (PostgREST, storage, functions) para identificar exceso de QPS.
+    // Mantiene el fetch original y no altera el payload.
+    fetch: async (url, options) => {
+      const start = Date.now();
+      const method = options?.method || 'GET';
+      try {
+        const res = await fetch(url, options);
+        const ms = Date.now() - start;
+
+        // Registrar solo requests a Supabase (misma base URL) si se puede inferir
+        if (supabaseUrl && typeof url === 'string' && url.startsWith(supabaseUrl)) {
+          __recordSupabaseRequest({ url, status: res.status, ms, method });
+        }
+        return res;
+      } catch (e) {
+        const ms = Date.now() - start;
+        if (supabaseUrl && typeof url === 'string' && url.startsWith(supabaseUrl)) {
+          __recordSupabaseRequest({ url, status: 0, ms, method });
+        }
+        throw e;
+      }
     },
   },
   db: {
@@ -57,60 +114,9 @@ export async function testConnection() {
   }
 }
 
-// 🔄 Monitor de estado de conexión
-let connectionStatus = 'unknown';
-let reconnectTimer = null;
-
-export function getConnectionStatus() {
-  return connectionStatus;
-}
-
-// Verificar conexión periódicamente y reconectar si es necesario
-export function startConnectionMonitor(onStatusChange) {
-  const checkConnection = async () => {
-    try {
-      const { error } = await supabase.from('entities').select('id', { count: 'exact', head: true });
-      
-      if (error) {
-        if (connectionStatus !== 'disconnected') {
-          connectionStatus = 'disconnected';
-          console.warn('⚠️ Conexión perdida con Supabase');
-          onStatusChange?.('disconnected');
-        }
-      } else {
-        if (connectionStatus !== 'connected') {
-          connectionStatus = 'connected';
-          console.log('✅ Conexión restaurada con Supabase');
-          onStatusChange?.('connected');
-        }
-      }
-    } catch (err) {
-      if (connectionStatus !== 'error') {
-        connectionStatus = 'error';
-        console.error('❌ Error de conexión:', err.message);
-        onStatusChange?.('error');
-      }
-    }
-  };
-
-  // Verificar cada 30 segundos
-  checkConnection();
-  reconnectTimer = setInterval(checkConnection, 30000);
-
-  return () => {
-    if (reconnectTimer) {
-      clearInterval(reconnectTimer);
-    }
-  };
-}
-
-// Exponer para debug
-if (typeof window !== 'undefined') {
-  window.supabaseStatus = () => ({
-    connectionStatus,
-    url: supabaseUrl,
-  });
-}
+// ❌ Connection Monitor ELIMINADO (optimización)
+// Supabase maneja reconexión automática internamente.
+// Este monitor hacía 2 queries/min innecesarias (120 queries/hora).
 
 /**
  * 🕐 Helper para ejecutar consultas con timeout
@@ -159,4 +165,25 @@ export async function safeQuery(queryOrPromise, timeout = 10000) {
     // Devolver formato consistente con Supabase
     return { data: null, error: error.message || 'Query failed' };
   }
+}
+
+// Exponer métricas para debug (admin/dev)
+export function getSupabaseMetrics() {
+  return {
+    ...__supabaseMetrics,
+    uptimeMs: Date.now() - __supabaseMetrics.startedAt,
+  };
+}
+
+export function resetSupabaseMetrics() {
+  __supabaseMetrics.startedAt = Date.now();
+  __supabaseMetrics.total = 0;
+  __supabaseMetrics.byPath = {};
+  __supabaseMetrics.byStatus = {};
+  __supabaseMetrics.last = [];
+}
+
+if (typeof window !== 'undefined') {
+  window.supabaseMetrics = () => getSupabaseMetrics();
+  window.resetSupabaseMetrics = () => resetSupabaseMetrics();
 }

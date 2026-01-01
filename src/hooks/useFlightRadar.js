@@ -502,8 +502,9 @@ export function useFlightRadar({
     fetchFlights();
 
     if (autoUpdate) {
-      // Si estamos leyendo desde cache, preferir realtime + un "poll" de seguridad más lento
-      const effectiveInterval = useCache ? Math.max(updateInterval, 120000) : updateInterval;
+      // ✅ OPTIMIZACIÓN: Intervalo aumentado a 5min cuando usa cache (antes 2min)
+      // Reduce carga de polling multiusuario: 10 usuarios × 0.33 queries/min = 3.3 queries/min (antes 5)
+      const effectiveInterval = useCache ? Math.max(updateInterval, 300000) : updateInterval; // 300000ms = 5min
       intervalRef.current = setInterval(fetchFlights, effectiveInterval);
     }
 

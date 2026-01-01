@@ -20,7 +20,8 @@ export function useEntities() {
         .select('*')
         .eq('is_visible', true)
         .is('archived_at', null)
-        .order('name', { ascending: true });
+        .order('created_at', { ascending: false }) // Ordenar por más recientes primero
+        .limit(500); // ✅ OPTIMIZACIÓN: Limitar a 500 entidades más recientes
 
       if (error) throw error;
 

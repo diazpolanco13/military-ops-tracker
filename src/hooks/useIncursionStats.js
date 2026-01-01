@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { realtimeManager } from '../lib/realtimeManager';
 
@@ -19,10 +19,64 @@ export function useIncursionStats() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Debounce para evitar ráfagas: realtime puede disparar múltiples eventos seguidos.
+  const debounceRef = useRef(null);
+
+  const tryLoadBundled = useCallback(async () => {
+    // ✅ OPTIMIZACIÓN: Intentar vista materializada primero (1 query vs 7)
+    // Si no existe, fallback a Edge Function o fan-out
+    try {
+      // 1. Intentar vista materializada (PRIORIDAD 1)
+      const { data: viewData, error: viewError } = await supabase
+        .from('incursion_stats_bundle')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      if (!viewError && viewData) {
+        // Adaptar formato de la vista al esperado por el componente
+        return {
+          summary: viewData.summary,
+          hourlyPatterns: viewData.hourly_patterns || [],
+          weeklyPatterns: viewData.weekly_patterns || [],
+          quadrantPatterns: viewData.quadrant_patterns || [],
+          aircraftPatterns: viewData.aircraft_patterns || [],
+          heatmapData: viewData.heatmap_data || [],
+          recentIncursions: viewData.recent_incursions || [],
+        };
+      }
+
+      // 2. Fallback a Edge Function (PRIORIDAD 2)
+      const { data, error: fnError } = await supabase.functions.invoke('incursion-stats-bundle', {
+        body: {},
+      });
+      if (fnError) return null;
+      if (!data) return null;
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const loadStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // 0) Intentar bundle (1 request) si está disponible
+      const bundled = await tryLoadBundled();
+      if (bundled) {
+        setStats({
+          summary: bundled.summary ?? null,
+          hourlyPatterns: bundled.hourlyPatterns || [],
+          weeklyPatterns: bundled.weeklyPatterns || [],
+          quadrantPatterns: bundled.quadrantPatterns || [],
+          aircraftPatterns: bundled.aircraftPatterns || [],
+          heatmapData: bundled.heatmapData || [],
+          recentIncursions: bundled.recentIncursions || [],
+        });
+        return;
+      }
 
       // Cargar todas las estadísticas en paralelo
       const [
@@ -59,14 +113,18 @@ export function useIncursionStats() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tryLoadBundled]);
 
   useEffect(() => {
     loadStats();
 
     // 🔄 Suscripción centralizada para incursion_sessions
     const unsubscribe = realtimeManager.subscribe('incursion_sessions', () => {
-      loadStats();
+      // Debounce para evitar ráfagas cuando llegan varios cambios seguidos
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        loadStats();
+      }, 1500);
     });
 
     // REDUCIDO: Actualizar cada 10 minutos en lugar de 5
@@ -74,6 +132,7 @@ export function useIncursionStats() {
 
     return () => {
       clearInterval(interval);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       unsubscribe();
     };
   }, [loadStats]);

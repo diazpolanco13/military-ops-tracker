@@ -16,7 +16,8 @@ export function useEvents() {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .order('event_date', { ascending: false });
+        .order('event_date', { ascending: false })
+        .limit(100); // ✅ OPTIMIZACIÓN: Limitar a 100 eventos más recientes
 
       if (error) throw error;
 
