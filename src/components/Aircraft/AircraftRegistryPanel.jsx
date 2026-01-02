@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   X, 
   RefreshCw, 
@@ -20,7 +20,8 @@ import {
   ChevronsRight,
   Eye,
   MoreVertical,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 import { useAircraftRegistry, useMilitaryBases, useCountryPresence } from '../../hooks/useAircraftRegistry';
 import { prefetchAircraftImages, useAircraftModelImage } from '../../hooks/useAircraftImages';
@@ -77,6 +78,7 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
     loading, 
     stats,
     topIncursionAircraft,
+    topIncursionsLoading,
     refetch,
     pagination,
     goToPage,
@@ -208,7 +210,7 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar por ICAO24, modelo, callsign..."
+                placeholder="Buscar por ICAO24, callsign, modelo..."
                 className="w-full pl-9 pr-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-500"
               />
             </div>
@@ -341,6 +343,7 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
             {activeTab === 'incursions' && (
               <IncursionsTab 
                 aircraft={topIncursionAircraft}
+                loading={topIncursionsLoading}
                 onSelect={setSelectedAircraft}
               />
             )}
@@ -649,18 +652,18 @@ function AircraftListItem({ aircraft, onClick }) {
             <Plane className={`w-6 h-6 ${loadingThumb ? 'text-slate-400 animate-pulse' : 'text-slate-500'}`} />
           )}
         </div>
-        {/* Apodo (CALLSIGN) debajo de la imagen - pequeño para ahorrar espacio */}
-        {lastCallsign && (
-          <div className="mt-1 font-mono text-[11px] text-amber-300 truncate max-w-[56px]">
-            {lastCallsign}
-          </div>
-        )}
       </div>
 
       {/* Info Principal */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <span className="font-mono text-xs text-sky-400">{a.icao24}</span>
+          {/* Callsign prominente */}
+          {lastCallsign && (
+            <span className="font-mono text-xs font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">
+              {lastCallsign}
+            </span>
+          )}
           {a.military_branch && (
             <span className="text-[10px] bg-slate-600 px-1.5 py-0.5 rounded text-slate-300">
               {a.military_branch}
@@ -796,8 +799,17 @@ function BasesTab({ basesByCountry, aircraft }) {
 // =============================================
 // TAB: TOP INCURSIONES
 // =============================================
-function IncursionsTab({ aircraft, onSelect }) {
-  if (aircraft.length === 0) {
+function IncursionsTab({ aircraft, loading, onSelect }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 text-red-400 animate-spin" />
+        <span className="ml-3 text-slate-400">Cargando incursiones...</span>
+      </div>
+    );
+  }
+
+  if (!aircraft || aircraft.length === 0) {
     return (
       <div className="text-center py-12">
         <AlertTriangle className="w-16 h-16 text-slate-600 mx-auto mb-4" />
@@ -906,18 +918,18 @@ function NewTodayTab({ aircraft, onSelect }) {
 // TAB: DESPLIEGUE POR PAÍS
 // =============================================
 function CountryDeploymentTab({ deploymentSummary, getAircraftInCountry, onSelectAircraft }) {
-  const [expandedCountry, setExpandedCountry] = useState(null);
+  const [expandedKey, setExpandedKey] = useState(null); // Usar key único, no solo country_code
   const [countryAircraft, setCountryAircraft] = useState([]);
   const [loadingCountry, setLoadingCountry] = useState(false);
 
-  const handleExpandCountry = async (countryCode) => {
-    if (expandedCountry === countryCode) {
-      setExpandedCountry(null);
+  const handleExpandCountry = async (uniqueKey, countryCode) => {
+    if (expandedKey === uniqueKey) {
+      setExpandedKey(null);
       setCountryAircraft([]);
       return;
     }
     
-    setExpandedCountry(countryCode);
+    setExpandedKey(uniqueKey);
     setLoadingCountry(true);
     
     try {
@@ -972,15 +984,35 @@ function CountryDeploymentTab({ deploymentSummary, getAircraftInCountry, onSelec
 
       {/* Lista de países */}
       <div className="space-y-2">
-        {deploymentSummary.map((country) => (
-          <div key={country.country_code} className="bg-slate-800/30 rounded-lg border border-slate-700 overflow-hidden">
+        {deploymentSummary.map((country, idx) => {
+          const uniqueKey = `${country.country_code}-${idx}`;
+          // Detectar si es una Zona Económica Exclusiva (EEZ) o territorio
+          const isEEZ = country.country_name?.includes('Exclusive Economic Zone') || 
+                        country.country_name?.includes('EEZ');
+          const displayName = isEEZ 
+            ? country.country_name.replace('Exclusive Economic Zone', 'ZEE')
+            : country.country_name;
+          
+          return (
+          <div key={uniqueKey} className={`rounded-lg border overflow-hidden ${
+            isEEZ 
+              ? 'bg-blue-900/20 border-blue-700/50' 
+              : 'bg-slate-800/30 border-slate-700'
+          }`}>
             <button
-              onClick={() => handleExpandCountry(country.country_code)}
+              onClick={() => handleExpandCountry(uniqueKey, country.country_code)}
               className="w-full flex items-center gap-3 p-4 hover:bg-slate-700/30 transition-colors"
             >
               <div className="text-3xl">{country.country_flag || '🏳️'}</div>
               <div className="flex-1 text-left min-w-0">
-                <h4 className="font-medium text-white">{country.country_name}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-medium text-white">{displayName}</h4>
+                  {isEEZ && (
+                    <span className="text-[10px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded">
+                      🌊 Zona Marítima
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
                   <span className="flex items-center gap-1">
                     <Plane className="w-3 h-3" />
@@ -1003,7 +1035,7 @@ function CountryDeploymentTab({ deploymentSummary, getAircraftInCountry, onSelec
                   <div className="text-lg font-bold text-sky-400">{country.total_aircraft}</div>
                   <div className="text-xs text-slate-500">aeronaves</div>
                 </div>
-                {expandedCountry === country.country_code ? (
+                {expandedKey === uniqueKey ? (
                   <ChevronDown className="w-5 h-5 text-slate-400" />
                 ) : (
                   <ChevronRight className="w-5 h-5 text-slate-400" />
@@ -1012,7 +1044,7 @@ function CountryDeploymentTab({ deploymentSummary, getAircraftInCountry, onSelec
             </button>
 
             {/* Lista de aeronaves del país */}
-            {expandedCountry === country.country_code && (
+            {expandedKey === uniqueKey && (
               <div className="border-t border-slate-700 bg-slate-900/50">
                 {loadingCountry ? (
                   <div className="p-4 text-center text-slate-400">
@@ -1060,7 +1092,8 @@ function CountryDeploymentTab({ deploymentSummary, getAircraftInCountry, onSelec
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN, MAPBOX_STYLES } from '../../lib/maplibre';
@@ -46,8 +46,8 @@ import { supabase, withTimeout } from '../../lib/supabase';
 import { batchGeocodeHistory, updateHistoryWithCountries, getCountryNameEs } from '../../services/geocodingService';
 import { getCountryByICAO24 } from '../../services/flightRadarService';
 
-// Timeouts para consultas
-const QUERY_TIMEOUT = 8000;       // Consultas simples (8 segundos)
+// Timeouts para consultas - aumentados para conexiones lentas
+const QUERY_TIMEOUT = 10000;      // Consultas simples (10 segundos)
 const HISTORY_TIMEOUT = 20000;    // Historial - más tiempo porque puede ser grande (20 segundos)
 const HISTORY_LIMIT_INITIAL = 50; // Carga inicial rápida
 const HISTORY_LIMIT_FULL = 200;   // Carga completa bajo demanda
@@ -69,84 +69,96 @@ export default function AircraftDetailView({ aircraft, onClose }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [modelData, setModelData] = useState(aircraft?.model || null);
+  const [modelLoading, setModelLoading] = useState(false);
+  const [modelError, setModelError] = useState(null);
   const [lastLocation, setLastLocation] = useState(null);
-  
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
 
   const { updateNotes, recalculateBase } = useAircraftRegistryActions();
   
   // Cargar modelo del catálogo si no viene incluido (con timeout)
-  useEffect(() => {
-    let cancelled = false;
+  const loadModelFromCatalog = useCallback(async () => {
+    if (!aircraft?.aircraft_type) {
+      setModelData(null);
+      setModelLoading(false);
+      return;
+    }
     
-    // Si ya tenemos modelo cargado o no hay tipo, no hacer nada
-    if (modelData || !aircraft?.aircraft_type) return;
+    setModelLoading(true);
+    setModelError(null);
     
-    const loadModelFromCatalog = async () => {
-      try {
-        const result = await withTimeout(
-          supabase
-            .from('aircraft_model_catalog')
-            .select('*')
-            .eq('aircraft_type', aircraft.aircraft_type)
-            .limit(1),
-          QUERY_TIMEOUT
-        );
+    try {
+      const result = await withTimeout(
+        supabase
+          .from('aircraft_model_catalog')
+          .select('*')
+          .eq('aircraft_type', aircraft.aircraft_type)
+          .limit(1),
+        QUERY_TIMEOUT
+      );
 
-        const row = result.data?.[0] || null;
-        if (!cancelled && !result.error && row) {
-          setModelData(row);
-        }
-      } catch (err) {
-        // Silencioso - timeout o el modelo simplemente no está en el catálogo
-        console.warn('[AircraftDetailView] Model catalog timeout/error:', err.message);
-      }
-    };
+      if (result.error) throw result.error;
+      
+      const row = result.data?.[0] || null;
+      setModelData(row);
+      // No es error si no hay datos - simplemente no está en catálogo
+    } catch (err) {
+      console.warn('[AircraftDetailView] Model catalog timeout/error:', err.message);
+      setModelError(err.message?.includes('Timeout') ? 'timeout' : err.message);
+    } finally {
+      setModelLoading(false);
+    }
+  }, [aircraft?.aircraft_type]);
+
+  useEffect(() => {
+    // Si ya tenemos modelo cargado, no hacer nada
+    if (modelData) return;
     
     loadModelFromCatalog();
-    
-    return () => {
-      cancelled = true;
-    };
-  }, [aircraft?.aircraft_type, modelData]);
+  }, [aircraft?.aircraft_type, modelData, loadModelFromCatalog]);
 
-  // Cargar última ubicación (con timeout)
-  useEffect(() => {
-    let cancelled = false;
-
+  // Cargar última ubicación (con timeout) - SECUENCIAL: después del modelo
+  const loadLastLocation = useCallback(async () => {
     if (!aircraft?.icao24) {
       setLastLocation(null);
+      setLocationLoading(false);
       return;
     }
 
-    const loadLastLocation = async () => {
-      try {
-        const result = await withTimeout(
-          supabase
-            .from('aircraft_location_history')
-            .select('callsign, latitude, longitude, country_code, country_name, detected_at, origin_icao, destination_icao')
-            .eq('icao24', aircraft.icao24.toUpperCase())
-            .order('detected_at', { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-          QUERY_TIMEOUT
-        );
+    setLocationLoading(true);
+    setLocationError(null);
 
-        if (!cancelled && !result.error) {
-          setLastLocation(result.data || null);
-        }
-      } catch (e) {
-        // Timeout o error - silencioso
-        console.warn('[AircraftDetailView] Last location timeout/error:', e.message);
-        if (!cancelled) setLastLocation(null);
-      }
-    };
+    try {
+      const result = await withTimeout(
+        supabase
+          .from('aircraft_location_history')
+          .select('callsign, latitude, longitude, country_code, country_name, detected_at, origin_icao, destination_icao')
+          .eq('icao24', aircraft.icao24.toUpperCase())
+          .order('detected_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        QUERY_TIMEOUT
+      );
 
-    loadLastLocation();
-
-    return () => {
-      cancelled = true;
-    };
+      if (result.error) throw result.error;
+      setLastLocation(result.data || null);
+    } catch (e) {
+      console.warn('[AircraftDetailView] Last location timeout/error:', e.message);
+      setLocationError(e.message?.includes('Timeout') ? 'timeout' : e.message);
+      setLastLocation(null);
+    } finally {
+      setLocationLoading(false);
+    }
   }, [aircraft?.icao24]);
+
+  // Secuenciar: cargar ubicación solo cuando el modelo terminó de cargar
+  useEffect(() => {
+    // Esperar a que el modelo termine (ya sea con datos o sin datos)
+    if (modelLoading) return;
+    
+    loadLastLocation();
+  }, [aircraft?.icao24, modelLoading, loadLastLocation]);
 
   const { 
     images, 
@@ -374,12 +386,13 @@ export default function AircraftDetailView({ aircraft, onClose }) {
           
           {/* Imagen Grande */}
           <div className="relative flex-shrink-0 h-[240px] sm:h-[320px] lg:h-[400px] flex items-center justify-center bg-slate-950 p-4">
-            {loadingImages ? (
+            {loadingImages && (
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="w-10 h-10 text-sky-400 animate-spin" />
                 <span className="text-slate-400 text-sm">Cargando imágenes...</span>
               </div>
-            ) : hasImages ? (
+            )}
+            {!loadingImages && hasImages && (
               <>
                 <img
                   src={currentImage.image_url}
@@ -436,7 +449,8 @@ export default function AircraftDetailView({ aircraft, onClose }) {
                   </div>
                 </div>
               </>
-            ) : (
+            )}
+            {!loadingImages && !hasImages && (
               <div className="flex flex-col items-center gap-4 text-center">
                 <div className="w-24 h-24 rounded-2xl bg-slate-800 flex items-center justify-center">
                   <Plane className="w-12 h-12 text-slate-600" />
@@ -488,7 +502,33 @@ export default function AircraftDetailView({ aircraft, onClose }) {
               Especificaciones Técnicas
             </h3>
             
-            {modelData ? (
+            {/* Estado de carga */}
+            {modelLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-sky-400 animate-spin" />
+                <span className="ml-2 text-slate-400 text-sm">Cargando especificaciones...</span>
+              </div>
+            )}
+
+            {/* Estado de error con opción de reintentar */}
+            {modelError && !modelLoading && (
+              <div className="text-center py-6 bg-red-500/10 rounded-xl border border-red-500/30">
+                <WifiOff className="w-8 h-8 text-red-400/60 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm mb-3">
+                  {modelError === 'timeout' ? 'Tiempo de espera agotado' : 'Error al cargar'}
+                </p>
+                <button
+                  onClick={loadModelFromCatalog}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors flex items-center gap-2 mx-auto"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Reintentar
+                </button>
+              </div>
+            )}
+            
+            {/* Datos cargados correctamente */}
+            {modelData && !modelLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {modelData?.max_speed_knots && (
                   <SpecCard 
@@ -555,12 +595,15 @@ export default function AircraftDetailView({ aircraft, onClose }) {
                   />
                 )}
               </div>
-            ) : (
+            ) : !modelLoading && !modelError ? (
               <div className="text-center py-8">
                 <Plane className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                 <p className="text-slate-500 text-sm">Sin especificaciones disponibles</p>
+                <p className="text-slate-600 text-xs mt-1">
+                  Modelo: {aircraft?.aircraft_type || 'Desconocido'}
+                </p>
               </div>
-            )}
+            ) : null}
 
             {/* Operadores */}
             {modelData?.operated_by && modelData?.operated_by.length > 0 && (
@@ -638,6 +681,9 @@ export default function AircraftDetailView({ aircraft, onClose }) {
                 aircraft={a} 
                 modelData={modelData}
                 lastLocation={lastLocation}
+                locationLoading={locationLoading}
+                locationError={locationError}
+                onRetryLocation={loadLastLocation}
                 notes={notes}
                 setNotes={setNotes}
                 isEditingNotes={isEditingNotes}
@@ -783,7 +829,7 @@ function Lightbox({ images, currentIndex, onClose, onPrev, onNext, onIndexChange
 // =============================================
 // TAB: IDENTIFICACIÓN
 // =============================================
-function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditingNotes, setIsEditingNotes, onSaveNotes, onRecalculateBase }) {
+function InfoTab({ aircraft, modelData, lastLocation, locationLoading, locationError, onRetryLocation, notes, setNotes, isEditingNotes, setIsEditingNotes, onSaveNotes, onRecalculateBase }) {
   const a = aircraft;
   const baseCountryCode = a.probable_country;
   const baseCountryLabel = baseCountryCode === 'PR'
@@ -827,14 +873,43 @@ function InfoTab({ aircraft, modelData, lastLocation, notes, setNotes, isEditing
               </div>
             ) : null;
           })()}
-          {lastLocation?.country_code && (
+          {/* Estado de carga de ubicación */}
+          {locationLoading && (
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <Globe className="w-4 h-4 text-slate-500" />
+                <span>Última ubicación</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 text-sky-400 animate-spin" />
+                <span className="text-sm text-slate-500">Cargando...</span>
+              </div>
+            </div>
+          )}
+          {/* Error de ubicación */}
+          {locationError && !locationLoading && (
+            <div className="flex items-center justify-between px-4 py-3 bg-red-500/10">
+              <div className="flex items-center gap-2 text-sm text-red-400">
+                <WifiOff className="w-4 h-4" />
+                <span>Error al cargar ubicación</span>
+              </div>
+              <button
+                onClick={onRetryLocation}
+                className="text-xs text-sky-400 hover:text-sky-300 px-2 py-1 bg-slate-700 rounded"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+          {/* Datos de ubicación */}
+          {lastLocation?.country_code && !locationLoading && (
             <InfoRow
               label="Último país detectado"
               value={getCountryNameEs(lastLocation.country_code) || lastLocation.country_name || lastLocation.country_code}
               icon={Globe}
             />
           )}
-          {(lastLocation?.latitude && lastLocation?.longitude) && (
+          {(lastLocation?.latitude && lastLocation?.longitude) && !locationLoading && (
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-slate-400">
                 <MapPin className="w-4 h-4 text-slate-500" />

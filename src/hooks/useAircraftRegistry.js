@@ -9,7 +9,7 @@
  * - Aeronaves nuevas del día
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase, withTimeout } from '../lib/supabase';
 
 const QUERY_TIMEOUT = 25000; // 25 segundos para listas grandes (aumentado por saturación)
@@ -457,13 +457,45 @@ export function useAircraftRegistry(options = {}) {
     return () => clearInterval(interval);
   }, [enabled, autoRefresh, refreshInterval, reloadCurrentPage]);
 
-  // Datos computados
-  const topIncursionAircraft = useMemo(() => {
-    return [...aircraft]
-      .filter(a => a.total_incursions > 0)
-      .sort((a, b) => b.total_incursions - a.total_incursions)
-      .slice(0, 10);
-  }, [aircraft]);
+  // ========== TOP INCURSIONES (consulta separada) ==========
+  const [topIncursionAircraft, setTopIncursionAircraft] = useState([]);
+  const [topIncursionsLoading, setTopIncursionsLoading] = useState(false);
+
+  // Cargar top incursiones directamente de la BD (no depende de paginación)
+  const fetchTopIncursions = useCallback(async () => {
+    if (!enabled) return;
+    
+    setTopIncursionsLoading(true);
+    try {
+      const result = await withTimeout(
+        supabase
+          .from('military_aircraft_registry')
+          .select(`
+            icao24, aircraft_model, aircraft_type, military_branch,
+            total_incursions, callsigns_used, last_seen, first_seen
+          `)
+          .gt('total_incursions', 0)
+          .order('total_incursions', { ascending: false })
+          .limit(15),
+        QUERY_TIMEOUT
+      );
+      
+      if (!result.error && result.data) {
+        setTopIncursionAircraft(result.data);
+      }
+    } catch (err) {
+      console.warn('[useAircraftRegistry] Error fetching top incursions:', err.message);
+    } finally {
+      setTopIncursionsLoading(false);
+    }
+  }, [enabled]);
+
+  // Cargar top incursiones cuando se activa el hook
+  useEffect(() => {
+    if (enabled) {
+      fetchTopIncursions();
+    }
+  }, [enabled, fetchTopIncursions]);
 
   const recentlySeenAircraft = useMemo(() => {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -508,6 +540,7 @@ export function useAircraftRegistry(options = {}) {
 
     // Datos computados
     topIncursionAircraft,
+    topIncursionsLoading,
     recentlySeenAircraft,
 
     // Funciones

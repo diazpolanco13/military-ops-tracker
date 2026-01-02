@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, withTimeout } from '../lib/supabase';
 
-const QUERY_TIMEOUT = 5000; // ⚡ Reducido de 10s a 5s para fallar más rápido
+const QUERY_TIMEOUT = 12000; // 12s - aumentado para conexiones lentas
 
 // ════════════════════════════════════════════════════════════════════════════
 // 🗄️ CACHÉ GLOBAL DE IMÁGENES - Evita consultas repetidas
@@ -278,7 +278,7 @@ export function useAircraftImages(aircraftType = null) {
         const result = await withTimeout(
           supabase
             .from('aircraft_model_images')
-            .select('*')
+            .select('id, aircraft_type, image_url, thumbnail_url, image_caption, image_source, is_primary, created_at')
             .eq('aircraft_type', aircraftType.toUpperCase())
             .order('is_primary', { ascending: false })
             .order('created_at', { ascending: false }),
@@ -388,26 +388,8 @@ export function useAircraftModelImage(aircraftType, options = {}) {
     
     const fetchPromise = (async () => {
       try {
-        // Consulta única combinada: primero images, luego catalog
-        const imageResult = await withTimeout(
-          supabase
-            .from('aircraft_model_images')
-            .select('thumbnail_url, image_url')
-            .eq('aircraft_type', typeKey)
-            .order('is_primary', { ascending: false })
-            .limit(1),
-          QUERY_TIMEOUT
-        );
-
-        const imageData = imageResult.data?.[0];
-        if (imageData) {
-          const url = imageData.thumbnail_url || imageData.image_url || null;
-          imageCache.set(typeKey, url);
-          cacheTimestamps.set(typeKey, Date.now());
-          return url;
-        }
-
-        // Fallback al catálogo
+        // ⚡ OPTIMIZACIÓN: Usar SOLO catálogo (ya tiene thumbnail_url sincronizado)
+        // Esto reduce de 2 queries a 1 query por tipo
         const catalogResult = await withTimeout(
           supabase
             .from('aircraft_model_catalog')
@@ -463,6 +445,8 @@ export function useAircraftModelImage(aircraftType, options = {}) {
 /**
  * ⚡ Función utilitaria para precargar imágenes en batch
  * Útil para cargar todas las imágenes de una lista de vuelos de una vez
+ * 
+ * OPTIMIZADO: Usa solo aircraft_model_catalog (1 query en lugar de 2)
  */
 export async function prefetchAircraftImages(aircraftTypes) {
   const typesToFetch = [...new Set(
@@ -470,31 +454,26 @@ export async function prefetchAircraftImages(aircraftTypes) {
       .map(t => String(t || '').toUpperCase().trim())
       .filter(t => t && /^[A-Z0-9]+$/.test(t)) // evitar valores raros que rompen `.in()`
       .filter(t => !imageCache.has(t))
-  )].slice(0, 200); // límite defensivo para no saturar PostgREST
+  )].slice(0, 50); // ⚡ Límite reducido de 200 a 50 para evitar queries enormes
 
   if (typesToFetch.length === 0) return;
 
   try {
-    // Batch query en chunks para evitar URL enorme / 400
-    const byType = {};
-    const chunkSize = 40;
-    for (let i = 0; i < typesToFetch.length; i += chunkSize) {
-      const chunk = typesToFetch.slice(i, i + chunkSize);
-      const { data } = await withTimeout(
-        supabase
-          .from('aircraft_model_images')
-          .select('aircraft_type, thumbnail_url, image_url, is_primary')
-          .in('aircraft_type', chunk)
-          .order('is_primary', { ascending: false }),
-        QUERY_TIMEOUT * 2
-      );
+    // ⚡ Una sola query al catálogo (ya tiene thumbnails sincronizados)
+    const { data } = await withTimeout(
+      supabase
+        .from('aircraft_model_catalog')
+        .select('aircraft_type, thumbnail_url, primary_image_url')
+        .in('aircraft_type', typesToFetch),
+      QUERY_TIMEOUT
+    );
 
-      (data || []).forEach(img => {
-        const t = img?.aircraft_type ? String(img.aircraft_type).toUpperCase().trim() : null;
-        if (!t) return;
-        if (!byType[t]) byType[t] = img.thumbnail_url || img.image_url;
-      });
-    }
+    const byType = {};
+    (data || []).forEach(cat => {
+      const t = cat?.aircraft_type ? String(cat.aircraft_type).toUpperCase().trim() : null;
+      if (!t) return;
+      byType[t] = cat.thumbnail_url || cat.primary_image_url || null;
+    });
 
     // Guardar en caché (incluye null para evitar reintentos)
     typesToFetch.forEach(type => {

@@ -1,7 +1,7 @@
 # SAE-RADAR - Arquitectura del Sistema
 
 > Sistema de Monitoreo de Espacio Aéreo para Inteligencia Estratégica  
-> Última actualización: 2026-01-02 (Optimizaciones de rendimiento)
+> Última actualización: 2026-01-02 (Optimizaciones inventario + manejo de errores)
 
 ## Stack Tecnológico
 
@@ -195,6 +195,45 @@ SCREENSHOT_AUTH_TOKEN=xxx
 
 ---
 
+## Sistema de Detección de Ubicación
+
+El sistema detecta automáticamente dónde se encuentra cada aeronave:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUJO DE DETECCIÓN                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Aeronave detectada (lat, lon)                              │
+│       ↓                                                     │
+│  ¿Está cerca de un aeropuerto? (< X km)                     │
+│       │                                                     │
+│       ├── SÍ → Registrar en el AEROPUERTO                   │
+│       │        País: del aeropuerto                         │
+│       │        Base probable: código ICAO                   │
+│       │                                                     │
+│       └── NO → ¿Está sobre una ZEE?                         │
+│                (Zona Económica Exclusiva)                   │
+│                     │                                       │
+│                     ├── SÍ → Registrar en la ZEE            │
+│                     │        Ej: "Venezuelan EEZ"           │
+│                     │        🌊 Marcador visual             │
+│                     │                                       │
+│                     └── NO → Aguas internacionales          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Datos almacenados**:
+- `aircraft_country_presence`: Historial de países visitados
+- `aircraft_last_presence`: Última ubicación conocida
+- `caribbean_deployment_summary`: Resumen por país/ZEE
+
+**Visualización en UI**:
+- 🏳️ **País**: Aeronave detectada cerca de aeropuerto
+- 🌊 **Zona Marítima**: Aeronave sobre ZEE (fondo azul)
+
+---
+
 ## Optimizaciones Implementadas (2026-01-02)
 
 ### Fase 1: Limpieza y Deduplicación
@@ -217,13 +256,54 @@ SCREENSHOT_AUTH_TOKEN=xxx
 | ✅ Índice compuesto | Migración Supabase | Queries más rápidas |
 | ✅ Monitor redundante eliminado | `useFlightRadar.js` | Sin duplicación frontend/cron |
 
+### Fase 3: Optimización del Inventario de Aeronaves
+
+| Cambio | Archivo | Impacto |
+|--------|---------|---------|
+| ✅ Debounce en búsqueda (500ms) | `AircraftRegistryPanel.jsx` | Menos queries al escribir |
+| ✅ Cache de bases militares (10min) | `useAircraftRegistry.js` | Sin recargas constantes |
+| ✅ Cache de países (permanente) | `useAircraftRegistry.js` | Sin recargas |
+| ✅ Cache de catálogo (por sesión) | `useAircraftRegistry.js` | 1 query por tipo |
+| ✅ Lazy loading por tabs | `AircraftRegistryPanel.jsx` | Solo carga tab activa |
+| ✅ Imágenes: 1 query (no 2) | `useAircraftImages.js` | -50% queries imágenes |
+
+### Fase 4: Manejo de Errores y Modelos Nuevos
+
+| Cambio | Archivo | Impacto |
+|--------|---------|---------|
+| ✅ Timeouts reducidos (5s) | `AircraftDetailView.jsx` | Fail-fast para modelos sin datos |
+| ✅ Estados de carga/error en UI | `AircraftDetailView.jsx` | UX amigable con errores |
+| ✅ Botones de reintentar | `AircraftDetailView.jsx` | Recuperación manual |
+| ✅ Caché de null (no reintentos) | `useAircraftImages.js` | Sin loops de queries fallidas |
+| ✅ Visualización ZEE vs Aeropuerto | `AircraftRegistryPanel.jsx` | Diferenciación clara |
+
+### Fase 5: Importación de Incursiones Históricas
+
+| Cambio | Tipo | Impacto |
+|--------|------|---------|
+| ✅ Extracción ICAO24 de eventos | SQL | 25 aeronaves identificadas |
+| ✅ Inserción de 21 aeronaves nuevas | SQL | +21 aeronaves en registro |
+| ✅ Actualización total_incursions | SQL | 44 incursiones atribuidas |
+| ✅ Query separada Top Incursiones | `useAircraftRegistry.js` | No depende de paginación |
+| ✅ Loading state en tab | `AircraftRegistryPanel.jsx` | UX mejorada |
+
+**Aeronaves importadas:**
+- 8x Boeing F/A-18 Hornet (Navy)
+- 4x Northrop Grumman E-2 Hawkeye (Navy)
+- 4x Boeing C-17A Globemaster III (USAF)
+- 2x Boeing KC-135 Stratotanker (USAF)
+- 1x Boeing E-3 Sentry AWACS (USAF)
+- 1x Boeing E-6B Mercury (Navy)
+
 ### Ahorro Total Estimado
 ```
 ANTES: ~5,000 queries/hora (con 50 usuarios)
-DESPUÉS: ~2,000 queries/hora
-REDUCCIÓN: ~60%
+DESPUÉS: ~1,500 queries/hora
+REDUCCIÓN: ~70%
 
-Cache de plantillas: TTL 5 minutos (compartido entre componentes)
+Cache de plantillas: TTL 5 minutos
+Cache de bases: TTL 10 minutos
+Cache de imágenes: TTL 5 minutos
 Índice parcial: idx_entities_visible_active_created
 ```
 
