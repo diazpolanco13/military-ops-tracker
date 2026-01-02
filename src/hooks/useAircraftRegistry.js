@@ -335,7 +335,11 @@ export function useAircraftRegistry(options = {}) {
     }
   }, [reloadCurrentPage]);
 
+  // ========== CACHE DE CATÁLOGO (compartido entre cargas) ==========
+  const catalogCacheRef = useRef({});
+
   // Cargar datos con PAGINACIÓN (con timeout)
+  // ✅ OPTIMIZADO: Reduce queries paralelas y usa cache
   useEffect(() => {
     if (!enabled) return;
     
@@ -346,17 +350,17 @@ export function useAircraftRegistry(options = {}) {
       setError(null);
       
       try {
-        // 1) Fetch paginado con count en la MISMA request (reduce 1 llamada y baja timeouts)
+        // 1) Fetch paginado con count en la MISMA request
         const offset = (currentPage - 1) * pageSize;
         const aircraftResult = await withTimeout(
           supabase
             .from('military_aircraft_registry')
             .select(
-              'icao24, aircraft_type, aircraft_model, military_branch, probable_country, probable_base_icao, probable_base_name, base_confidence, total_detections, total_flights, total_incursions, is_new_today, first_seen, last_seen, notes',
+              'icao24, aircraft_type, aircraft_model, military_branch, probable_country, probable_base_icao, probable_base_name, base_confidence, total_detections, total_flights, total_incursions, is_new_today, first_seen, last_seen, callsigns_used, notes',
               { count: 'exact' }
             )
             .order('last_seen', { ascending: false })
-            .range(offset, offset + pageSize - 1), // Paginación
+            .range(offset, offset + pageSize - 1),
           QUERY_TIMEOUT
         );
         
@@ -368,36 +372,37 @@ export function useAircraftRegistry(options = {}) {
         setTotalCount(total);
         setTotalPages(Math.ceil(total / pageSize));
 
-        // 2) Obtener tipos únicos SOLO de esta página
+        // 2) Obtener tipos únicos NO cacheados
         const uniqueTypes = [...new Set(aircraftData.map(a => a.aircraft_type).filter(Boolean))];
+        const uncachedTypes = uniqueTypes.filter(t => !catalogCacheRef.current[t]);
         
-        // 3) Cargar catálogo SOLO para tipos de esta página (campos mínimos)
-        let modelCatalog = {};
-        if (uniqueTypes.length > 0) {
+        // 3) Cargar catálogo SOLO para tipos no cacheados (reduce queries)
+        if (uncachedTypes.length > 0) {
           try {
             const catalogResult = await withTimeout(
               supabase
                 .from('aircraft_model_catalog')
                 .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url')
-                .in('aircraft_type', uniqueTypes),
-              QUERY_TIMEOUT
+                .in('aircraft_type', uncachedTypes),
+              10000 // Timeout más corto para catálogo (10s)
             );
             
             if (!cancelled && catalogResult.data) {
               catalogResult.data.forEach(m => {
-                modelCatalog[m.aircraft_type] = m;
+                catalogCacheRef.current[m.aircraft_type] = m;
               });
             }
           } catch (catalogErr) {
-            console.warn('[useAircraftRegistry] Catalog timeout:', catalogErr.message);
+            // ⚡ No fallar por timeout de catálogo - continuar sin imágenes
+            console.warn('[useAircraftRegistry] Catalog optional:', catalogErr.message);
           }
         }
 
         if (cancelled) return;
 
-        // 4) Asociar datos del catálogo a cada aeronave
+        // 4) Asociar datos del catálogo (desde cache) a cada aeronave
         const aircraftWithCatalog = aircraftData.map(a => {
-          const catalogInfo = modelCatalog[a.aircraft_type] || null;
+          const catalogInfo = catalogCacheRef.current[a.aircraft_type] || null;
           return {
             ...a,
             aircraft_model: (a.aircraft_model === a.aircraft_type && catalogInfo) 
@@ -407,47 +412,24 @@ export function useAircraftRegistry(options = {}) {
           };
         });
 
-        // 5) Mezclar última presencia SOLO para esta página (campos mínimos)
-        const icaoList = aircraftWithCatalog.map((r) => r.icao24).filter(Boolean);
-        let aircraftWithPresence = aircraftWithCatalog;
-        if (icaoList.length > 0) {
-          try {
-            const presenceResult = await withTimeout(
-              supabase
-                .from('aircraft_last_presence')
-                .select('icao24, country_code, country_name, country_flag, last_seen_in_country, last_position_lat, last_position_lon')
-                .in('icao24', icaoList),
-              QUERY_TIMEOUT
-            );
-            
-            if (!cancelled && presenceResult.data) {
-              aircraftWithPresence = mergeLastPresence(aircraftWithCatalog, presenceResult.data);
-            }
-          } catch (presenceErr) {
-            console.warn('[useAircraftRegistry] Presence timeout:', presenceErr.message);
-          }
-        }
-
+        // ⚡ OPTIMIZACIÓN: Omitir query de presencia por país
+        // Esta info es "nice to have" pero no crítica - reduce 1 query
+        // Si se necesita, se carga on-demand al ver detalle de aeronave
+        
         if (cancelled) return;
-        setAircraft(aircraftWithPresence);
+        setAircraft(aircraftWithCatalog);
 
-        // 6) Stats: evitar query full-table aquí (reduce carga).
-        // Dejamos stats básicos con el count; los demás se pueden calcular en pantallas específicas o via RPC/cache.
-        if (!stats) {
-          setStats({
-            totalAircraft: total,
-            newToday: null,
-            withIncursions: null,
-            byCountry: null,
-          });
-        } else if (stats?.totalAircraft !== total) {
-          setStats((prev) => ({ ...(prev || {}), totalAircraft: total }));
-        }
+        // 5) Stats: solo el total (sin query adicional)
+        setStats((prev) => ({
+          ...(prev || {}),
+          totalAircraft: total,
+        }));
+        
       } catch (err) {
         console.error('[useAircraftRegistry] Error loading data:', err);
         if (!cancelled) {
           setError(err.message?.includes('Timeout') 
-            ? 'Tiempo de espera agotado. La conexión es lenta.' 
+            ? 'Tiempo de espera agotado. Intenta de nuevo.' 
             : err.message);
         }
       } finally {
@@ -462,7 +444,7 @@ export function useAircraftRegistry(options = {}) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, currentPage, pageSize, mergeLastPresence, reloadToken]); // Recargar al cambiar página / refresh manual
+  }, [enabled, currentPage, pageSize, reloadToken]); // ⚡ Removido mergeLastPresence
 
   // Auto-refresh (deshabilitado por defecto)
   useEffect(() => {
@@ -544,25 +526,38 @@ export function useAircraftRegistry(options = {}) {
   };
 }
 
+// ========== CACHE COMPARTIDO PARA BASES ==========
+let cachedBases = null;
+let basesLastFetch = 0;
+const BASES_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
+
 /**
  * Hook para obtener bases militares del Caribe
+ * ✅ OPTIMIZADO: Cache compartido para evitar recargas
  */
 export function useMilitaryBases(options = {}) {
   const { enabled = true, countryCode = null } = options;
 
-  const [bases, setBases] = useState([]);
+  const [bases, setBases] = useState(cachedBases || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!enabled) return;
 
+    // ⚡ Usar cache si es reciente
+    const now = Date.now();
+    if (cachedBases && (now - basesLastFetch) < BASES_CACHE_TTL) {
+      setBases(cachedBases);
+      return;
+    }
+
     const fetchBases = async () => {
       setLoading(true);
       try {
         let query = supabase
           .from('caribbean_military_bases')
-          .select('*')
+          .select('icao_code, name, city, country_code, country_name, latitude, longitude, military_presence, is_active')
           .eq('is_active', true)
           .order('country_code', { ascending: true });
 
@@ -572,7 +567,12 @@ export function useMilitaryBases(options = {}) {
 
         const { data, error: queryError } = await query;
         if (queryError) throw queryError;
-        setBases(data || []);
+        
+        // Guardar en cache
+        cachedBases = data || [];
+        basesLastFetch = Date.now();
+        
+        setBases(cachedBases);
       } catch (err) {
         console.error('Error fetching bases:', err);
         setError(err.message);
@@ -671,28 +671,48 @@ export function useAircraftModels(options = {}) {
   };
 }
 
+// ========== CACHE COMPARTIDO PARA DEPLOYMENT ==========
+let cachedDeployment = null;
+let deploymentLastFetch = 0;
+const DEPLOYMENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+let cachedCountries = null;
+
 /**
  * Hook para presencia de aeronaves por país del Caribe
+ * ✅ OPTIMIZADO: Cache compartido para evitar recargas
  */
 export function useCountryPresence(options = {}) {
   const { enabled = true } = options;
 
-  const [countries, setCountries] = useState([]);
-  const [deploymentSummary, setDeploymentSummary] = useState([]);
+  const [countries, setCountries] = useState(cachedCountries || []);
+  const [deploymentSummary, setDeploymentSummary] = useState(cachedDeployment || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Cargar resumen de despliegue
-  const fetchDeploymentSummary = useCallback(async () => {
+  const fetchDeploymentSummary = useCallback(async (force = false) => {
+    // ⚡ Usar cache si es reciente (y no forzado)
+    const now = Date.now();
+    if (!force && cachedDeployment && (now - deploymentLastFetch) < DEPLOYMENT_CACHE_TTL) {
+      setDeploymentSummary(cachedDeployment);
+      return;
+    }
+    
     setLoading(true);
     try {
       const { data, error: queryError } = await supabase
         .from('caribbean_deployment_summary')
-        .select('*')
+        .select('country_code, country_name, country_flag, total_aircraft, total_sightings, currently_present')
         .order('total_aircraft', { ascending: false });
       
       if (queryError) throw queryError;
-      setDeploymentSummary(data || []);
+      
+      // Guardar en cache
+      cachedDeployment = data || [];
+      deploymentLastFetch = Date.now();
+      
+      setDeploymentSummary(cachedDeployment);
     } catch (err) {
       console.error('Error fetching deployment summary:', err);
       setError(err.message);
@@ -703,14 +723,22 @@ export function useCountryPresence(options = {}) {
 
   // Cargar lista de países
   const fetchCountries = useCallback(async () => {
+    // ⚡ Usar cache si existe
+    if (cachedCountries) {
+      setCountries(cachedCountries);
+      return;
+    }
+    
     try {
       const { data, error: queryError } = await supabase
         .from('caribbean_countries')
-        .select('*')
+        .select('country_code, country_name, country_flag')
         .order('country_name');
       
       if (queryError) throw queryError;
-      setCountries(data || []);
+      
+      cachedCountries = data || [];
+      setCountries(cachedCountries);
     } catch (err) {
       console.error('Error fetching countries:', err);
     }

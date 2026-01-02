@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { 
   X, 
   RefreshCw, 
@@ -26,6 +26,21 @@ import { useAircraftRegistry, useMilitaryBases, useCountryPresence } from '../..
 import { prefetchAircraftImages, useAircraftModelImage } from '../../hooks/useAircraftImages';
 import AircraftDetailView from './AircraftDetailView';
 
+// ⚡ Custom hook para debounce (evita queries en cada keystroke)
+function useDebouncedValue(value, delay = 500) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 /**
  * 🎖️ PANEL DE REGISTRO DE AERONAVES MILITARES
  * 
@@ -34,7 +49,7 @@ import AircraftDetailView from './AircraftDetailView';
  */
 export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAircraft, onAircraftSelected }) {
   const [activeTab, setActiveTab] = useState('registry');
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState('grid'); // 'list' | 'grid' - Grid por defecto (más ligero visualmente)
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAircraft, setSelectedAircraft] = useState(null);
   const [filters, setFilters] = useState({
@@ -44,6 +59,10 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
     hasIncursions: false,
   });
   const [showFilters, setShowFilters] = useState(false);
+
+  // ⚡ OPTIMIZACIÓN: Debounce de búsqueda (500ms)
+  // Evita hacer queries en cada keystroke
+  const debouncedSearch = useDebouncedValue(searchTerm, 500);
 
   // 🔍 Auto-seleccionar aeronave cuando viene de la búsqueda
   useEffect(() => {
@@ -64,16 +83,16 @@ export default function AircraftRegistryPanel({ isOpen, onClose, preSelectedAirc
     nextPage,
     prevPage,
   } = useAircraftRegistry({
-    enabled: isOpen,
+    enabled: isOpen && activeTab === 'registry', // ⚡ Solo cargar cuando la tab está activa
     pageSize: 20, // 20 aeronaves por página
     filters: {
       ...filters,
-      search: searchTerm || undefined,
+      search: debouncedSearch || undefined, // ⚡ Usar valor debounced
     },
   });
 
-  // ⚠️ Importante para evitar saturación: no cargar TODO al abrir el panel.
-  // Cargar por pestaña reduce la concurrencia (y los timeouts) en Supabase.
+  // ⚠️ OPTIMIZACIÓN: Cargar datos de tabs secundarias SOLO cuando se activan
+  // Y mantenerlos cacheados una vez cargados
   const { bases, basesByCountry } = useMilitaryBases({ enabled: isOpen && activeTab === 'bases' });
   const { deploymentSummary, getAircraftInCountry } = useCountryPresence({ enabled: isOpen && activeTab === 'countries' });
 
