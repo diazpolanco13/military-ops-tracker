@@ -1,6 +1,7 @@
 # SAE-RADAR - Esquema de Base de Datos
 
-> PostgreSQL + PostGIS en Supabase
+> PostgreSQL + PostGIS en Supabase  
+> Última actualización: 2026-01-02
 
 ## Tablas Principales
 
@@ -21,12 +22,9 @@ Buques, aeronaves, tropas y vehículos rastreados en el mapa.
 | template_id | UUID | FK a entity_templates |
 | is_visible | BOOLEAN | Visibilidad en mapa |
 | archived_at | TIMESTAMPTZ | Soft delete |
-| crew_count | INTEGER | Tripulación |
-| embarked_personnel | INTEGER | Personal embarcado |
-| embarked_aircraft | INTEGER | Aeronaves embarcadas |
 
 ### `entity_templates` - Plantillas Base
-Modelos reutilizables para crear entidades (25 plantillas).
+14 plantillas genéricas por tipo de entidad.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -36,10 +34,6 @@ Modelos reutilizables para crear entidades (25 plantillas).
 | category | VARCHAR | Categoría (ej: "Buques de Guerra") |
 | entity_type | VARCHAR | Tipo de entidad |
 | icon_url | TEXT | URL del icono i2 |
-| displacement_tons | INTEGER | Desplazamiento |
-| max_speed_knots | INTEGER | Velocidad máxima |
-| crew_count | INTEGER | Tripulación estándar |
-| armamento | TEXT | Armamento principal |
 
 ### `events` - Timeline de Eventos
 Eventos manuales y automáticos (incursiones).
@@ -54,17 +48,6 @@ Eventos manuales y automáticos (incursiones).
 | priority_level | VARCHAR | normal, importante, urgente |
 | source_reliability | VARCHAR | A-F (confiabilidad fuente) |
 | info_credibility | VARCHAR | 1-6 (credibilidad info) |
-| latitude/longitude | NUMERIC | Ubicación opcional |
-| tags | TEXT[] | Etiquetas |
-
-### `event_entities` - Relación Eventos ↔ Entidades
-Many-to-many entre eventos y entidades.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| event_id | UUID | FK a events |
-| entity_id | UUID | FK a entities |
-| relationship_type | VARCHAR | mentioned, involved, location, subject |
 
 ---
 
@@ -79,7 +62,6 @@ Agrupa todas las detecciones de un vuelo mientras está en la zona.
 | flight_id | TEXT | ICAO24 hex |
 | callsign | TEXT | Callsign del vuelo |
 | aircraft_type | TEXT | Código (ej: "C17") |
-| aircraft_model | TEXT | Nombre completo |
 | zone_code | TEXT | País (ej: "VEN") |
 | status | TEXT | active, pending_exit, closed |
 | started_at | TIMESTAMPTZ | Inicio de incursión |
@@ -87,13 +69,9 @@ Agrupa todas las detecciones de un vuelo mientras está en la zona.
 | detection_count | INTEGER | Número de detecciones |
 | avg_altitude | NUMERIC | Altitud promedio |
 | avg_speed | NUMERIC | Velocidad promedio |
-| event_id | UUID | FK a events (calendario) |
-| day_of_week | SMALLINT | 0=Domingo...6=Sábado |
-| hour_of_day | SMALLINT | 0-23 UTC |
-| entry_quadrant | TEXT | NE, NW, SE, SW |
 
 ### `incursion_waypoints` - Posiciones Durante Incursión
-Cada punto detectado durante una incursión. **Usado para generar el trail visual en screenshots de salida.**
+Cada punto detectado durante una incursión (usado para trail en screenshots).
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -102,10 +80,7 @@ Cada punto detectado durante una incursión. **Usado para generar el trail visua
 | latitude/longitude | NUMERIC | Posición |
 | altitude | INTEGER | Altitud en ft |
 | speed | INTEGER | Velocidad en kts |
-| heading | INTEGER | Rumbo |
 | detected_at | TIMESTAMPTZ | Timestamp |
-
-> **Uso en Screenshots**: Al cerrar una sesión (`incursion-session-closer`), se recuperan todos los waypoints ordenados por `detected_at` para renderizar el trail completo en el screenshot de salida.
 
 ### `incursion_monitor_config` - Configuración del Monitor
 Una sola fila con configuración global.
@@ -114,135 +89,68 @@ Una sola fila con configuración global.
 |-------|------|-------------|
 | is_active | BOOLEAN | Monitor activo |
 | query_bounds_* | NUMERIC | Límites de escaneo N/S/E/W |
-| zone_center_lat/lon | NUMERIC | Centro para cuadrantes |
-| inactivity_threshold_minutes | INTEGER | Tiempo para cerrar sesión |
 | icao24_military_prefixes | TEXT[] | Prefijos hex militares |
 | telegram_destinations | JSONB | Array de destinos Telegram |
-| telegram_entry_template | TEXT | Template mensaje entrada |
-| telegram_exit_template | TEXT | Template mensaje salida |
-| screenshot_service_url | TEXT | URL del servicio de screenshots |
-| screenshot_auth_token | TEXT | Token de autenticación para screenshots |
 
 ---
 
 ## Tablas de Límites Geográficos
 
-> **Nota**: Estas tablas son usadas por las **Edge Functions** para detección de incursiones.
-> El **frontend** usa archivos locales (`src/data/maritimeBoundaries.js`, etc.) para carga instantánea.
-> Para regenerar los archivos locales: `node scripts/export-boundaries-to-local.js`
+> **Nota**: Las Edge Functions usan estas tablas para detección.
+> El frontend usa archivos locales (`src/data/*.js`) para carga instantánea.
 
-### `maritime_boundaries_cache` - EEZ (Zona Económica Exclusiva)
-Polígonos marítimos de Marine Regions. Usada por `military-airspace-monitor` para detectar incursiones.
+### `maritime_boundaries_cache` - EEZ
+Polígonos marítimos de Marine Regions (200mn).
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | country_code | VARCHAR | ISO3 (ej: "VEN") |
 | country_name | VARCHAR | Nombre del país |
-| zone_name | VARCHAR | Nombre de la zona específica |
 | geojson | JSONB | GeoJSON del polígono |
-| mrgid | INTEGER | ID de Marine Regions |
 
 ### `terrestrial_boundaries_cache` - Límites Terrestres
 Polígonos terrestres de Natural Earth/GADM.
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| country_code | VARCHAR | ISO3 |
-| country_name | VARCHAR | Nombre del país |
-| geojson | JSONB | GeoJSON del polígono |
-| source | VARCHAR | Natural Earth, GADM, etc. |
-
-### `maritime_boundaries_settings` - Configuración Visual
-Preferencias de visualización por país.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| country_code | VARCHAR | ISO3 |
-| is_visible | BOOLEAN | Mostrar en mapa |
-| alert_enabled | BOOLEAN | Enviar alertas Telegram |
-| color | VARCHAR | Color hex |
-| opacity | NUMERIC | Opacidad 0-1 |
-
 ---
 
-## Tablas de Patrones Militares
-
-### `military_callsign_patterns` - Patrones de Callsign
-32 patrones para identificar vuelos militares USA.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| pattern | VARCHAR | Prefijo (ej: "RCH", "BAT") |
-| description | VARCHAR | Descripción |
-| mission_type | VARCHAR | transport, reconnaissance, patrol, etc. |
-| military_branch | VARCHAR | USAF, Navy, Marines, Army, Coast Guard |
-| alert_priority | INTEGER | 1 (crítica) a 5 (baja) |
-
-### `military_aircraft_patterns` - Tipos de Aeronave
-18 modelos de aeronave militar.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| aircraft_code | VARCHAR | Código FR24 (ej: "C17", "P8") |
-| aircraft_name | VARCHAR | Nombre completo |
-| category | VARCHAR | transport, reconnaissance, tanker, awacs, fighter, etc. |
-| alert_priority | INTEGER | Prioridad de alerta |
-
----
-
-## Tablas del Registro de Aeronaves Militares
+## Tablas del Registro de Aeronaves
 
 ### `military_aircraft_registry` - Inventario Principal
-Cada aeronave militar única detectada, identificada por ICAO24.
+Cada aeronave militar única detectada.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| icao24 | VARCHAR(10) | **PK** - Código hex único del transponder |
+| icao24 | VARCHAR(10) | **PK** - Código hex único |
 | callsigns_used | TEXT[] | Array de callsigns observados |
-| aircraft_type | VARCHAR(10) | Código ICAO (C30J, K35R, P8) |
-| aircraft_model | VARCHAR(100) | Nombre del modelo |
+| aircraft_type | VARCHAR(10) | Código ICAO (C30J, K35R) |
 | military_branch | VARCHAR(20) | USAF, USN, USMC, USA, USCG |
-| squadron | VARCHAR(50) | Escuadrón (si se conoce) |
-| tail_number | VARCHAR(20) | Número de cola/registro |
 | probable_base_icao | VARCHAR(10) | Código ICAO base probable |
-| probable_base_name | VARCHAR(100) | Nombre de la base |
-| probable_country | VARCHAR(50) | País de la base |
-| base_confidence | INTEGER | Confianza 0-100% |
 | first_seen | TIMESTAMPTZ | Primera detección |
 | last_seen | TIMESTAMPTZ | Última detección |
 | total_detections | INTEGER | Veces detectado |
 | total_incursions | INTEGER | Incursiones a Venezuela |
-| is_active | BOOLEAN | Activa/inactiva |
 
 ### `aircraft_model_catalog` - Especificaciones Técnicas
-Catálogo de 82+ modelos de aeronave con especificaciones.
+Catálogo de 82+ modelos de aeronave.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | aircraft_type | VARCHAR(10) | **PK** - Código ICAO |
 | aircraft_name | VARCHAR(100) | Nombre completo |
-| manufacturer | VARCHAR(100) | Fabricante |
-| category | VARCHAR(50) | fighter, transport, tanker, surveillance, etc. |
-| role | VARCHAR(100) | Rol: Combat, Cargo, Reconnaissance |
-| max_speed_kts | INTEGER | Velocidad máxima en nudos |
-| cruise_speed_kts | INTEGER | Velocidad crucero |
-| max_altitude_ft | INTEGER | Techo máximo en pies |
-| range_nm | INTEGER | Alcance en millas náuticas |
-| crew_size | INTEGER | Tripulación |
+| category | VARCHAR(50) | fighter, transport, tanker, etc. |
+| max_speed_kts | INTEGER | Velocidad máxima |
 | is_armed | BOOLEAN | ¿Armado? |
-| thumbnail_url | TEXT | URL de imagen principal |
 
-### `aircraft_model_images` - Galería por Modelo
-Imágenes compartidas entre aeronaves del mismo tipo.
+### `aircraft_location_history` - Trail de Posiciones
+Historial de ubicaciones para reconstruir vuelos.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| id | UUID | Identificador único |
-| aircraft_type | VARCHAR(10) | FK a aircraft_model_catalog |
-| image_url | TEXT | URL en Supabase Storage |
-| is_primary | BOOLEAN | ¿Es la imagen principal? |
-| caption | TEXT | Descripción |
-| source | VARCHAR(255) | Fuente de la imagen |
+| icao24 | VARCHAR(10) | FK a registry |
+| event_type | VARCHAR(20) | detection, departure, arrival |
+| latitude/longitude | DECIMAL | Posición |
+| country_code | VARCHAR(3) | País (geocodificado) |
+| detected_at | TIMESTAMPTZ | Timestamp |
 
 ### `caribbean_military_bases` - Bases y Aeropuertos
 40+ bases militares y aeropuertos relevantes.
@@ -250,112 +158,9 @@ Imágenes compartidas entre aeronaves del mismo tipo.
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | icao_code | VARCHAR(10) | **PK** - Código ICAO |
-| iata_code | VARCHAR(3) | Código IATA |
 | name | VARCHAR(200) | Nombre de la base |
 | country_code | VARCHAR(3) | Código ISO del país |
-| country_name | VARCHAR(100) | Nombre del país |
 | base_type | VARCHAR(50) | military, joint, civilian |
-| latitude | DECIMAL(10,6) | Coordenadas |
-| longitude | DECIMAL(10,6) | |
-| operators | TEXT[] | Operadores militares |
-
-### `aircraft_location_history` - Trail de Posiciones
-Historial de ubicaciones para reconstruir vuelos.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID | Identificador único |
-| icao24 | VARCHAR(10) | FK a military_aircraft_registry |
-| event_type | VARCHAR(20) | detection, departure, arrival, incursion |
-| latitude | DECIMAL(10,6) | Posición |
-| longitude | DECIMAL(10,6) | |
-| altitude | INTEGER | Altitud ft |
-| heading | INTEGER | Rumbo |
-| speed | INTEGER | Velocidad kts |
-| callsign | VARCHAR(20) | Callsign usado |
-| origin_icao | VARCHAR(10) | Aeropuerto origen |
-| destination_icao | VARCHAR(10) | Aeropuerto destino |
-| country_code | VARCHAR(3) | País (geocodificado) |
-| detected_at | TIMESTAMPTZ | Timestamp |
-
-**Índices**: `idx_location_history_icao24`, `idx_location_history_detected_at`
-
-### `aircraft_country_presence` - Presencia por País
-Acumulado de presencia por país para cada aeronave.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID | Identificador único |
-| icao24 | VARCHAR(10) | FK a military_aircraft_registry |
-| country_code | VARCHAR(3) | Código ISO |
-| country_name | VARCHAR(100) | Nombre del país |
-| first_seen_in_country | TIMESTAMPTZ | Primera vez en el país |
-| last_seen_in_country | TIMESTAMPTZ | Última vez en el país |
-| total_detections_in_country | INTEGER | Total detecciones |
-
-**Constraint**: `UNIQUE(icao24, country_code)`
-
-### `aircraft_last_presence` (VIEW) - Última Ubicación
-Vista optimizada para última ubicación conocida.
-
-```sql
-CREATE VIEW aircraft_last_presence AS
-SELECT DISTINCT ON (icao24)
-  icao24, country_code, country_name, last_seen_in_country
-FROM aircraft_country_presence
-ORDER BY icao24, last_seen_in_country DESC;
-```
-
-### Función: `recalculate_probable_base()`
-Recalcula base probable basándose en historial de origen.
-
-```sql
-SELECT recalculate_probable_base('AE54C7');
-```
-
----
-
-## Tablas de Buques
-
-### `ship_positions` - Posiciones AIS
-Última posición conocida de cada buque.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| mmsi | VARCHAR | Maritime Mobile Service Identity (único) |
-| ship_name | VARCHAR | Nombre del buque |
-| ship_type | INTEGER | Código AIS de tipo |
-| flag_country | VARCHAR | Bandera |
-| latitude/longitude | NUMERIC | Posición |
-| speed | NUMERIC | Velocidad |
-| heading | INTEGER | Rumbo |
-| destination | VARCHAR | Destino |
-| is_military | BOOLEAN | ¿Militar? |
-| last_update | TIMESTAMPTZ | Última actualización |
-
-### `ship_alerts` - Alertas de Buques
-Similar a airspace_alerts pero para tráfico marítimo.
-
----
-
-## Tablas de Inteligencia
-
-### `intelligence_events` - Eventos de Inteligencia
-Eventos detectados automáticamente por Grok AI.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| event_type | VARCHAR | sighting, news, exercise, deployment, etc. |
-| priority | VARCHAR | low, medium, high, urgent |
-| title | VARCHAR | Título |
-| summary | TEXT | Resumen |
-| source_type | VARCHAR | twitter, news, official |
-| source_credibility | VARCHAR | official, verified, unverified |
-| confidence_score | INTEGER | 0-100 |
-| status | VARCHAR | pending, verified, dismissed, archived |
-
-### `intelligence_tweets_cache` - Cache de Tweets
-Tweets procesados para evitar duplicados.
 
 ---
 
@@ -370,104 +175,62 @@ Extensión de auth.users con datos adicionales.
 | username | VARCHAR | Username único |
 | role | VARCHAR | admin, operator, analyst, viewer |
 | is_active | BOOLEAN | Cuenta activa |
-| organizacion | VARCHAR | Organización |
-| cargo | VARCHAR | Cargo |
 
-### `role_permissions` - Permisos por Rol
-Configuración de permisos JSONB por rol.
+### `user_audit_logs` - Logs de Actividad
+Registro completo de actividad de usuarios.
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| user_id | UUID | FK a auth.users |
+| event_type | TEXT | login, logout, login_failed, etc. |
+| ip_address | TEXT | Dirección IP |
+| device_type | TEXT | desktop, mobile, tablet |
+| created_at | TIMESTAMPTZ | Timestamp |
 
 ---
 
-## Tablas de Auditoría
+## Vista Materializada
 
-### `user_audit_logs` - Logs de Actividad de Usuarios
-Registro completo de actividad de usuarios en el sistema.
+### `incursion_stats_bundle`
+Consolida 7 queries de estadísticas en 1 sola.
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID | Identificador único |
-| user_id | UUID | FK a auth.users |
-| user_email | TEXT | Email del usuario (respaldo) |
-| event_type | TEXT | login, logout, login_failed, password_change, session_refresh |
-| ip_address | TEXT | Dirección IP del cliente |
-| user_agent | TEXT | User-Agent completo |
-| device_type | TEXT | desktop, mobile, tablet |
-| browser | TEXT | Navegador (Chrome, Safari, Firefox) |
-| os | TEXT | Sistema operativo |
-| success | BOOLEAN | Resultado de la operación |
-| error_message | TEXT | Mensaje de error (si aplica) |
-| metadata | JSONB | Datos adicionales |
-| created_at | TIMESTAMPTZ | Timestamp del evento |
+```sql
+-- Consultar
+SELECT * FROM incursion_stats_bundle WHERE id = 1;
 
-**Índices**:
-- `idx_audit_user_id`: Por user_id para historial
-- `idx_audit_created_at`: Por fecha para filtros
-- `idx_audit_event_type`: Por tipo de evento
-
-### `user_sessions` - Sesiones de Usuario
-Tracking de sesiones activas.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| id | UUID | Identificador único |
-| user_id | UUID | FK a auth.users |
-| session_token | TEXT | Token de sesión |
-| ip_address | TEXT | IP de la sesión |
-| device_info | JSONB | Info del dispositivo |
-| started_at | TIMESTAMPTZ | Inicio de sesión |
-| last_activity | TIMESTAMPTZ | Última actividad |
-| ended_at | TIMESTAMPTZ | Fin de sesión |
-| is_active | BOOLEAN | Sesión activa |
-
-### `movement_history` - Historial de Movimientos
-Registra cada cambio de posición de entidades.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| entity_id | UUID | FK a entities |
-| old_position | GEOGRAPHY | Posición anterior |
-| new_position | GEOGRAPHY | Nueva posición |
-| distance_meters | NUMERIC | Distancia calculada |
-| moved_at | TIMESTAMPTZ | Timestamp |
-
-### `api_usage` - Uso de API
-Tracking de llamadas a APIs externas.
+-- Refrescar (cada 10 min via pg_cron)
+REFRESH MATERIALIZED VIEW CONCURRENTLY incursion_stats_bundle;
+```
 
 ---
 
 ## Extensiones PostgreSQL
 
 ```sql
--- Requeridas
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
 ```
+
+---
 
 ## RLS (Row Level Security)
 
 Las siguientes tablas tienen RLS habilitado:
-- `entities` ✅
-- `entity_templates` ✅
-- `events` ✅
-- `event_entities` ✅
-- `maritime_boundaries_cache` ✅
-- `terrestrial_boundaries_cache` ✅
-- `incursion_sessions` ✅
-- `incursion_waypoints` ✅
-- `incursion_monitor_config` ✅
-- `user_profiles` ✅
-- `intelligence_events` ✅
-- `user_audit_logs` ✅ (solo admins pueden leer)
-- `user_sessions` ✅ (solo admins pueden leer)
-- `military_aircraft_registry` ✅
-- `aircraft_model_catalog` ✅
-- `aircraft_model_images` ✅
-- `caribbean_military_bases` ✅
-- `aircraft_location_history` ✅
-- `aircraft_country_presence` ✅
+- `entities`, `entity_templates`, `events`, `event_entities`
+- `incursion_sessions`, `incursion_waypoints`, `incursion_monitor_config`
+- `maritime_boundaries_cache`, `terrestrial_boundaries_cache`
+- `user_profiles`, `user_audit_logs`, `user_sessions`
+- `military_aircraft_registry`, `aircraft_model_catalog`, `aircraft_location_history`
 
-## Funciones PostGIS Útiles
+**Políticas consolidadas**: 63 políticas totales (reducidas de 97).
 
+---
+
+## Funciones Útiles
+
+### PostGIS
 ```sql
 -- Distancia entre dos puntos (metros)
 ST_Distance(position1::geography, position2::geography)
@@ -477,9 +240,10 @@ ST_Within(point::geometry, polygon::geometry)
 
 -- Crear punto desde lat/lon
 ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
-
--- Extraer lat/lon de geometry
-ST_Y(position::geometry) -- latitude
-ST_X(position::geometry) -- longitude
 ```
 
+### Custom
+```sql
+-- Recalcular base probable de aeronave
+SELECT recalculate_probable_base('AE54C7');
+```
