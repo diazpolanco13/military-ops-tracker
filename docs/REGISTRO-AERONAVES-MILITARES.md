@@ -1,7 +1,7 @@
 # Sistema de Registro de Aeronaves Militares del Caribe
 
 > **Estado**: ✅ MVP en Producción (Dic 2025)  
-> **Última actualización**: 30 de diciembre de 2025
+> **Última actualización**: 31 de diciembre de 2025
 
 ## Índice
 
@@ -78,11 +78,16 @@ El Sistema de Registro de Aeronaves Militares es un módulo del proyecto SAE-RAD
 ### 📊 Estadísticas del Sistema
 
 ```
-Aeronaves en inventario: 50+ registradas
-Modelos en catálogo:     82 tipos
+Aeronaves en inventario: 100+ registradas (ej: 106)
+Modelos en catálogo:     80+ tipos (ej: 84)
 Bases militares:         40+ aeropuertos
 Detecciones diarias:     Variable según actividad
 ```
+
+### 🛡️ Nota (multiusuario / performance)
+
+- **Problema observado**: al crecer la cantidad de usuarios concurrentes, el frontend podía disparar múltiples queries paralelas (timeout) y dejar el panel vacío.
+- **Fix aplicado**: el Inventario se optimizó con **paginación**, **select mínimo de columnas**, **carga diferida por pestaña (lazy-load)** y **caché/deduplicación** para imágenes/rol.
 
 ### 🗂️ Tablas Implementadas
 
@@ -132,7 +137,7 @@ Detecciones diarias:     Variable según actividad
 3. **Frontend (React)**:
    - Hook `useAircraftRegistry`: Gestión del estado
    - Panel `AircraftRegistryPanel`: Interfaz principal
-   - Modal `AircraftDetailModal`: Detalles de cada aeronave
+   - Vista `AircraftDetailView`: Detalles de cada aeronave (pantalla completa)
 
 ---
 
@@ -440,44 +445,43 @@ SELECT cron.schedule(
 **Ubicación**: `src/hooks/useAircraftRegistry.js`
 
 ```javascript
+/**
+ * V18 (optimizado):
+ * - 1 sola query paginada con count (evita COUNT separado)
+ * - select de columnas mínimas (reduce payload)
+ * - catálogo + last_presence solo para ICAO24/tipos de la página
+ * - evita "full table scan" de stats en la carga inicial
+ */
 export function useAircraftRegistry(options = {}) {
   const {
     enabled = true,
-    autoRefresh = false,
-    refreshInterval = 60000,
     filters = {},
+    pageSize = 20,
+    initialPage = 1,
   } = options;
 
-  // Estado
+  // Estado principal
   const [aircraft, setAircraft] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  // Stats livianas (sin full-scan en carga inicial)
   const [stats, setStats] = useState(null);
-  const [modelCatalog, setModelCatalog] = useState({});
-  const [modelImages, setModelImages] = useState({});
 
-  // Funciones principales
-  const fetchAircraft = useCallback(async (customFilters) => { ... });
-  const fetchStats = useCallback(async () => { ... });
-  const getByIcao24 = useCallback(async (icao24) => { ... });
-  const getLocationHistory = useCallback(async (icao24) => { ... });
-  const updateNotes = useCallback(async (icao24, notes) => { ... });
-
-  // Datos computados
-  const topIncursionAircraft = useMemo(() => { ... }, [aircraft]);
-  const recentlySeenAircraft = useMemo(() => { ... }, [aircraft]);
-
+  // ...
   return {
     aircraft,
     loading,
     error,
-    stats,
-    topIncursionAircraft,
-    recentlySeenAircraft,
-    refetch: fetchAircraft,
-    refreshStats: fetchStats,
-    getByIcao24,
-    updateNotes,
+    stats, // totalAircraft viene del count de la query paginada
+    pagination: { currentPage, totalPages, totalCount, pageSize },
+    goToPage: (page) => setCurrentPage(page),
+    // ...
   };
 }
 ```
@@ -517,6 +521,16 @@ export function useAircraftImages(aircraftType) {
 }
 ```
 
+#### `useAircraftModelImage` + `prefetchAircraftImages` (thumbnails en Inventario)
+
+- **Objetivo**: mostrar thumbnails de modelos sin saturar Supabase.
+- **Implementación**:
+  - `useAircraftModelImage(aircraftType)` usa **caché en memoria** + dedupe para resolver el thumbnail por tipo.
+  - `prefetchAircraftImages(aircraftTypes)` precarga en batch desde `aircraft_model_images` con:
+    - **sanitización** de tipos (`A-Z0-9`)
+    - **límite defensivo** (máx 200 tipos por ciclo)
+    - **batching en chunks** (evita URLs enormes y errores 400)
+
 ---
 
 ## Componentes UI
@@ -537,6 +551,13 @@ Características:
 - Muestra última ubicación conocida y base probable
 - Banderas de países con emoji
 - Responsive para móvil y desktop
+
+#### Optimización multiusuario (V18)
+
+- **Lazy-load por pestaña**:
+  - `Bases` y `Por País` **solo consultan** cuando el usuario abre esas pestañas.
+- **Thumbnails desacoplados del catálogo**:
+  - El Inventario obtiene imágenes desde `aircraft_model_images` (no depende de `aircraft_model_catalog` para que “no se caigan todas las fotos” si hay errores de catálogo).
 
 ### `AircraftDetailView` (Pantalla Completa)
 
@@ -631,26 +652,35 @@ Panel de preview rápido en el mapa:
 1. Usuario abre panel "Inventario"
    │
    ▼
-2. Hook useAircraftRegistry se activa
+2. `useAircraftRegistry` (paginado + select mínimo)
    │
-   ├── fetchAircraft()
-   │   SELECT * FROM military_aircraft_registry
+   ├── Query paginada (incluye count en la misma request)
+   │   SELECT <columnas mínimas> FROM military_aircraft_registry
+   │   ORDER BY last_seen DESC
+   │   RANGE offset..offset+pageSize
    │
-   ├── fetchModelCatalog()
-   │   SELECT * FROM aircraft_model_catalog
+   ├── Catálogo SOLO para tipos de la página
+   │   SELECT aircraft_type, aircraft_model, category, manufacturer, thumbnail_url...
+   │   FROM aircraft_model_catalog
+   │   WHERE aircraft_type IN (<tipos únicos de la página>)
    │
-   ├── fetchModelImages()
-   │   SELECT * FROM aircraft_model_images
-   │
-   └── Enriquece datos
-       aircraft.map(a => ({
-         ...a,
-         model: modelCatalog[a.aircraft_type],
-         images: modelImages[a.aircraft_type]
-       }))
+   ├── Última presencia SOLO para ICAO24 de la página
+   │   SELECT icao24, country_code, last_seen_in_country, ...
+   │   FROM aircraft_last_presence
+   │   WHERE icao24 IN (<icao24 de la página>)
    │
    ▼
-3. Renderiza en UI
+3. Thumbnails del Inventario (en paralelo, cacheados)
+   │
+   ├── `prefetchAircraftImages(types)` (batch + caché)
+   │   SELECT aircraft_type, thumbnail_url, image_url, is_primary
+   │   FROM aircraft_model_images
+   │   WHERE aircraft_type IN (<chunks>)
+   │
+   └── `useAircraftModelImage(type)` resuelve por caché/dedupe
+   │
+   ▼
+4. Renderiza UI (lista/grid) sin bloquear por timeouts
 ```
 
 ---
@@ -946,6 +976,18 @@ Si las fechas en el historial muestran el día anterior:
 new Date(day.date + 'T12:00:00').toLocaleDateString('es-VE', {...})
 ```
 
+### El Inventario aparece vacío o muestra timeouts
+
+- **Síntoma**: “Tiempo de espera agotado” / panel “Sin aeronaves registradas” aunque existan filas.
+- **Causa común**: demasiadas consultas en paralelo al abrir el panel (especialmente en multiusuario).
+- **Solución (V18)**: Inventario optimizado con **lazy-load por pestaña**, **paginación**, **select mínimo** y **caché** para thumbnails.
+
+### Error 400 en requests de `in.(...)` (PostgREST)
+
+- **Síntoma**: `Failed to load resource: the server responded with a status of 400` en endpoints `rest/v1/...`.
+- **Causa común**: filtros `IN` demasiado grandes (URL enorme) o valores con caracteres que rompen el parseo.
+- **Solución (V18)**: batching en chunks + sanitización/límites en precargas de imágenes.
+
 ---
 
 ## Archivos Relacionados
@@ -976,6 +1018,13 @@ docs/
 ---
 
 ## Changelog
+
+### V18 (2025-12-31)
+- ✅ **Fix Inventario vacío/timeout**: `useAircraftRegistry` ahora usa **paginación con count en la misma request** y **select mínimo**.
+- ✅ **Lazy-load por pestaña**: `Bases` y `Por País` solo consultan cuando se abren.
+- ✅ **Thumbnails robustos**: Inventario usa `aircraft_model_images` via `useAircraftModelImage` + `prefetchAircraftImages` (caché/dedupe).
+- ✅ **Batching + sanitización**: precarga de imágenes evita URLs enormes y reduce errores 400 de PostgREST.
+- ✅ **Mejoras globales anti-saturación**: dedupe de rol/sesión (`useUserRole` + `singleflight`) y reducción de auto-refresh agresivo en monitor del sistema.
 
 ### V17 (2025-12-30)
 - ✅ **Fix timezone fechas**: Corregido bug donde las fechas mostraban el día anterior por conversión UTC→Venezuela
@@ -1052,7 +1101,8 @@ src/
 ├── lib/
 │   ├── maplibre.js                     # Estilos Mapbox (OUTDOORS)
 │   ├── supabase.js                     # Cliente Supabase (optimizado)
-│   └── realtimeManager.js              # ✨ NUEVO: Gestión centralizada de canales Realtime
+│   ├── realtimeManager.js              # ✨ Gestión centralizada de canales Realtime
+│   └── singleflight.js                 # ✨ Deduplicación de queries async (anti-tormentas)
 └── services/
     └── flightRadarService.js           # Servicio FR24
 

@@ -236,6 +236,15 @@ git push origin <tu-rama>
 
 ---
 
+## 🛡️ Nota de seguridad (IMPORTANTE)
+
+- **No hardcodees tokens/keys** en scripts o archivos del repo.
+- Para ejecutar SQL/automatizaciones:
+  - Usa variables de entorno (`SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`).
+  - Si una key se expuso, **róta** la credencial en Supabase antes de continuar.
+
+---
+
 **Generado**: 2026-01-01
 **Commit**: 9759f03
 **Proyecto**: Military Ops Tracker v2.0

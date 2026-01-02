@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, withTimeout } from '../lib/supabase';
 
-const QUERY_TIMEOUT = 15000; // 15 segundos para listas grandes
+const QUERY_TIMEOUT = 25000; // 25 segundos para listas grandes (aumentado por saturación)
 
 /**
  * Hook principal para el registro de aeronaves
@@ -378,7 +378,7 @@ export function useAircraftRegistry(options = {}) {
             const catalogResult = await withTimeout(
               supabase
                 .from('aircraft_model_catalog')
-                .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url, country_origin')
+                .select('aircraft_type, aircraft_model, category, manufacturer, primary_image_url, thumbnail_url')
                 .in('aircraft_type', uniqueTypes),
               QUERY_TIMEOUT
             );

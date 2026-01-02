@@ -39,7 +39,7 @@ import {
   Pause,
   Play
 } from 'lucide-react';
-import { supabase, getConnectionStatus, withTimeout } from '../../lib/supabase';
+import { supabase, withTimeout } from '../../lib/supabase';
 import { realtimeManager } from '../../lib/realtimeManager';
 
 // Intervalo de actualización

@@ -14,7 +14,14 @@ const __dirname = dirname(__filename);
 
 // Configuración de Supabase
 const SUPABASE_URL = 'https://oqhujdqbszbvozsuunkw.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sbp_4698907bcf460172582d747c8db5d841b5d16421';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ Falta SUPABASE_SERVICE_ROLE_KEY en el entorno.');
+  console.error('💡 Exporta la variable y vuelve a ejecutar:');
+  console.error('   export SUPABASE_SERVICE_ROLE_KEY="TU_SERVICE_ROLE_KEY"');
+  process.exit(1);
+}
 
 console.log('🔧 Conectando a Supabase...');
 console.log(`📍 URL: ${SUPABASE_URL}`);

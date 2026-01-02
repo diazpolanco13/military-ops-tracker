@@ -259,6 +259,42 @@ Para reducir aún más las queries (hasta 89%), implementar:
    - Eliminar query de catálogo
    - **Impacto**: -10 queries en carga inicial
 
+---
+
+## 🛡️ Seguridad (IMPORTANTE)
+
+### ✅ Tokens y claves: NO hardcodear
+
+- **Regla**: nunca commitear tokens/keys dentro de scripts o código.
+- **Cambio aplicado (2026-01-02)**: se eliminaron tokens hardcodeados de:
+  - `scripts/execute-sql-bundle.js`
+  - `scripts/create-view.sh`
+- **Nuevo comportamiento**:
+  - `scripts/execute-sql-bundle.js` requiere `SUPABASE_SERVICE_ROLE_KEY` via variable de entorno.
+  - `scripts/create-view.sh` requiere `SUPABASE_ACCESS_TOKEN` via variable de entorno.
+
+### ✅ Acción requerida en Supabase
+
+Si alguna key/token se expuso previamente:
+- **Rotar** el `Service Role Key` y cualquier `Access Token` afectado en Supabase.
+- Invalidar tokens viejos (si aplica) para evitar abuso.
+
+---
+
+## 💡 Mejoras propuestas (FASE 2/3)
+
+### Performance / multiusuario
+- **FlightRadar “push-first” real**: eliminar interval por cliente cuando `useCache=true` y depender de `Realtime` + fallback raro (ej: cada 15-30 min).
+- **SearchBar lazy-load de inventario**: no montar `useAircraftRegistry()` hasta que haya búsqueda (`searchQuery.trim().length > 0`) o hasta abrir resultados de “Inventario”.
+- **Paginación en Events/Entities**: hoy hay `limit(100)` y `limit(500)`, pero ideal sumar **paginación real** + “cargar más”.
+
+### Base de datos
+- **`incursion_stats_bundle` refresco automático**: usar `pg_cron` (si disponible) o un mecanismo controlado para refrescar (evitar refresh manual).
+- **Índices**: asegurar índices para `events.event_date`, `entities.created_at`, `military_aircraft_registry.last_seen`, etc.
+
+### Observabilidad
+- **Alerta de rate limit**: usar `window.supabaseMetrics()` y registrar cuando aparezca status `429` o spikes por path.
+
 3. **Query batching con RPC**
    - Consolidar 3 queries de AircraftRegistry en 1
    - **Impacto**: -4 queries/min

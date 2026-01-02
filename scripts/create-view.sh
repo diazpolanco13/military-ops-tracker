@@ -4,7 +4,14 @@
 # Usa la API de Management de Supabase
 
 PROJECT_REF="oqhujdqbszbvozsuunkw"
-ACCESS_TOKEN="sbp_4698907bcf460172582d747c8db5d841b5d16421"
+ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
+
+if [ -z "$ACCESS_TOKEN" ]; then
+  echo "❌ Falta SUPABASE_ACCESS_TOKEN en el entorno."
+  echo "💡 Exporta la variable y vuelve a ejecutar:"
+  echo "   export SUPABASE_ACCESS_TOKEN=\"TU_ACCESS_TOKEN\""
+  exit 1
+fi
 
 echo "🚀 Creando vista materializada en Supabase..."
 echo "📍 Proyecto: $PROJECT_REF"
