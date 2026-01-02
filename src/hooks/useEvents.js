@@ -11,13 +11,18 @@ export function useEvents() {
   const [loading, setLoading] = useState(true);
 
   // Cargar eventos
+  // ✅ OPTIMIZADO: Select específico en lugar de select('*')
   const loadEvents = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          id, title, description, event_date, type,
+          priority_level, source_reliability, info_credibility,
+          latitude, longitude, tags, created_at
+        `)
         .order('event_date', { ascending: false })
-        .limit(100); // ✅ OPTIMIZACIÓN: Limitar a 100 eventos más recientes
+        .limit(100); // ✅ Limitar a 100 eventos más recientes
 
       if (error) throw error;
 

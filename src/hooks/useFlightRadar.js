@@ -9,67 +9,30 @@ import { supabase } from '../lib/supabase';
 import { realtimeManager } from '../lib/realtimeManager';
 
 /**
- * 🛩️ HOOK USEFLIGHTRADAR - VERSIÓN COMPLETA
+ * 🛩️ HOOK USEFLIGHTRADAR - VERSIÓN OPTIMIZADA
  * 
  * Hook para tracking de vuelos en tiempo real con filtros tipo FlightRadar24
  * - Carga TODOS los vuelos o solo militares
  * - Filtrado por categorías (passenger, cargo, military, etc.)
  * - Actualización automática
  * - Pause/Resume
+ * 
+ * ✅ OPTIMIZADO (2026-01-02):
+ * - Eliminado monitor de frontend redundante (pg_cron lo hace cada 2 min)
+ * - El monitoreo de incursiones se ejecuta SOLO desde Supabase pg_cron
  */
-// ====== MONITOR DE ESPACIO AÉREO ======
-// Ejecuta el monitor de alertas cada 3 minutos (solo una vez activo)
-let monitorInterval = null;
-
-async function runAirspaceMonitor() {
-  try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/military-airspace-monitor`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    if (response.ok) {
-      const data = await response.json();
-      if (data.alerts_sent > 0) {
-        console.log(`🚨 ALERTA: ${data.alerts_sent} vuelos militares detectados en Venezuela:`, data.alerted);
-      }
-    }
-  } catch (error) {
-    // Silencioso - no interrumpir la app si falla
-  }
-}
-
-export function startAirspaceMonitor(intervalMs = 300000) { // 5 minutos para ahorrar créditos
-  if (monitorInterval) return; // Ya está corriendo
-  console.log('🛡️ Monitor de espacio aéreo iniciado (cada 5 min)');
-  runAirspaceMonitor(); // Ejecutar inmediatamente
-  monitorInterval = setInterval(runAirspaceMonitor, intervalMs);
-}
-
-export function stopAirspaceMonitor() {
-  if (monitorInterval) {
-    clearInterval(monitorInterval);
-    monitorInterval = null;
-    console.log('🛡️ Monitor de espacio aéreo detenido');
-  }
-}
 
 // ====== HOOK PRINCIPAL ======
-// ✅ V2: Lee de cache centralizado en Supabase
+// ✅ V3: Lee de cache centralizado en Supabase
 // El cache se actualiza por Edge Function (1 sola petición para todos los usuarios)
+// El monitoreo de incursiones lo hace pg_cron, NO el frontend
 export function useFlightRadar({ 
   autoUpdate = true,
   updateInterval = 30000,  // 30 segundos - polling del cache
   enabled = true,
   militaryOnly = false,
   bounds = null,
-  useCache = true, // Nuevo: usar cache centralizado
-  enableAirspaceMonitor = false, // ⚠️ IMPORTANTE: NO correr por defecto (escala por usuario)
+  useCache = true, // Usar cache centralizado
 } = {}) {
   const [allFlights, setAllFlights] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -492,12 +455,8 @@ export function useFlightRadar({
       return;
     }
 
-    // 🛡️ Monitor de alertas de espacio aéreo
-    // ⚠️ En modo multiusuario esto NO debe correr por defecto en cada cliente:
-    // debe ejecutarse idealmente por cron/servidor. Se habilita solo si el usuario lo activa explícitamente.
-    if (enableAirspaceMonitor) {
-      startAirspaceMonitor();
-    }
+    // ✅ El monitor de incursiones se ejecuta desde pg_cron (cada 2 min)
+    // NO desde el frontend - elimina duplicación y escala mejor
 
     fetchFlights();
 

@@ -12,16 +12,23 @@ export function useEntities() {
   const [error, setError] = useState(null);
 
   // 📡 Función para cargar entidades (extraída para reutilizar)
+  // ✅ OPTIMIZADO: Select específico en lugar de select('*')
   const fetchEntities = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const { data, error } = await supabase
         .from('entities')
-        .select('*')
+        .select(`
+          id, name, class, type, status,
+          latitude, longitude, heading, speed,
+          template_id, is_visible, archived_at,
+          crew_count, embarked_personnel, embarked_aircraft,
+          image_url, created_at, updated_at
+        `)
         .eq('is_visible', true)
         .is('archived_at', null)
-        .order('created_at', { ascending: false }) // Ordenar por más recientes primero
-        .limit(500); // ✅ OPTIMIZACIÓN: Limitar a 500 entidades más recientes
+        .order('created_at', { ascending: false })
+        .limit(500); // ✅ Limitar a 500 entidades más recientes
 
       if (error) throw error;
 

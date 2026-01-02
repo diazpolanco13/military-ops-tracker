@@ -1,28 +1,56 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { singleflight } from '../lib/singleflight';
 
 /**
- * Hook para gestionar plantillas de entidades
- * Permite obtener, crear, actualizar y eliminar plantillas base
+ * 📋 Hook para gestionar plantillas de entidades
+ * 
+ * ✅ OPTIMIZADO: Cache compartido en memoria (singleton)
+ * - Las plantillas cambian muy poco (solo 25 registros)
+ * - Se cachean por 5 minutos
+ * - Todos los componentes comparten la misma data
+ * - Evita queries duplicadas al montar múltiples componentes
  */
-export function useEntityTemplates() {
-  const [templates, setTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Fetch all templates
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+// ========== CACHE COMPARTIDO (Module Scope) ==========
+let sharedTemplates = [];
+let sharedLoading = true;
+let sharedError = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
-  /**
-   * Obtener todas las plantillas activas
-   */
-  async function fetchTemplates() {
+const listeners = new Set();
+
+function notifyListeners() {
+  listeners.forEach(cb => {
+    try { cb({ templates: sharedTemplates, loading: sharedLoading, error: sharedError }); } 
+    catch { /* ignore */ }
+  });
+}
+
+function subscribe(callback) {
+  listeners.add(callback);
+  // Emitir estado actual inmediatamente
+  callback({ templates: sharedTemplates, loading: sharedLoading, error: sharedError });
+  return () => listeners.delete(callback);
+}
+
+// ========== FUNCIÓN DE FETCH CON DEDUPE ==========
+async function fetchTemplatesInternal(force = false) {
+  const now = Date.now();
+  
+  // Si el cache es válido y no es forzado, no hacer nada
+  if (!force && sharedTemplates.length > 0 && (now - lastFetchTime) < CACHE_TTL_MS) {
+    return sharedTemplates;
+  }
+
+  // Usar singleflight para evitar queries duplicadas simultáneas
+  return singleflight('entity-templates-fetch', async () => {
+    sharedLoading = true;
+    sharedError = null;
+    notifyListeners();
+
     try {
-      setLoading(true);
-      setError(null);
-      
       const { data, error } = await supabase
         .from('entity_templates')
         .select('*')
@@ -32,203 +60,98 @@ export function useEntityTemplates() {
         .order('display_name', { ascending: true });
 
       if (error) throw error;
-      setTemplates(data || []);
+
+      sharedTemplates = data || [];
+      lastFetchTime = Date.now();
+      sharedError = null;
+      console.log(`📋 Templates cacheados: ${sharedTemplates.length} (válido por 5 min)`);
     } catch (err) {
       console.error('Error fetching templates:', err);
-      setError(err.message);
+      sharedError = err.message;
     } finally {
-      setLoading(false);
+      sharedLoading = false;
+      notifyListeners();
     }
-  }
+
+    return sharedTemplates;
+  }, { ttlMs: 2000 });
+}
+
+// ========== HOOK PRINCIPAL ==========
+export function useEntityTemplates() {
+  const [state, setState] = useState({
+    templates: sharedTemplates,
+    loading: sharedLoading,
+    error: sharedError
+  });
+
+  useEffect(() => {
+    // Suscribirse al cache compartido
+    const unsubscribe = subscribe(setState);
+
+    // Trigger fetch si es necesario (dedupe automático)
+    fetchTemplatesInternal();
+
+    return unsubscribe;
+  }, []);
+
+  // ========== MÉTODOS DE CONSULTA ==========
 
   /**
-   * Obtener plantillas por categoría
-   * @param {string} category - Categoría (militar, civil, comercial)
+   * Refrescar plantillas (fuerza reload)
    */
-  async function getTemplatesByCategory(category) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('category', category)
-        .eq('is_active', true)
-        .order('entity_type', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching templates by category:', err);
-      return [];
-    }
-  }
+  const fetchTemplates = useCallback(() => {
+    return fetchTemplatesInternal(true);
+  }, []);
 
   /**
-   * Obtener plantillas por tipo
-   * @param {string} entityType - Tipo de entidad (destructor, avion, etc)
+   * Obtener plantillas por categoría (desde cache)
    */
-  async function getTemplatesByType(entityType) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('entity_type', entityType)
-        .eq('is_active', true)
-        .order('display_name', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching templates by type:', err);
-      return [];
-    }
-  }
+  const getTemplatesByCategory = useCallback((category) => {
+    return state.templates.filter(t => t.category === category);
+  }, [state.templates]);
 
   /**
-   * Obtener plantilla por código
-   * @param {string} code - Código único de la plantilla
+   * Obtener plantillas por tipo (desde cache)
    */
-  async function getTemplateByCode(code) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('code', code)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error fetching template by code:', err);
-      return null;
-    }
-  }
+  const getTemplatesByType = useCallback((entityType) => {
+    return state.templates.filter(t => t.entity_type === entityType);
+  }, [state.templates]);
 
   /**
-   * Obtener plantilla por ID
-   * @param {string} id - UUID de la plantilla
+   * Obtener plantilla por código (desde cache)
    */
-  async function getTemplateById(id) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      console.error('Error fetching template by id:', err);
-      return null;
-    }
-  }
+  const getTemplateByCode = useCallback((code) => {
+    return state.templates.find(t => t.code === code) || null;
+  }, [state.templates]);
 
   /**
-   * Crear nueva plantilla
-   * @param {object} templateData - Datos de la plantilla
+   * Obtener plantilla por ID (desde cache)
    */
-  async function createTemplate(templateData) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .insert(templateData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Refetch para actualizar la lista
-      await fetchTemplates();
-      
-      return { success: true, data };
-    } catch (err) {
-      console.error('Error creating template:', err);
-      return { success: false, error: err.message };
-    }
-  }
+  const getTemplateById = useCallback((id) => {
+    return state.templates.find(t => t.id === id) || null;
+  }, [state.templates]);
 
   /**
-   * Actualizar plantilla existente
-   * @param {string} id - UUID de la plantilla
-   * @param {object} updates - Campos a actualizar
+   * Obtener plantillas más usadas (desde cache)
    */
-  async function updateTemplate(id, updates) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Refetch para actualizar la lista
-      await fetchTemplates();
-      
-      return { success: true, data };
-    } catch (err) {
-      console.error('Error updating template:', err);
-      return { success: false, error: err.message };
-    }
-  }
+  const getTopTemplates = useCallback((limit = 5) => {
+    return [...state.templates]
+      .sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
+      .slice(0, limit);
+  }, [state.templates]);
 
   /**
-   * Eliminar plantilla (soft delete)
-   * @param {string} id - UUID de la plantilla
+   * Buscar plantillas por texto (desde cache)
    */
-  async function deleteTemplate(id) {
-    try {
-      const { error } = await supabase
-        .from('entity_templates')
-        .update({ is_active: false })
-        .eq('id', id);
-
-      if (error) throw error;
-      
-      // Refetch para actualizar la lista
-      await fetchTemplates();
-      
-      return { success: true };
-    } catch (err) {
-      console.error('Error deleting template:', err);
-      return { success: false, error: err.message };
-    }
-  }
-
-  /**
-   * Obtener plantillas más usadas
-   * @param {number} limit - Número de plantillas a retornar
-   */
-  async function getTopTemplates(limit = 5) {
-    try {
-      const { data, error } = await supabase
-        .from('entity_templates')
-        .select('*')
-        .eq('is_active', true)
-        .order('usage_count', { ascending: false })
-        .limit(limit);
-
-      if (error) throw error;
-      return data || [];
-    } catch (err) {
-      console.error('Error fetching top templates:', err);
-      return [];
-    }
-  }
-
-  /**
-   * Buscar plantillas por texto (búsqueda del lado del cliente)
-   * @param {string} searchTerm - Término de búsqueda
-   */
-  function searchTemplates(searchTerm) {
+  const searchTemplates = useCallback((searchTerm) => {
     if (!searchTerm || searchTerm.trim().length === 0) {
       return [];
     }
 
     const term = searchTerm.toLowerCase().trim();
     
-    return templates.filter(template => {
+    return state.templates.filter(template => {
       const searchableText = [
         template.name,
         template.display_name,
@@ -239,22 +162,21 @@ export function useEntityTemplates() {
         template.category,
         template.sub_type
       ]
-        .filter(Boolean) // Eliminar valores null/undefined
+        .filter(Boolean)
         .join(' ')
         .toLowerCase();
 
       return searchableText.includes(term);
     });
-  }
+  }, [state.templates]);
 
   /**
    * Agrupar plantillas por categoría y tipo
-   * @returns {object} - Objeto con estructura jerárquica
    */
-  function getTemplatesHierarchy() {
+  const getTemplatesHierarchy = useCallback(() => {
     const hierarchy = {};
 
-    templates.forEach(template => {
+    state.templates.forEach(template => {
       const { category, entity_type } = template;
 
       if (!hierarchy[category]) {
@@ -269,15 +191,86 @@ export function useEntityTemplates() {
     });
 
     return hierarchy;
-  }
+  }, [state.templates]);
+
+  // ========== MÉTODOS DE MODIFICACIÓN ==========
+
+  /**
+   * Crear nueva plantilla
+   */
+  const createTemplate = useCallback(async (templateData) => {
+    try {
+      const { data, error } = await supabase
+        .from('entity_templates')
+        .insert(templateData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Invalidar cache y refetch
+      await fetchTemplatesInternal(true);
+      
+      return { success: true, data };
+    } catch (err) {
+      console.error('Error creating template:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  /**
+   * Actualizar plantilla existente
+   */
+  const updateTemplate = useCallback(async (id, updates) => {
+    try {
+      const { data, error } = await supabase
+        .from('entity_templates')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Invalidar cache y refetch
+      await fetchTemplatesInternal(true);
+      
+      return { success: true, data };
+    } catch (err) {
+      console.error('Error updating template:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  /**
+   * Eliminar plantilla (soft delete)
+   */
+  const deleteTemplate = useCallback(async (id) => {
+    try {
+      const { error } = await supabase
+        .from('entity_templates')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Invalidar cache y refetch
+      await fetchTemplatesInternal(true);
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting template:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
 
   return {
     // Estado
-    templates,
-    loading,
-    error,
+    templates: state.templates,
+    loading: state.loading,
+    error: state.error,
 
-    // Métodos de consulta
+    // Métodos de consulta (desde cache - sin queries)
     fetchTemplates,
     getTemplatesByCategory,
     getTemplatesByType,
@@ -293,4 +286,3 @@ export function useEntityTemplates() {
     deleteTemplate,
   };
 }
-
