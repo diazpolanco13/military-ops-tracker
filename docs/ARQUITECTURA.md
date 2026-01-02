@@ -1,7 +1,7 @@
 # SAE-RADAR - Arquitectura del Sistema
 
 > Sistema de Monitoreo de Espacio Aéreo para Inteligencia Estratégica  
-> Última actualización: 2026-01-02
+> Última actualización: 2026-01-02 (Optimizaciones de rendimiento)
 
 ## Stack Tecnológico
 
@@ -118,9 +118,9 @@ src/
 
 | Función | Versión | Propósito | JWT | Frecuencia |
 |---------|---------|-----------|-----|------------|
-| `flightradar-proxy` | v21 | Proxy para datos de vuelos | ❌ No | On-demand |
-| `military-airspace-monitor` | v34 | Detectar incursiones + Telegram | ❌ No | Cron 2min |
-| `incursion-session-closer` | v8 | Cerrar sesiones + screenshot | ❌ No | Cron 5min |
+| `flightradar-proxy` | v24 | Proxy para datos de vuelos | ❌ No | On-demand |
+| `military-airspace-monitor` | v38 | Detectar incursiones + Telegram | ❌ No | Cron 2min |
+| `incursion-session-closer` | v12 | Cerrar sesiones + screenshot | ❌ No | Cron 5min |
 | `incursion-situation-report` | v4 | Reporte consolidado de actividad | ❌ No | Cron 10min |
 | `aircraft-registry-collector` | v14 | Registrar aeronaves en inventario | ❌ No | Cron 5min |
 
@@ -197,21 +197,34 @@ SCREENSHOT_AUTH_TOKEN=xxx
 
 ## Optimizaciones Implementadas (2026-01-02)
 
-### Cambios Realizados
+### Fase 1: Limpieza y Deduplicación
 
 | Cambio | Impacto |
 |--------|---------|
-| Eliminación AISStream/ShipRadar | -2,400 queries/hora |
-| Políticas RLS consolidadas | -60% evaluaciones (97→63) |
-| Cron jobs deduplicados | Sin alertas duplicadas |
-| Edge Functions sin JWT | Sin errores 401 |
-| Vista materializada `incursion_stats_bundle` | 7 queries → 1 query |
+| ❌ Eliminación AISStream/ShipRadar | -2,400 queries/hora |
+| ✅ Políticas RLS consolidadas | -60% evaluaciones (97→63) |
+| ✅ Cron jobs deduplicados (solo pg_cron) | Sin alertas Telegram duplicadas |
+| ✅ Edge Functions sin JWT | Sin errores 401 |
+| ✅ Tablas `ship_*` eliminadas | BD más limpia |
+
+### Fase 2: Optimizaciones de Código
+
+| Cambio | Archivo | Impacto |
+|--------|---------|---------|
+| ✅ Cache de plantillas (singleton) | `useEntityTemplates.js` | -10-20 queries/carga |
+| ✅ Select específico (no `*`) | `useEntities.js` | -50% payload |
+| ✅ Select específico (no `*`) | `useEvents.js` | -50% payload |
+| ✅ Índice compuesto | Migración Supabase | Queries más rápidas |
+| ✅ Monitor redundante eliminado | `useFlightRadar.js` | Sin duplicación frontend/cron |
 
 ### Ahorro Total Estimado
 ```
-ANTES: ~3,840 queries/hora (con 10 usuarios)
-DESPUÉS: ~1,000 queries/hora
-REDUCCIÓN: ~74%
+ANTES: ~5,000 queries/hora (con 50 usuarios)
+DESPUÉS: ~2,000 queries/hora
+REDUCCIÓN: ~60%
+
+Cache de plantillas: TTL 5 minutos (compartido entre componentes)
+Índice parcial: idx_entities_visible_active_created
 ```
 
 ---
