@@ -80,10 +80,10 @@ export default function TopNavigationBar({
   onSignOut = null
 }) {
   const [activePanel, setActivePanel] = useState(null);
-  
+
   // 🚢 Estado para ocultar/mostrar embarcaciones
   const [shipsVisible, setShipsVisible] = useState(() => {
-    return localStorage.getItem('shipsVisible') !== 'false'; // Por defecto visible
+    return localStorage.getItem('shipsVisible') !== 'false';
   });
 
   // ✈️ Estado para ocultar/mostrar aeronaves
@@ -202,8 +202,6 @@ export default function TopNavigationBar({
     const newState = !shipsVisible;
     setShipsVisible(newState);
     localStorage.setItem('shipsVisible', newState.toString());
-    
-    // Emitir evento para que MapContainer actualice el filtro
     window.dispatchEvent(new CustomEvent('toggleShipsVisibility', { 
       detail: { visible: newState } 
     }));
@@ -678,7 +676,7 @@ function ViewPanel({
     // Acción de toggle embarcaciones
     if (action === 'toggle-ships') {
       onToggleShips();
-      return; // No cerrar el panel
+      return;
     }
 
     // Acción de toggle aeronaves

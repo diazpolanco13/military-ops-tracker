@@ -1,12 +1,85 @@
-# 🚀 Optimización de Consultas a Supabase - FASE 1 COMPLETADA
+# 🚀 Optimización de Consultas a Supabase - FASE 1 + FASE 2 COMPLETADAS
 
-**Fecha**: 2026-01-01
-**Estado**: ✅ Implementado - **Pendiente de testing**
-**Impacto estimado**: **Reducción del 50% en queries** (de ~64 a ~32 queries/min con 10 usuarios)
+**Fecha**: 2026-01-02 (actualizado)
+**Estado**: ✅ Implementado
+**Impacto estimado**: **Reducción del 80%+ en queries** (eliminación de AISStream + optimizaciones previas)
 
 ---
 
-## 📊 RESUMEN DE CAMBIOS IMPLEMENTADOS
+## 🔴 FASE 2: ELIMINACIÓN DE SISTEMA DE BARCOS (AISStream) - 2026-01-02
+
+### Problema detectado
+El sistema AISStream Worker estaba causando **~1,200+ writes/hora** a Supabase:
+- POSTs a `ship_positions` cada 2-4 segundos
+- 3 HEAD requests cada 60 segundos para estadísticas
+- Cron jobs cada 2 minutos llamando Edge Functions
+
+### Solución implementada
+
+#### ✅ Archivos eliminados:
+- `scripts/aisstream-worker.js` - Worker Node.js principal
+- `Dockerfile.aisworker` - Docker del worker
+- `src/hooks/useShipRadar.js` - Hook de React
+- `src/services/shipRadarService.js` - Servicio
+- `src/components/ShipRadar/*` - Todos los componentes:
+  - `ShipLayer.jsx`
+  - `ShipDetailsPanel.jsx`
+  - `ShipRadarBottomBar.jsx`
+  - `ShipRadarPanel.jsx`
+  - `index.js`
+
+#### ✅ Componentes limpiados:
+- `src/components/Map/MapContainer.jsx` - Eliminadas referencias a ships
+- `src/components/Navigation/TopNavigationBar.jsx` - Eliminado toggle de embarcaciones
+- `docker-entrypoint.sh` - Eliminados cron jobs de AIS y marítimo
+
+#### ✅ Tablas de Supabase eliminadas:
+```sql
+DROP TABLE IF EXISTS public.ship_alerts CASCADE;
+DROP TABLE IF EXISTS public.ship_positions CASCADE;
+```
+
+#### ✅ Cron jobs desactivados:
+- `*/2 * * * * ais-collector.sh` - ELIMINADO
+- `*/5 * * * * maritime-monitor.sh` - ELIMINADO
+
+### Impacto en rate-limiting:
+```
+ANTES:
+├── AISStream Worker writes: ~1,200 queries/hora
+├── printStats() HEAD requests: 180 queries/hora
+├── Edge Function calls (ais-collector): 720 queries/hora
+├── Edge Function calls (maritime-monitor): 288 queries/hora
+└── SUBTOTAL SHIPS: ~2,400 queries/hora
+
+DESPUÉS:
+└── SHIPS: 0 queries/hora
+
+✅ AHORRO: ~2,400 queries/hora (eliminación total)
+```
+
+### Edge Functions inactivas (no eliminadas pero sin uso):
+- `aisstream-collector` - Ya no será llamada
+- `ship-positions` - Ya no será llamada
+- `maritime-vessel-monitor` - Ya no será llamada
+
+---
+
+## 📊 RESUMEN TOTAL DE OPTIMIZACIONES
+
+| Fase | Cambio | Ahorro |
+|------|--------|--------|
+| Fase 1 | Eliminación Connection Monitor | 120 queries/hora |
+| Fase 1 | Intervalo FlightRadar 5min | 180 queries/hora |
+| Fase 1 | Vista materializada incursions | 36 queries/hora |
+| **Fase 2** | **Eliminación AISStream** | **~2,400 queries/hora** |
+| **TOTAL** | | **~2,736 queries/hora** |
+
+---
+
+## 📊 FASE 1: OPTIMIZACIONES PREVIAS (2026-01-01)
+
+## 📊 RESUMEN DE CAMBIOS FASE 1
 
 ### ✅ 1. Eliminación de Connection Monitor
 **Archivo**: [src/lib/supabase.js](src/lib/supabase.js)
