@@ -8,7 +8,8 @@ import {
   CircleDot,
   Car,
   HelpCircle,
-  Check
+  Check,
+  Lock
 } from 'lucide-react';
 
 /**
@@ -16,6 +17,10 @@ import {
  * 
  * Panel lateral con categorías de aeronaves
  * Estilo oscuro consistente con la app
+ * 
+ * ⚠️ NOTA: Actualmente solo se monitorean vuelos militares.
+ * Las demás categorías están deshabilitadas pero visibles
+ * para mostrar que el sistema podría filtrar más tipos.
  */
 
 // Categorías de aeronaves
@@ -87,6 +92,9 @@ export const AIRCRAFT_CATEGORIES = [
   },
 ];
 
+// ⚠️ Solo estas categorías están habilitadas para selección
+const ENABLED_CATEGORIES = ['military'];
+
 export default function FlightRadarFiltersPanel({ 
   isOpen, 
   onClose, 
@@ -94,17 +102,14 @@ export default function FlightRadarFiltersPanel({
   onFilterChange 
 }) {
   const handleCategoryToggle = (categoryId) => {
+    // Solo permitir toggle de categorías habilitadas
+    if (!ENABLED_CATEGORIES.includes(categoryId)) {
+      return; // No hacer nada si la categoría está deshabilitada
+    }
+    
     if (categoryId === 'all') {
-      // Toggle all
-      const allEnabled = AIRCRAFT_CATEGORIES.filter(c => c.id !== 'all').every(cat => activeFilters[cat.id]);
-      
-      const newFilters = {};
-      AIRCRAFT_CATEGORIES.forEach(cat => {
-        if (cat.id !== 'all') {
-          newFilters[cat.id] = !allEnabled;
-        }
-      });
-      onFilterChange(newFilters);
+      // Toggle all - deshabilitado por ahora
+      return;
     } else {
       onFilterChange({
         ...activeFilters,
@@ -148,15 +153,20 @@ export default function FlightRadarFiltersPanel({
         <div className="flex-1 overflow-y-auto py-1">
           {AIRCRAFT_CATEGORIES.map((category) => {
             const isActive = category.id === 'all' ? allActive : activeFilters[category.id];
+            const isEnabled = ENABLED_CATEGORIES.includes(category.id);
+            const isDisabled = !isEnabled; // Deshabilitar todo lo que no esté en ENABLED_CATEGORIES
             
             return (
               <button
                 key={category.id}
                 onClick={() => handleCategoryToggle(category.id)}
+                disabled={isDisabled}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 transition-colors ${
-                  isActive 
-                    ? 'bg-slate-800' 
-                    : 'hover:bg-slate-800/50'
+                  isDisabled 
+                    ? 'opacity-40 cursor-not-allowed' 
+                    : isActive 
+                      ? 'bg-slate-800' 
+                      : 'hover:bg-slate-800/50'
                 }`}
               >
                 {/* Checkbox */}
@@ -164,21 +174,28 @@ export default function FlightRadarFiltersPanel({
                   className={`w-5 h-5 rounded flex items-center justify-center transition-colors border ${
                     isActive 
                       ? 'border-yellow-500 bg-yellow-500' 
-                      : 'border-slate-600 bg-slate-800'
+                      : isDisabled
+                        ? 'border-slate-700 bg-slate-800/50'
+                        : 'border-slate-600 bg-slate-800'
                   }`}
                 >
                   {isActive && <Check size={12} className="text-black" strokeWidth={3} />}
+                  {isDisabled && !isActive && <Lock size={10} className="text-slate-600" />}
                 </div>
 
                 {/* Indicador de color */}
                 <div 
-                  className="w-2 h-2 rounded-full"
+                  className={`w-2 h-2 rounded-full ${isDisabled ? 'opacity-50' : ''}`}
                   style={{ backgroundColor: category.color }}
                 />
 
                 {/* Nombre */}
                 <span className={`flex-1 text-left text-sm ${
-                  isActive ? 'text-white font-medium' : 'text-slate-400'
+                  isDisabled 
+                    ? 'text-slate-600' 
+                    : isActive 
+                      ? 'text-white font-medium' 
+                      : 'text-slate-400'
                 }`}>
                   {category.name}
                 </span>
@@ -191,6 +208,10 @@ export default function FlightRadarFiltersPanel({
         <div className="px-4 py-2 border-t border-slate-700 bg-slate-800/30">
           <p className="text-[10px] text-slate-500 text-center">
             {activeCount} categorías activas
+          </p>
+          <p className="text-[9px] text-yellow-600/70 text-center mt-1 flex items-center justify-center gap-1">
+            <Lock size={8} />
+            Solo monitoreo militar habilitado
           </p>
         </div>
       </div>
